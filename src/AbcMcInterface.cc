@@ -10,7 +10,9 @@
 #include <iostream>
 
 #include "AbcMcInterface.h"
-#include "../abc/src/base/main/main.h"
+#include "base/main/main.h"
+
+using namespace abc;
 
 //extern int Cmd_CommandExecute(void *pAbc, char *sCommand);
 
