@@ -1,15 +1,17 @@
 #ifndef ABC_MC_INTERFACE_H
 #define ABC_MC_INTERFACE_H
 
-#include "../abc/src/aig/aig/aig.h"
-#include "../abc/src/aig/saig/saig.h"
-#include "../abc/src/sat/cnf/cnf.h"
-#include "../abc/src/base/main/main.h"
-#include "../abc/src/base/abc/abc.h"
-#include "../abc/src/misc/vec/vec.h"
-#include "../abc/src/sat/bsat/satStore.h"
+#include "aig/aig/aig.h"
+#include "aig/saig/saig.h"
+#include "sat/cnf/cnf.h"
+#include "base/main/main.h"
+#include "base/abc/abc.h"
+#include "misc/vec/vec.h"
+#include "sat/bsat/satStore.h"
 
 #include <string>
+
+using namespace abc;
 
 // An interface to the ABC framework.
 // Should give utilities such as:
@@ -20,7 +22,11 @@
 // Can also be implemented for other frameworks: add an Interface class
 // with general utility functions (class AbcMcInterface : public McInterface).
 
-extern Aig_Man_t * Abc_NtkToDar( Abc_Ntk_t * pNtk, int fExors, int fRegisters );
+namespace abc
+{
+  extern Aig_Man_t * Abc_NtkToDar( Abc_Ntk_t * pNtk, int fExors, int fRegisters );
+}
+
 
 enum eResult {
     FALSE = -1,
