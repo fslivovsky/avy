@@ -18,7 +18,7 @@ Define a sequence $\setof{J_i}_{i=0}^{k}$ as follows:
 \begin{align}
   J_0 &= I_0\\
   J_{i+1} &= \itp (J_i(V_1) \lor J_i(V_0) \land \Tr(V_0,V_1),
-  I_{i+1}(V_1) \lor J_i(V_1))
+  \neg I_{i+1}(V_1) \land \neg J_i(V_1))
 \end{align}
 where $\itp(A,B)$ is an interpolant between $A$ and $B$. Then, the
 sequence $\setof{J_i}_{i=0}^k$ satisfies:
@@ -40,7 +40,7 @@ CNF.
 
 \begin{question} Is it possible to construct the sequence $\setof{J_i}$
   directly from the resolution proof of unsatisfiability of
-  $\bigwedge_{i=0}^{k-1} \Tr(V_i,V_{i+1})$.
+  $I_0(V_0)\land\bigwedge_{i=0}^{k-1} \Tr(V_i,V_{i+1})\land\neg P(V_k)$.
 \end{question}
 
 
