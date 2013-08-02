@@ -5,14 +5,15 @@
 \newtheorem{question}{Question}
 \newcommand{\itp}{\textsc{Itp}}
 \newcommand{\Tr}{\mathit{Tr}}
+\newcommand{\Init}{\mathit{Init}}
 \newcommand{\setof}[1]{\{#1\}}
 \begin{document}
 \section{Generating monotone interpolation sequence}
 
-Let $\Tr(V_0, V_1)$ be a transition relation, and $\setof{I_i}_{i=0}^k$ be
+Let $\Tr(V_0, V_1)$ be a transition relation, $P(V)$ a property, and $\setof{I_i}_{i=0}^k$ be
 an interpolation sequence satisfying
 \begin{equation}
-  \forall i < k \cdot I_0(V_0) \land \Tr(V_0, V_1) \implies I_{i+1}(V_1)
+  \forall i < k \cdot I_i(V_0) \land \Tr(V_0, V_1) \implies I_{i+1}(V_1)
 \end{equation}
 Define a sequence $\setof{J_i}_{i=0}^{k}$ as follows:
 \begin{align}
@@ -40,9 +41,48 @@ CNF.
 
 \begin{question} Is it possible to construct the sequence $\setof{J_i}$
   directly from the resolution proof of unsatisfiability of
-  $I_0(V_0)\land\bigwedge_{i=0}^{k-1} \Tr(V_i,V_{i+1})\land\neg P(V_k)$.
+  $\Init(V_0)\land\bigwedge_{i=0}^{k-1} \Tr(V_i,V_{i+1})\land\neg P(V_k)$.
 \end{question}
 
+\subsection{Using an Existing Sequence}
+
+Let $\bar{F}^k = \langle F_0, F_1,\ldots, F_k\rangle$ be a monotone sequence of propositional formulas in CNF satisfying the following:
+\begin{itemize}
+	\item $F_0 = \Init$
+	\item $F_i\Rightarrow P$ for every $0\leq i\leq k$
+	\item $F_i \Rightarrow F_{i+1}$ for every $0\leq i < k$
+	\item $F_i(V_0)\land\Tr(V_0,V_1)\Rightarrow F_{i+1}(V_1)$
+\end{itemize}
+
+Let us now assume that for $n > k$, the formula, 
+\begin{align}
+	F_0(V_0)\land\bigwedge_{i=0}^{k-1}[ \Tr(V_i,V_{i+1})\land F_{i+1}(V_{i+1})]\land\bigwedge_{i=k}^{n-1} \Tr(V_i,V_{i+1})\land\neg P(V_n)
+\end{align}
+is unsatisfiable. Now let $\bar{I}^n = \langle I_i \rangle_{i=0}^n$ be an interpolation sequence w.r.t. the above unsatisfiable formula. Then, the following holds:
+\begin{itemize}
+	\item $I_0 = \Init$
+	\item $\forall i < k \cdot I_0(V_0) \land \Tr(V_0, V_1) \implies I_{i+1}(V_1)$
+	\item $I_n\Rightarrow P$
+\end{itemize}
+
+Our goal now is to make $\bar{I}^n$ both monotone and in CNF. To do so, there are two possibilities. Either use the formulation presented above, or use a slightly revised version of it making use of the already existing $\bar{F}^k$ sequence:
+
+\begin{itemize}
+	\item $J_0 = I_0$
+	\item $\forall i < k \cdot J_{i+1} = \itp (A,B)\land F_{i+1}$ where \\$A = J_i(V_1) \lor J_i(V_0) \land \Tr(V_0,V_1)$ and $B = \neg I_{i+1}(V_1) \land \neg J_i(V_1)\land\neg F_{i+1}(V_1)$
+	\item $\forall (k\leq i < n) \cdot J_{i+1} = \itp (A,B)$ where \\$A = J_i(V_1) \lor J_i(V_0) \land \Tr(V_0,V_1)$ and $B = \neg I_{i+1}(V_1) \land \neg J_i(V_1)$
+\end{itemize}
+
+One should note that using $n > k+1$ pose a problem. Let us denote $\bar{J}^n = \langle J_i \rangle_{i=0}^n$ as the resulting monotone interpolation sequence in CNF. While each of the first $k$ elements satisfy $P$, the rest (except for the last one), do not satisfy $P$. To remedy this we slightly change the formulation and simply conjoin $\neg P$ in the $B$ part. We then get that $\forall (k\leq i < n) \cdot J_{i+1} = \itp (A,B)$ where $A$ is the same as before and $B = \neg I_{i+1}(V_1) \land \neg J_i(V_1)\land\neg P(V_1)$. The addition of $\neg P$ is possible since it only further restricts the formula (therefore maintains its unsatisfiability). In addition, it also further restricts the resulting interpolant and therefore does not break any of our desired properties.
+
+Question / Issues / Comments:
+\begin{enumerate}
+	\item Note that for $0\leq i < k$, we still conjoin $F_{i+1}$ to the resulting interpolant, even though it does not change the cardinality of the formula (by cardinality I mean "strength" - cardinality= the number of satisfying assignments, it is logically equivalent). The question is then: do we need it? Considering our implementation, this will be done in the SAT solver in case we keep the same instance throughout the run (incremental instance). But in the actual representation of our sequence (for fixpoint purposes for example), there is no need in maintaining the extra clauses. Moreover, it may even be better to get rid of these clauses (both in our maintained sequence and in the SAT-solver).
+
+	\item What are the implications on the Justification process? Meaning, in the original $\bar{F}^k$ the clauses were justified. In the new $\bar{F}^n$ (in case we discard the previous $\bar{F}^k$, none of the clauses is justified. Do we justify them all? Do we want to keep some of the $\bar{F}^k$ clauses and replace some new clauses by these to save Justification operations?
+\end{enumerate}
+
+\section{Justification}
 
 \end{document}
 %%% Local Variables:
