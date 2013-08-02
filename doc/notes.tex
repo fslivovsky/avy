@@ -54,14 +54,17 @@ Let $\bar{F}^k = \langle F_0, F_1,\ldots, F_k\rangle$ be a monotone sequence of 
 	\item $F_i(V_0)\land\Tr(V_0,V_1)\Rightarrow F_{i+1}(V_1)$
 \end{itemize}
 
-Let us now assume that for $n > k$, the formula, 
-\begin{align}
+Let us now assume that for $n > k$, the formula,
+\begin{equation}
+  \label{eq:unsat_fmla_one}
 	F_0(V_0)\land\bigwedge_{i=0}^{k-1}[ \Tr(V_i,V_{i+1})\land F_{i+1}(V_{i+1})]\land\bigwedge_{i=k}^{n-1} \Tr(V_i,V_{i+1})\land\neg P(V_n)
-\end{align}
-is unsatisfiable. Now let $\bar{I}^n = \langle I_i \rangle_{i=0}^n$ be an interpolation sequence w.r.t. the above unsatisfiable formula. Then, the following holds:
+\end{equation}
+is unsatisfiable. Now let $\bar{I}^n = \langle I_i \rangle_{i=0}^n$ be
+an interpolation sequence w.r.t.~\eqref{eq:unsat_fmla_one}. Then, the
+following holds:
 \begin{itemize}
 	\item $I_0 = \Init$
-	\item $\forall i < k \cdot I_0(V_0) \land \Tr(V_0, V_1) \implies I_{i+1}(V_1)$
+	\item $\forall i < k \cdot I_i(V_0) \land \Tr(V_0, V_1) \implies I_{i+1}(V_1)$
 	\item $I_n\Rightarrow P$
 \end{itemize}
 
