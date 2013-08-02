@@ -85,6 +85,39 @@ Question / Issues / Comments:
 	\item What are the implications on the Justification process? Meaning, in the original $\bar{F}^k$ the clauses were justified. In the new $\bar{F}^n$ (in case we discard the previous $\bar{F}^k$, none of the clauses is justified. Do we justify them all? Do we want to keep some of the $\bar{F}^k$ clauses and replace some new clauses by these to save Justification operations?
 \end{enumerate}
 
+\subsection{Using an Existing Sequence, Take 2}
+
+Assume everything as in the previous section. However, instead of
+computing the interpolants from~\eqref{eq:unsat_fmla_one}, consider
+the following equivalent sequence partitioning:
+\begin{equation}
+  \label{eq:unsat_fmla_two}
+  \bigwedge_{i=0}^{k}[F_i(V_i) \land \Tr(V_i,V_{i+1})] \land
+  \bigwedge_{i=k+1}^{n-1} \Tr(V_i,V_{i+1})\land\neg P(V_n)
+\end{equation}
+That is, $F_i$ is pushed to the $B$-part of each interpolant instead
+of the $A$-part. Let $\bar{I}^n = \langle I_i \rangle_{i=0}^n$ be an
+interpolation sequence w.r.t.~\eqref{eq:unsat_fmla_two}. Then, the
+following holds:
+\begin{align}
+  F_0 \land I_0 &= \Init\\
+  \forall i < k \cdot F_i(V_0) \land I_i(V_0) \land \Tr(V_0, V_1)
+  &\implies F_{i+1}(V_1) \land I_{i+1}(V_1)\\
+  F_n \land I_n &\implies P
+\end{align}
+where for all $i > k$, $F_i = true$. That is, the sequence $\bar{I}$
+is the strengthening of the sequence $\bar{F}$ sufficient to show that
+the new unrolling is unsatisfiable. If $\bar{F}$ and $\bar{I}$ are
+both in CNF, then $I_i$ is the set of clauses that are added to $F_i$
+to strengthen it. The sequence $\bar{I}$ can be put into CNF and made
+monotone relative to~\eqref{eq:unsat_fmla_two} as usual. For
+justification, the sequence $\bar{F}$ can be kept constant or
+not. This is left as a choice for now. Note that if $\bar{F}$ is
+constant, then the SAT solver's context is grown monotonically (more
+constraints are added) for each subsequent unrolling. Hence, all
+intermediate results (i.e., learned clauses) can be kept.
+
+
 \section{Justification}
 
 \end{document}
