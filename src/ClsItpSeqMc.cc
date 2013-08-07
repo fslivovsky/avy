@@ -17,6 +17,8 @@ bool ClsItpSeqMc::prove()
 
 	// Check the initial states first.
 
+	if (m_McUtil.setInit() == false)
+	    assert(false);
 	// Start the BMC loop
 	for (unsigned nFrame = 1; nFrame <= nMaxFrame; nFrame++)
 	{
@@ -48,10 +50,12 @@ bool ClsItpSeqMc::prove()
 
 ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame)
 {
+    cout << "Solving frame: " << nFrame << endl;
     m_McUtil.addTransitionsFromTo(nFrame-1, nFrame);
-    Cnf_Dat_t* pCnf = m_McUtil.createCNFRepresentation();
+    m_McUtil.setBad(nFrame);
+    /*Cnf_Dat_t* pCnf = m_McUtil.createCNFRepresentation();
     m_McUtil.updateSATSolverWithCNF(pCnf);
-    m_McUtil.destroyCnfRepresentation(pCnf);
+    m_McUtil.destroyCnfRepresentation(pCnf);*/
 
     eResult res = m_McUtil.solveSat();
 
