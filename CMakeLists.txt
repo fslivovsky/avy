@@ -12,6 +12,20 @@ set(CMAKE_MODULE_PATH
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
   )
 
+
+set (CUSTOM_BOOST_ROOT "" CACHE PATH "Path to custom boost installation.")
+if (CUSTOM_BOOST_ROOT)
+  set (BOOST_ROOT ${CUSTOM_BOOST_ROOT})
+  set (Boost_NO_SYSTEM_PATHS "ON")
+endif()
+
+set (Boost_USE_STATIC_LIBS ON)
+find_package (Boost 1.46.1 REQUIRED)
+IF (Boost_FOUND)
+  include_directories (${Boost_INCLUDE_DIRS})
+endif ()
+
+
 # check for rt lib. Not needed on OSX.
 find_library(RT_LIB NAMES rt)
 if (NOT RT_LIB)
