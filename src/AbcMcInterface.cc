@@ -20,9 +20,11 @@ using namespace abc;
 
 //extern int Cmd_CommandExecute(void *pAbc, char *sCommand);
 
-AbcMcInterface::AbcMcInterface(std::string strFileName) :
+AbcMcInterface::AbcMcInterface(string strFileName) :
     m_iFramePrev(0)
     , m_nLastFrame(0)
+    , m_ClausesByFrame(1)
+    , m_VarsByFrame(1)
 {
     std::cout << "Setting up ABC.\n";
     Abc_Start();
@@ -40,22 +42,22 @@ AbcMcInterface::AbcMcInterface(std::string strFileName) :
 
     std::cout << "\tSetup the SAT solver.\n";
     // create a SAT solver
-    m_pSat         = sat_solver_new();
-    //sat_solver_store_alloc( m_pSat ); STORE PROOF does not work. Sent Alan an email
+    m_pSat         = sat_solver2_new();
+    //sat_solver2_store_alloc( m_pSat ); STORE PROOF does not work. Sent Alan an email
     /*m_pSat->nLearntStart = 10000;
     m_pSat->nLearntDelta =  5000;
     m_pSat->nLearntRatio =    75;
     m_pSat->nLearntMax   = m_pSat->nLearntStart;*/
-    sat_solver_setnvars( m_pSat, 2000 );
+    sat_solver2_setnvars( m_pSat, 2000 );
 
     m_pOneTR = duplicateAigWithoutPOs(m_pAig);
     m_pOneTRCnf = Cnf_Derive(m_pOneTR, Aig_ManRegNum(m_pOneTR));
     createInitMan();
     createBadMan();
     m_pInitCnf = Cnf_Derive(m_pInit, 0);
-    Cnf_DataWriteIntoFile(m_pInitCnf, "init1.cnf", 0, NULL, NULL);
+    //Cnf_DataWriteIntoFile(m_pInitCnf, "init1.cnf", 0, NULL, NULL);
     m_pBadCnf = Cnf_Derive(m_pBad, Aig_ManCoNum(m_pBad));
-    Cnf_DataWriteIntoFile(m_pBadCnf, "bad.cnf", 0, NULL, NULL);
+    //Cnf_DataWriteIntoFile(m_pBadCnf, "bad.cnf", 0, NULL, NULL);
 
     std::cout << m_pInitCnf->nVars << " " << m_pOneTRCnf->nVars << " " << m_pBadCnf->nVars << "\n";
     std::cout << "Done setting up ABC.\n";
@@ -68,8 +70,14 @@ void AbcMcInterface::addTransitionsFromTo(int nFrom, int nTo)
     m_iFramePrev = m_nLastFrame;
     int nDelta = m_pInitCnf->nVars + (nFrom)*(m_pOneTRCnf->nVars + m_pBadCnf->nVars);
     Cnf_DataLift(m_pOneTRCnf, nDelta);
+
+    m_ClausesByFrame.resize(nTo+1);
+    m_VarsByFrame.resize(nTo+1);
+
     for ( ; m_nLastFrame < nTo; m_nLastFrame++)
     {
+        logCnfVars(m_pOneTR, m_pOneTRCnf);
+
         Aig_Obj_t *pObj;
         int i, Lits[2];
         if (nFrom == 0)
@@ -80,12 +88,11 @@ void AbcMcInterface::addTransitionsFromTo(int nFrom, int nTo)
 
                 Lits[0] = toLitCond(m_pInitCnf->pVarNums[pObj->Id], 0 );
                 Lits[1] = toLitCond(m_pOneTRCnf->pVarNums[pObj2->Id], 1 );
-                if ( !sat_solver_addclause(m_pSat, Lits, Lits+2 ) )
-                    assert(false);
+                addClauseToSat(Lits, Lits+2);
+
                 Lits[0] = toLitCond(m_pInitCnf->pVarNums[pObj->Id], 1 );
                 Lits[1] = toLitCond(m_pOneTRCnf->pVarNums[pObj2->Id], 0 );
-                if ( !sat_solver_addclause(m_pSat, Lits, Lits+2 ) )
-                    assert(false);
+                addClauseToSat(Lits, Lits+2);
             }
         }
         else
@@ -98,23 +105,11 @@ void AbcMcInterface::addTransitionsFromTo(int nFrom, int nTo)
 
                 Lits[0] = toLitCond(m_pOneTRCnf->pVarNums[pObj->Id], 0 );
                 Lits[1] = toLitCond(m_pOneTRCnf->pVarNums[pObj2->Id] - m_pOneTRCnf->nVars - m_pBadCnf->nVars, 1 );
-                if ( !sat_solver_addclause(m_pSat, Lits, Lits+2 ) )
-                {
-#if DEBUG
-                    sat_solver_store_write(m_pSat, "xxx.cnf");
-#endif
-                    assert(false);
-                }
+                addClauseToSat(Lits, Lits+2);
 
                 Lits[0] = toLitCond(m_pOneTRCnf->pVarNums[pObj->Id], 1 );
                 Lits[1] = toLitCond(m_pOneTRCnf->pVarNums[pObj2->Id] - m_pOneTRCnf->nVars - m_pBadCnf->nVars, 0 );
-                if ( !sat_solver_addclause(m_pSat, Lits, Lits+2 ) )
-                {
-#if DEBUG
-                    sat_solver_store_write(m_pSat, "xxx.cnf");
-#endif
-                    assert(false);
-                }
+                addClauseToSat(Lits, Lits+2);
             }
         }
 
@@ -124,7 +119,7 @@ void AbcMcInterface::addTransitionsFromTo(int nFrom, int nTo)
         Cnf_DataLift(m_pOneTRCnf, m_pOneTRCnf->nVars + m_pBadCnf->nVars);
     }
 #if DEBUG
-    sat_solver_store_write(m_pSat, "init_tr.cnf");
+    sat_solver2_store_write(m_pSat, "init_tr.cnf");
 #endif
     Cnf_DataLift(m_pOneTRCnf, -nDelta - (nTo-nFrom)*(m_pOneTRCnf->nVars + m_pBadCnf->nVars));
 }
@@ -133,7 +128,7 @@ bool AbcMcInterface::addCNFToSAT(Cnf_Dat_t *pCnf)
 {
     for (int i = 0; i < pCnf->nClauses; i++)
     {
-        if ( !sat_solver_addclause(m_pSat, pCnf->pClauses[i], pCnf->pClauses[i+1] ))
+        if ( addClauseToSat(pCnf->pClauses[i], pCnf->pClauses[i+1]) == false)
         {
             return false;
         }
@@ -144,7 +139,7 @@ bool AbcMcInterface::addCNFToSAT(Cnf_Dat_t *pCnf)
 eResult AbcMcInterface::solveSat()
 {
     Aig_Obj_t * pObj;
-    int i, k, VarNum, Lit, status, RetValue;
+    int i, k, VarNum, Lit, RetValue;
 
     /*if ( m_pSat->qtail != m_pSat->qhead )
     {
@@ -159,28 +154,33 @@ eResult AbcMcInterface::solveSat()
     std::ostringstream os;
     os << "yakir_" << m_nLastFrame << ".cnf";
     const char* name = os.str().c_str();
-    sat_solver_store_write(m_pSat, (char*)name);
+    sat_solver2_store_write(m_pSat, (char*)name);
 #endif
     VarNum = m_pBadCnf->pVarNums[pObj->Id] + (m_pInitCnf->nVars) + (m_nLastFrame - 1)*(m_pOneTRCnf->nVars + m_pBadCnf->nVars) + m_pOneTRCnf->nVars;
     Lit = toLitCond( VarNum, Aig_IsComplement(pObj) ) ;
-    RetValue = sat_solver_solve( m_pSat, &Lit, &Lit + 1, (ABC_INT64_T)10000000, (ABC_INT64_T)0, (ABC_INT64_T)0, (ABC_INT64_T)0 );
+    RetValue = sat_solver2_solve( m_pSat, &Lit, &Lit + 1, (ABC_INT64_T)10000000, (ABC_INT64_T)0, (ABC_INT64_T)0, (ABC_INT64_T)0 );
 
     if ( RetValue == l_False ) // unsat
     {
         // add final unit clause
         Lit = lit_neg( Lit );
-        status = sat_solver_addclause( m_pSat, &Lit, &Lit + 1 );
-        assert( status );
+        addClauseToSat(&Lit, &Lit + 1);
         // add learned units
-        for ( k = 0; k < veci_size(&m_pSat->unit_lits); k++ )
+        /*for ( k = 0; k < veci_size(&m_pSat->unit_lits); k++ )
         {
             Lit = veci_begin(&m_pSat->unit_lits)[k];
-            status = sat_solver_addclause( m_pSat, &Lit, &Lit + 1 );
+            status = sat_solver2_addclause( m_pSat, &Lit, &Lit + 1, 0 );
             assert( status );
         }
-        veci_resize(&m_pSat->unit_lits, 0);
+        veci_resize(&m_pSat->unit_lits, 0);*/
         // propagate units
-        sat_solver_compress( m_pSat );
+        if (m_pSat->qtail != m_pSat->qhead )
+        {
+            int RetValue = sat_solver2_simplify(m_pSat);
+            assert( RetValue != 0 );
+            //sat_solver2_compress( m_pSat );
+        }
+
         return FALSE;
     }
     if ( RetValue == l_Undef )
@@ -231,6 +231,53 @@ Aig_Man_t* AbcMcInterface::duplicateAigWithoutPOs(Aig_Man_t* p)
             continue;
         Aig_ObjCreateCo( pNew, Aig_Not( Aig_ObjChild0Copy(pObj) ) );
     }
+
+    Saig_ManForEachLi( p, pObj, i )
+        Aig_ObjCreateCo( pNew, Aig_ObjChild0Copy(pObj) );
+    Aig_ManCleanup( pNew );
+    return pNew;
+}
+
+Aig_Man_t* AbcMcInterface::duplicateAigWithNewPO(Aig_Man_t* p, Aig_Obj_t *pNewPO)
+{
+    // Only one property output.
+    assert(Saig_ManPoNum(p) - Saig_ManConstrNum(p) == 1);
+
+    assert( Aig_ManRegNum(p) > 0 );
+    // create the new manager
+    Aig_Man_t *pNew = Aig_ManStart( Aig_ManObjNumMax(p) );
+    pNew->pName = Abc_UtilStrsav( p->pName );
+    pNew->pSpec = Abc_UtilStrsav( p->pSpec );
+    // create the PIs
+    Aig_ManCleanData( p );
+    Aig_ManConst1(p)->pData = Aig_ManConst1(pNew);
+
+    int i;
+    Aig_Obj_t * pObj;
+    Aig_ManForEachCi( p, pObj, i )
+        pObj->pData = Aig_ObjCreateCi( pNew );
+
+    // set registers
+    pNew->nTruePis = p->nTruePis;
+    pNew->nTruePos = Saig_ManConstrNum(p) + 1;
+    pNew->nRegs    = p->nRegs;
+
+    // duplicate internal nodes
+    Aig_ManForEachNode( p, pObj, i )
+        pObj->pData = Aig_And( pNew, Aig_ObjChild0Copy(pObj), Aig_ObjChild1Copy(pObj) );
+
+    // create constraint outputs
+    Saig_ManForEachPo( p, pObj, i )
+    {
+        if ( i < Saig_ManPoNum(p)-Saig_ManConstrNum(p) )
+            continue;
+        Aig_ObjCreateCo( pNew, Aig_Not( Aig_ObjChild0Copy(pObj) ) );
+    }
+
+    // Create the new output
+    pObj = createCombSlice_rec(pNew, pNewPO); // Is this needed in this case?
+    assert(pObj == Aig_ObjChild0Copy(pNewPO));
+    Aig_ObjCreateCo(pNew, Aig_ObjChild0Copy(pNewPO));
 
     Saig_ManForEachLi( p, pObj, i )
         Aig_ObjCreateCo( pNew, Aig_ObjChild0Copy(pObj) );
@@ -309,8 +356,9 @@ void AbcMcInterface::createBadMan()
 
 bool AbcMcInterface::setInit()
 {
+    logCnfVars(m_pInit, m_pInitCnf);
     bool bRes = addCNFToSAT(m_pInitCnf);
-    sat_solver_store_write(m_pSat, "init.cnf");
+    //sat_solver2_store_write(m_pSat, "init.cnf");
     return bRes;
 }
 
@@ -324,6 +372,8 @@ bool AbcMcInterface::setBad(int nFrame)
     Cnf_DataLift(m_pBadCnf, nDelta + m_pOneTRCnf->nVars);
     Cnf_DataLift(m_pOneTRCnf, nDelta);
 
+    logCnfVars(m_pBad, m_pBadCnf);
+
     Aig_Obj_t* pObj;
     int i, Lits[2];
     Saig_ManForEachLi(m_pOneTR, pObj, i)
@@ -333,12 +383,11 @@ bool AbcMcInterface::setBad(int nFrame)
 
         Lits[0] = toLitCond(m_pOneTRCnf->pVarNums[pObj->Id], 0 );
         Lits[1] = toLitCond(m_pBadCnf->pVarNums[pObj2->Id], 1 );
-        if ( !sat_solver_addclause(m_pSat, Lits, Lits+2 ) )
-            assert(false);
+        addClauseToSat(Lits, Lits+2);
+
         Lits[0] = toLitCond(m_pOneTRCnf->pVarNums[pObj->Id], 1 );
         Lits[1] = toLitCond(m_pBadCnf->pVarNums[pObj2->Id], 0 );
-        if ( !sat_solver_addclause(m_pSat, Lits, Lits+2 ) )
-            assert(false);
+        addClauseToSat(Lits, Lits+2);
     }
 
     bool bRes = addCNFToSAT(m_pBadCnf);
@@ -365,6 +414,7 @@ Aig_Obj_t* AbcMcInterface::createCombSlice_rec(Aig_Man_t* pMan, Aig_Obj_t * pObj
     else if ( Aig_ObjIsCo( pObj ) )
     {
         // Can this happen for comb slice?!
+        assert(false);
     }
     else
     {
