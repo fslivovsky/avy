@@ -8,7 +8,19 @@
 #include "ClsItpSeqMc.h"
 #include <iostream>
 
+#include "aig/gia/giaAig.h"
+
 using namespace std;
+
+ClsItpSeqMc::ClsItpSeqMc(string strAigFileName) :
+      m_McUtil(strAigFileName)
+    , m_nLowestModifiedFrame(0)
+{
+    Pdr_Par_t pdrPars;
+    Pdr_ManSetDefaultParams(&pdrPars);
+
+    m_pGlobalPdr = Pdr_ManStart(m_McUtil.getCircuit(), &pdrPars, NULL);
+}
 
 bool ClsItpSeqMc::prove()
 {
@@ -143,7 +155,11 @@ void ClsItpSeqMc::transformInterpolantToCNF(
     Pdr_ManSetDefaultParams(&pdrPars);
 
     Aig_Obj_t* pInterpolant = Aig_ManCo(pMan, nFrame-1);
+    Aig_Obj_t* pPrev = getFrameAigObj(nFrame-1, pMan);
+    Aig_Obj_t* pDriver = Aig_Or(pMan, Aig_ObjChild0(pInterpolant), pPrev);
+    pInterpolant->pFanin0 = pDriver;
 
+    Aig_ManDump(pMan);
     // TODO: Check that there is a 1-1 correspondence between latches in the
     // original AIG and in the AIG with the new PO.
     // I don't see why there wouldn't be, but just to make sure.
@@ -153,6 +169,10 @@ void ClsItpSeqMc::transformInterpolantToCNF(
     // It should be as a Cube object is represented by RO numbers and these
     // should be the same between the two AIGs.
     Aig_Man_t *pNewMgr = m_McUtil.duplicateAigWithNewPO(pMan, pInterpolant);
+    Gia_Man_t* pGia = Gia_ManFromAigSimple(pNewMgr);
+    Aig_ManStop(pNewMgr);
+    pNewMgr = Gia_ManToAigSimple(pGia);
+    //Aig_ManDump(pNewMgr);
     Pdr_Man_t *pPdrTransform = Pdr_ManStart(pNewMgr , &pdrPars, NULL);
 
     // In case we are dealing with the first frame, we set up the PDR manager
@@ -161,6 +181,10 @@ void ClsItpSeqMc::transformInterpolantToCNF(
     // TODO: Should we use 2 and 3 or 1 and 2? Check in DEBUG mode.
     if (nFrame == 1)
     {
+        //pdrPars.fVerbose = 1;
+        //pdrPars.fMonoCnf = 1;
+        //int res = Pdr_ManSolve(pNewMgr, &pdrPars);
+
         // No other settings in this case.
         Pdr_CNFizationInt(pPdrTransform, m_pGlobalPdr, nFrame-1);
     }
@@ -179,4 +203,48 @@ void ClsItpSeqMc::justifyClauses(unsigned nFrame, const set<Clause>& cnfInterpol
 bool ClsItpSeqMc::globalPush()
 {
     return false;
+}
+
+Aig_Obj_t* ClsItpSeqMc::getFrameAigObj(int nFrame, Aig_Man_t* pMan)
+{
+    Aig_Man_t* pAig = m_pGlobalPdr->pAig;
+    Aig_Obj_t* pRes = Aig_ManConst1(pMan);
+    if (nFrame == 0)
+    {
+        int nRegs = Aig_ManRegNum(pAig);
+        assert(nRegs > 0 );
+        Aig_Obj_t ** ppInputs = ABC_ALLOC( Aig_Obj_t *, nRegs );
+
+        for ( int i = 0; i < nRegs; i++ )
+            ppInputs[i] = Aig_Not( Aig_ManCi(pMan, i) );
+        Aig_Obj_t *pRes = Aig_Multi( pMan, ppInputs, nRegs, AIG_OBJ_AND );
+        ABC_FREE( ppInputs );
+        return pRes;
+    }
+
+    Vec_Ptr_t* vVec;
+    int i;
+    Vec_VecForEachLevelStart( m_pGlobalPdr->vClauses, vVec, i, nFrame-1)
+    {
+        Pdr_Set_t* pCube;
+        int j;
+        Vec_PtrForEachEntry( Pdr_Set_t *, vVec, pCube, j )
+        {
+            Aig_Obj_t* pObj;
+            Aig_Obj_t* pClause = Aig_ManConst0(pMan);
+            for ( int nLitIdx = 0; nLitIdx < pCube->nLits; nLitIdx++ )
+            {
+                if ( pCube->Lits[nLitIdx] == -1 )
+                    continue;
+
+                pObj = Aig_ManCi(pMan, lit_var(pCube->Lits[nLitIdx]));
+                pObj = Aig_NotCond(pObj, !lit_sign(pCube->Lits[i]));
+                pClause = Aig_Or(pMan, pClause, pObj);
+            }
+
+            pRes = Aig_And(pMan, pRes, pClause);
+        }
+    }
+
+    return pRes;
 }

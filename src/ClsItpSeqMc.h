@@ -45,12 +45,7 @@ public:
     };
 
 public:
-	ClsItpSeqMc(string strAigFileName) :
-	      m_McUtil(strAigFileName)
-        , m_nLowestModifiedFrame(0)
-    {
-
-    }
+	ClsItpSeqMc(string strAigFileName);
 
 	~ClsItpSeqMc()
 	{
@@ -109,6 +104,8 @@ private:
 
 
 	bool testInterpolationSeq(Aig_Man_t* pInterSeq, int nFrame);
+
+	Aig_Obj_t* getFrameAigObj(int nFrame, Aig_Man_t* pMan);
 
 
 private:

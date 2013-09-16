@@ -52,6 +52,8 @@ public:
 		Abc_Stop();
 	}
 
+	Aig_Man_t* getCircuit() { return m_pAig; }
+
 	// Updates pUnrolledTR to an AIG representing an unrolling of the TR from
 	// phase nFrom to phase nTo. It should be possible to create the
 	// unrolling in an incremental fashion.
