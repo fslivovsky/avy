@@ -145,9 +145,9 @@ void ClsItpSeqMc::transformInterpolantToCNF(
   dummyName (pMan);  
   Aig_Obj_t* pInterpolant = Aig_ManCo(pMan, nFrame-1);
 
-  std::cout << "Interpolant for frame: " << nFrame << "\n";
-  dumpAig (pMan, Aig_ObjChild0(pInterpolant));
-  std::cout << "\n\n";
+  // std::cout << "Interpolant for frame: " << nFrame << "\n";
+  // dumpAig (pMan, Aig_ObjChild0(pInterpolant));
+  // std::cout << "\n\n";
 
   Aig_Obj_t* pPrev;
 
@@ -156,17 +156,17 @@ void ClsItpSeqMc::transformInterpolantToCNF(
   else
     pPrev = m_GlobalPdr.getCover (nFrame - 1, pMan);
 
-  std::cout << "Cover for frame: " << nFrame-1 << "\n";
-  dummyName (pMan);
-  dumpAig (pMan, pPrev);
-  std::cout << "\n\n";
+  // std::cout << "Cover for frame: " << nFrame-1 << "\n";
+  // dummyName (pMan);
+  // dumpAig (pMan, pPrev);
+  // std::cout << "\n\n";
 
   Aig_Obj_t* pDriver = Aig_Or(pMan, Aig_ObjChild0(pInterpolant), pPrev);
   pInterpolant->pFanin0 = pDriver;
 
-  std::cout << "Property: \n";
-  dumpAig (pMan, pDriver);
-  std::cout << "\n\n";
+  // std::cout << "Property: \n";
+  // dumpAig (pMan, pDriver);
+  // std::cout << "\n\n";
   
 
   Aig_Man_t *pNewMgr = m_McUtil.duplicateAigWithNewPO(pMan, pInterpolant);

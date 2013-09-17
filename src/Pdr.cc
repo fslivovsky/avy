@@ -21,8 +21,8 @@ namespace avy
     p->fMonoCnf = 1;
     m_pPdr = Pdr_ManStart (m_pAig, p, NULL);
 
-    setVerbose (true);
-    setSilent (false);
+    setVerbose (false);
+    setSilent (true);
   }
 
   Pdr::~Pdr ()
@@ -193,9 +193,6 @@ namespace avy
               }
             while ( 1 )
               {
-                std::cout << "In blocking phase of iteration " << k << "\n";
-                std::cout.flush ();
-
                 RetValue = Pdr_ManCheckCube( p, k, NULL, &pCube, p->pPars->nConfLimit );
                 if ( RetValue == 1 )
                   break;
@@ -298,6 +295,7 @@ namespace avy
             return -1;
           }
       }
+    assert (0);
     return -1;
   }    
 
