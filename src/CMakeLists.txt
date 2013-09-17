@@ -1,4 +1,5 @@
-add_library (ClauseItpSeq STATIC AbcMcInterface.cc ClsItpSeqMc.cc)
+add_library (ClauseItpSeq STATIC 
+  AbcMcInterface.cc ClsItpSeqMc.cc AbcUtils.cpp Pdr.cc)
 add_executable (main main.cc)
 target_link_libraries (main 
   ClauseItpSeq 
