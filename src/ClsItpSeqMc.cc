@@ -159,7 +159,6 @@ void ClsItpSeqMc::transformInterpolantToCNF(
     Aig_Obj_t* pDriver = Aig_Or(pMan, Aig_ObjChild0(pInterpolant), pPrev);
     pInterpolant->pFanin0 = pDriver;
 
-    Aig_ManDump(pMan);
     // TODO: Check that there is a 1-1 correspondence between latches in the
     // original AIG and in the AIG with the new PO.
     // I don't see why there wouldn't be, but just to make sure.
@@ -193,6 +192,9 @@ void ClsItpSeqMc::transformInterpolantToCNF(
         Pdr_CNFizationInt(pPdrTransform, m_pGlobalPdr, nFrame-1);
     }
 
+    Vec_Ptr_t* pCubes = Vec_PtrAlloc(10);
+    m_McUtil.getCubesFromPdrFrame(pPdrTransform, (nFrame == 1) ? 1: 2, pCubes);
+    m_McUtil.addCubesToPdrFrame(m_pGlobalPdr, pCubes, nFrame);
 }
 
 void ClsItpSeqMc::justifyClauses(unsigned nFrame, const set<Clause>& cnfInterpolant)
@@ -224,7 +226,7 @@ Aig_Obj_t* ClsItpSeqMc::getFrameAigObj(int nFrame, Aig_Man_t* pMan)
 
     Vec_Ptr_t* vVec;
     int i;
-    Vec_VecForEachLevelStart( m_pGlobalPdr->vClauses, vVec, i, nFrame-1)
+    Vec_VecForEachLevelStart( m_pGlobalPdr->vClauses, vVec, i, nFrame)
     {
         Pdr_Set_t* pCube;
         int j;

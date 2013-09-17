@@ -13,9 +13,6 @@
 
 #include "AbcMcInterface.h"
 
-#include "proof/pdr/pdr.h"
-#include "proof/pdr/pdrInt.h"
-
 using namespace std;
 
 // Fooling the compiler for now
