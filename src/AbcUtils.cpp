@@ -26,6 +26,7 @@ namespace avy
 
   void dumpAig (Aig_Man_t *pMan, Aig_Obj_t *pObj)
   {
+    std::cout.flush ();
     assert (!Aig_ObjIsCo (pObj));
 
     Vec_Vec_t *v;
