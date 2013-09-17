@@ -16,13 +16,23 @@ namespace avy
   
   Pdr::Pdr (Aig_Man_t *pAig) : m_pAig (pAig)
   {
-    Pdr_Par_t p;
-    Pdr_ManSetDefaultParams (&p);
-    p.fMonoCnf = 1;
-    m_pPdr = Pdr_ManStart (m_pAig, &p, NULL);
+    Pdr_Par_t *p = ABC_ALLOC (Pdr_Par_t, 1);
+    Pdr_ManSetDefaultParams (p);
+    p->fMonoCnf = 1;
+    m_pPdr = Pdr_ManStart (m_pAig, p, NULL);
 
     setVerbose (true);
     setSilent (false);
+  }
+
+  Pdr::~Pdr ()
+  {
+    std::cout.flush ();
+    std::cerr.flush ();
+    
+    Pdr_Par_t *p = m_pPdr->pPars;
+    Pdr_ManStop (m_pPdr);
+    ABC_FREE (p);
   }
 
   void Pdr::ensureFrames (unsigned lvl)
@@ -52,7 +62,7 @@ namespace avy
           }
         
         
-        Vec_VecPush (m_pPdr->vClauses, level, pCube);
+        Vec_VecPush (m_pPdr->vClauses, level, Pdr_SetDup (pCube));
         m_pPdr->nCubes++;
         
         for (int i = 1; i <= level; ++i)
@@ -146,7 +156,7 @@ namespace avy
     int nOutDigits = Abc_Base10Log( Saig_ManPoNum(p->pAig) );
     abctime clkStart = Abc_Clock(), clkOne = 0;
     p->timeToStop = p->pPars->nTimeOut ? p->pPars->nTimeOut * CLOCKS_PER_SEC + Abc_Clock(): 0;
-    assert( Vec_PtrSize(p->vSolvers) == 0 );
+    //assert( Vec_PtrSize(p->vSolvers) == 0 );
     // create the first timeframe
     p->pPars->timeLastSolved = Abc_Clock();
     ensureFrames (k = 0);
@@ -155,8 +165,11 @@ namespace avy
 
     while ( 1 )
       {
+        std::cout << "At loop iteration " << k << "\n";
+        std::cout.flush ();
+        
         p->nFrames = k;
-        assert( k == Vec_PtrSize(p->vSolvers)-1 );
+        //assert( k == Vec_PtrSize(p->vSolvers)-1 );
         p->iUseFrame = ABC_INFINITY;
         Saig_ManForEachPo( p->pAig, pObj, p->iOutCur )
           {
@@ -180,6 +193,9 @@ namespace avy
               }
             while ( 1 )
               {
+                std::cout << "In blocking phase of iteration " << k << "\n";
+                std::cout.flush ();
+
                 RetValue = Pdr_ManCheckCube( p, k, NULL, &pCube, p->pPars->nConfLimit );
                 if ( RetValue == 1 )
                   break;
@@ -284,5 +300,24 @@ namespace avy
       }
     return -1;
   }    
+
+
+  Aig_Obj_t *Pdr::getInit (Aig_Man_t *pAig)
+  {
+    if (!pAig) pAig = m_pAig;
+
+    Aig_Obj_t *pRes;
+    
+    int nRegs = Aig_ManRegNum (m_pAig);
+    assert (nRegs > 0);
+    Aig_Obj_t **ppIntputs = ABC_ALLOC (Aig_Obj_t*, nRegs);
+    for (int i = 0; i < nRegs; ++i)
+      ppIntputs [i] = Aig_Not (Aig_ManCi (pAig, i));
+    pRes = Aig_Multi (pAig, ppIntputs, nRegs, AIG_OBJ_AND);
+    
+    ABC_FREE (ppIntputs);
+    return pRes;
+  }
+  
   
 }

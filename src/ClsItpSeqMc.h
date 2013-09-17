@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "AbcMcInterface.h"
+#include "Pdr.h"
 
 using namespace std;
 
@@ -102,8 +103,6 @@ private:
 
 	bool testInterpolationSeq(Aig_Man_t* pInterSeq, int nFrame);
 
-	Aig_Obj_t* getFrameAigObj(int nFrame, Aig_Man_t* pMan);
-
 
 private:
 	// Using our own MC interface to ABC.
@@ -115,7 +114,7 @@ private:
 	// 1. Store clauses of the different time-frames.
 	// 2. Push clauses forward.
 	// 3. Check for a fixpoint.
-	Pdr_Man_t *m_pGlobalPdr;
+        avy::Pdr m_GlobalPdr;
 
 	// Given the above manager, those are not needed.
 	/*

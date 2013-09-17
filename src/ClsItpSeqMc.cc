@@ -9,18 +9,13 @@
 #include <iostream>
 
 #include "aig/gia/giaAig.h"
+#include "AbcUtils.h"
 
 using namespace std;
 
 ClsItpSeqMc::ClsItpSeqMc(string strAigFileName) :
-      m_McUtil(strAigFileName)
-    , m_nLowestModifiedFrame(0)
-{
-    Pdr_Par_t pdrPars;
-    Pdr_ManSetDefaultParams(&pdrPars);
-
-    m_pGlobalPdr = Pdr_ManStart(m_McUtil.getCircuit(), &pdrPars, NULL);
-}
+  m_McUtil(strAigFileName) , m_nLowestModifiedFrame(0), 
+  m_GlobalPdr (m_McUtil.getCircuit ()) { }
 
 bool ClsItpSeqMc::prove()
 {
@@ -141,61 +136,121 @@ void ClsItpSeqMc::extractInterpolationSeq()
 	// Now justify the clauses.
     //justifyClauses(i, cnfInterpolant);
 }
-
 void ClsItpSeqMc::transformInterpolantToCNF(
     unsigned nFrame,
     Aig_Man_t* pMan)
 {
-    // TODO: Decide how to do it.
-    // Points to take into account:
-    // 1. Do we try and push clauses from previous frame into this frame
-    //    before the transformation? Can it help the transformation?
+  using namespace avy;
 
-    Pdr_Par_t pdrPars;
-    Pdr_ManSetDefaultParams(&pdrPars);
+  dummyName (pMan);  
+  Aig_Obj_t* pInterpolant = Aig_ManCo(pMan, nFrame-1);
 
-    Aig_Obj_t* pInterpolant = Aig_ManCo(pMan, nFrame-1);
-    Aig_Obj_t* pPrev = getFrameAigObj(nFrame-1, pMan);
-    Aig_Obj_t* pDriver = Aig_Or(pMan, Aig_ObjChild0(pInterpolant), pPrev);
-    pInterpolant->pFanin0 = pDriver;
+  std::cout << "Interpolant for frame: " << nFrame << "\n";
+  dumpAig (pMan, Aig_ObjChild0(pInterpolant));
+  std::cout << "\n\n";
 
-    // TODO: Check that there is a 1-1 correspondence between latches in the
-    // original AIG and in the AIG with the new PO.
-    // I don't see why there wouldn't be, but just to make sure.
-    // This is due to the fact that we simply use the Cube objects between
-    // Global PDR object and the ones used for CNFization. It should be
-    // verified that a cube in GlobalPDR is the same in a new PDR instance.
-    // It should be as a Cube object is represented by RO numbers and these
-    // should be the same between the two AIGs.
-    Aig_Man_t *pNewMgr = m_McUtil.duplicateAigWithNewPO(pMan, pInterpolant);
-    Gia_Man_t* pGia = Gia_ManFromAigSimple(pNewMgr);
-    Aig_ManStop(pNewMgr);
-    pNewMgr = Gia_ManToAigSimple(pGia);
-    //Aig_ManDump(pNewMgr);
-    Pdr_Man_t *pPdrTransform = Pdr_ManStart(pNewMgr , &pdrPars, NULL);
+  Aig_Obj_t* pPrev;
 
-    // In case we are dealing with the first frame, we set up the PDR manager
-    // differently.
-    // We only want one time frame in the first case, and two in the second.
-    // TODO: Should we use 2 and 3 or 1 and 2? Check in DEBUG mode.
-    if (nFrame == 1)
+  if (nFrame == 1)
+    pPrev = m_GlobalPdr.getInit (pMan);
+  else
+    pPrev = m_GlobalPdr.getCover (nFrame - 1, pMan);
+
+  std::cout << "Cover for frame: " << nFrame-1 << "\n";
+  dummyName (pMan);
+  dumpAig (pMan, pPrev);
+  std::cout << "\n\n";
+
+  Aig_Obj_t* pDriver = Aig_Or(pMan, Aig_ObjChild0(pInterpolant), pPrev);
+  pInterpolant->pFanin0 = pDriver;
+
+  std::cout << "Property: \n";
+  dumpAig (pMan, pDriver);
+  std::cout << "\n\n";
+  
+
+  Aig_Man_t *pNewMgr = m_McUtil.duplicateAigWithNewPO(pMan, pInterpolant);
+  Gia_Man_t* pGia = Gia_ManFromAigSimple(pNewMgr);
+  Aig_ManStop(pNewMgr);
+  pNewMgr = Gia_ManToAigSimple(pGia);
+
+  dummyName (pNewMgr);
+  
+  Pdr pdr (pNewMgr);
+  Vec_Ptr_t *pCubes = NULL;
+  pdr.setLimit (nFrame == 1 ? 2 : 3);
+  if (nFrame >= 2)
     {
-        //pdrPars.fVerbose = 1;
-        //pdrPars.fMonoCnf = 1;
-        //int res = Pdr_ManSolve(pNewMgr, &pdrPars);
-
-        // No other settings in this case.
-        Pdr_CNFizationInt(pPdrTransform, m_pGlobalPdr, nFrame-1);
+      pCubes = Vec_PtrAlloc (10);
+      m_GlobalPdr.getCoverCubes (nFrame - 1, pCubes);
+      pdr.addCoverCubes (1, pCubes);
+      Vec_PtrFree (pCubes);
+      pCubes = NULL;
     }
-    else
-    {
-        Pdr_CNFizationInt(pPdrTransform, m_pGlobalPdr, nFrame-1);
-    }
+  pdr.solve ();
 
-    Vec_Ptr_t* pCubes = Vec_PtrAlloc(10);
-    m_McUtil.getCubesFromPdrFrame(pPdrTransform, (nFrame == 1) ? 1: 2, pCubes);
-    m_McUtil.addCubesToPdrFrame(m_pGlobalPdr, pCubes, nFrame);
+    
+  pCubes = Vec_PtrAlloc (10);
+  pdr.getCoverCubes (nFrame == 1 ? 1 : 2, pCubes);
+  m_GlobalPdr.addCoverCubes (nFrame, pCubes);
+  Vec_PtrFree (pCubes);
+  pCubes = NULL;
 }
+
+// void ClsItpSeqMc::transformInterpolantToCNF(
+//     unsigned nFrame,
+//     Aig_Man_t* pMan)
+// {
+//     // TODO: Decide how to do it.
+//     // Points to take into account:
+//     // 1. Do we try and push clauses from previous frame into this frame
+//     //    before the transformation? Can it help the transformation?
+
+//     Pdr_Par_t pdrPars;
+//     Pdr_ManSetDefaultParams(&pdrPars);
+
+//     Aig_Obj_t* pInterpolant = Aig_ManCo(pMan, nFrame-1);
+//     Aig_Obj_t* pPrev = getFrameAigObj(nFrame-1, pMan);
+//     Aig_Obj_t* pDriver = Aig_Or(pMan, Aig_ObjChild0(pInterpolant), pPrev);
+//     pInterpolant->pFanin0 = pDriver;
+
+//     // TODO: Check that there is a 1-1 correspondence between latches in the
+//     // original AIG and in the AIG with the new PO.
+//     // I don't see why there wouldn't be, but just to make sure.
+//     // This is due to the fact that we simply use the Cube objects between
+//     // Global PDR object and the ones used for CNFization. It should be
+//     // verified that a cube in GlobalPDR is the same in a new PDR instance.
+//     // It should be as a Cube object is represented by RO numbers and these
+//     // should be the same between the two AIGs.
+//     Aig_Man_t *pNewMgr = m_McUtil.duplicateAigWithNewPO(pMan, pInterpolant);
+//     Gia_Man_t* pGia = Gia_ManFromAigSimple(pNewMgr);
+//     Aig_ManStop(pNewMgr);
+//     pNewMgr = Gia_ManToAigSimple(pGia);
+//     //Aig_ManDump(pNewMgr);
+//     Pdr_Man_t *pPdrTransform = Pdr_ManStart(pNewMgr , &pdrPars, NULL);
+
+//     // In case we are dealing with the first frame, we set up the PDR manager
+//     // differently.
+//     // We only want one time frame in the first case, and two in the second.
+//     // TODO: Should we use 2 and 3 or 1 and 2? Check in DEBUG mode.
+//     if (nFrame == 1)
+//     {
+//         //pdrPars.fVerbose = 1;
+//         //pdrPars.fMonoCnf = 1;
+//         //int res = Pdr_ManSolve(pNewMgr, &pdrPars);
+
+//         // No other settings in this case.
+//         Pdr_CNFizationInt(pPdrTransform, m_pGlobalPdr, nFrame-1);
+//     }
+//     else
+//     {
+//         Pdr_CNFizationInt(pPdrTransform, m_pGlobalPdr, nFrame-1);
+//     }
+
+//     Vec_Ptr_t* pCubes = Vec_PtrAlloc(10);
+//     m_McUtil.getCubesFromPdrFrame(pPdrTransform, (nFrame == 1) ? 1: 2, pCubes);
+//     m_McUtil.addCubesToPdrFrame(m_pGlobalPdr, pCubes, nFrame);
+// }
 
 void ClsItpSeqMc::justifyClauses(unsigned nFrame, const set<Clause>& cnfInterpolant)
 {
@@ -205,48 +260,4 @@ void ClsItpSeqMc::justifyClauses(unsigned nFrame, const set<Clause>& cnfInterpol
 bool ClsItpSeqMc::globalPush()
 {
     return false;
-}
-
-Aig_Obj_t* ClsItpSeqMc::getFrameAigObj(int nFrame, Aig_Man_t* pMan)
-{
-    Aig_Man_t* pAig = m_pGlobalPdr->pAig;
-    Aig_Obj_t* pRes = Aig_ManConst1(pMan);
-    if (nFrame == 0)
-    {
-        int nRegs = Aig_ManRegNum(pAig);
-        assert(nRegs > 0 );
-        Aig_Obj_t ** ppInputs = ABC_ALLOC( Aig_Obj_t *, nRegs );
-
-        for ( int i = 0; i < nRegs; i++ )
-            ppInputs[i] = Aig_Not( Aig_ManCi(pMan, i) );
-        Aig_Obj_t *pRes = Aig_Multi( pMan, ppInputs, nRegs, AIG_OBJ_AND );
-        ABC_FREE( ppInputs );
-        return pRes;
-    }
-
-    Vec_Ptr_t* vVec;
-    int i;
-    Vec_VecForEachLevelStart( m_pGlobalPdr->vClauses, vVec, i, nFrame)
-    {
-        Pdr_Set_t* pCube;
-        int j;
-        Vec_PtrForEachEntry( Pdr_Set_t *, vVec, pCube, j )
-        {
-            Aig_Obj_t* pObj;
-            Aig_Obj_t* pClause = Aig_ManConst0(pMan);
-            for ( int nLitIdx = 0; nLitIdx < pCube->nLits; nLitIdx++ )
-            {
-                if ( pCube->Lits[nLitIdx] == -1 )
-                    continue;
-
-                pObj = Aig_ManCi(pMan, lit_var(pCube->Lits[nLitIdx]));
-                pObj = Aig_NotCond(pObj, !lit_sign(pCube->Lits[i]));
-                pClause = Aig_Or(pMan, pClause, pObj);
-            }
-
-            pRes = Aig_And(pMan, pRes, pClause);
-        }
-    }
-
-    return pRes;
 }
