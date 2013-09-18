@@ -105,7 +105,8 @@ bool ClsItpSeqMc::testInterpolationSeq(Aig_Man_t* pInterSeq, int nFrame)
 
     m_McUtil.addTransitionsFromTo(0, 1);
 
-    m_McUtil.setBad(1, false);
+    if (m_McUtil.setBad(1, false) == false)
+        return true;
 
     eResult res = m_McUtil.solveSat();
 
@@ -127,6 +128,7 @@ void ClsItpSeqMc::extractInterpolationSeq()
 	{
 	    // Test the validity of the interpolation-seq
 	    // by checking I_{i-1} & TR => I_i'
+	    std::cout << "Checking " << i << endl;
 	    bool r = testInterpolationSeq(pMan, i-1);
 	    assert(r);
 	    Aig_Man_t* pDup = Aig_ManDupSimple(pMan);
@@ -135,6 +137,7 @@ void ClsItpSeqMc::extractInterpolationSeq()
 	    Aig_ManStop(pDup);
 	}
 
+	Aig_ManStop(pMan);
 	// Now justify the clauses.
     //justifyClauses(i, cnfInterpolant);
 }

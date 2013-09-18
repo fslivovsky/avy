@@ -19,6 +19,7 @@
 #include <vector>
 #include <set>
 #include <iostream>
+#include <sstream>
 
 using namespace abc;
 using namespace std;
@@ -181,7 +182,6 @@ private:
 	bool addClauseToSat(lit* begin, lit* end)
 	{
 	    int Cid = sat_solver_addclause(m_pSat, begin, end);
-	    assert (Cid);
 
 	    //clause2_set_partA(m_pSat, Cid, m_nLastFrame);
 	    //m_ClausesByFrame[m_nLastFrame].insert(Cid);

@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <assert.h>
 #include <iostream>
-#include <sstream>
 
 #include "AbcMcInterface.h"
 #include "base/main/main.h"
@@ -262,7 +261,8 @@ eResult AbcMcInterface::solveSat()
     //sat_solver_bookmark(m_pSat);
     VarNum = m_pBadCnf->pVarNums[pObj->Id] + (m_pInitCnf->nVars) + (m_nLastFrame - 1)*(m_pOneTRCnf->nVars + m_pBadCnf->nVars) + m_pOneTRCnf->nVars;
     Lit = toLitCond( VarNum, Aig_IsComplement(pObj) ) ;
-    addClauseToSat(&Lit, &Lit +1);
+    if (addClauseToSat(&Lit, &Lit +1) == false)
+        return FALSE;
     markPartition(m_nLastFrame);
     sat_solver_store_mark_roots( m_pSat );
     //RetValue = sat_solver_solve( m_pSat, &Lit, &Lit + 1, (ABC_INT64_T)10000000, (ABC_INT64_T)0, (ABC_INT64_T)0, (ABC_INT64_T)0 );
