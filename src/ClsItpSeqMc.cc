@@ -162,6 +162,9 @@ void ClsItpSeqMc::extractInterpolationSeq()
 	    // Get the interpolant as a set of clauses.
 	    transformInterpolantToCNF(i, pMan);
 	    //Aig_ManStop(pDup);
+
+            if (m_GlobalPdr.push ()) cerr << "SAFE\n";
+            m_GlobalPdr.statusLn (cerr);
 	}
 
 	Aig_ManStop(pMan);
@@ -241,6 +244,10 @@ void ClsItpSeqMc::transformInterpolantToCNF(
       pCubes = Vec_PtrAlloc (10);
       m_GlobalPdr.getCoverCubes (nFrame - 1, pCubes);
       pdr.addCoverCubes (1, pCubes);
+
+      Vec_PtrClear (pCubes);
+      m_GlobalPdr.getCoverCubes (nFrame, pCubes);
+      pdr.addCoverCubes (2, pCubes);
       Vec_PtrFree (pCubes);
       pCubes = NULL;
     }

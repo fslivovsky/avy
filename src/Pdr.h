@@ -66,6 +66,8 @@ namespace avy
     Aig_Obj_t *getCoverDelta (unsigned level, Aig_Man_t *pAig=0);
 
     unsigned maxFrames () { return Vec_PtrSize (m_pPdr->vSolvers); }
+
+    void statusLn (std::ostream &out);
     
     /**
      * based on abc::Pdr_ManSolveInt

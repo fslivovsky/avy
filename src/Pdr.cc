@@ -53,14 +53,25 @@ namespace avy
       {
         out << "F" << i << ": ";
         Vec_PtrClear (pCubes);
-        if (m_pPdr->pPars->fVerbose) getCoverDeltaCubes (i, pCubes);
+        getCoverDeltaCubes (i, pCubes);
         out << "size: " << Vec_PtrSize (pCubes) << "\n";
-        PrintPdrSets (out, *pCubes);
+        if (m_pPdr->pPars->fVerbose) PrintPdrSets (out, *pCubes);
       }
     Vec_PtrFree (pCubes);
     
     out << "PDR END\n";
   }
+
+  void Pdr::statusLn (std::ostream &out)
+  {
+    out << maxFrames () << ": ";
+    Vec_Ptr_t *vVec;
+    int i;
+    Vec_VecForEachLevel (m_pPdr->vClauses, vVec, i)
+      out << Vec_PtrSize (vVec) << " ";
+    out << "\n";
+  }
+
   
   void Pdr::addCoverCubes (unsigned level, Vec_Ptr_t *pCubes)
   {
@@ -69,12 +80,11 @@ namespace avy
     int j;
     Pdr_Set_t *pCube;
 
-    LOG("pdr",
-        std::cerr << "Adding cubes to level: " << level << "\n";);
+    LOG("pdr_verbose", std::cerr << "Adding cubes to level: " << level << "\n";);
 
     Vec_PtrForEachEntry (Pdr_Set_t*, pCubes, pCube, j)
       {
-        LOG("pdr",
+        LOG("pdr_verbose",
             std::cerr << j << ": " << *pCube << "\n";);
         
         Vec_VecPush (m_pPdr->vClauses, level, Pdr_SetDup (pCube));
@@ -342,7 +352,7 @@ namespace avy
     int Counter = 0;
     abctime clk = Abc_Clock();
     //assert( p->iUseFrame > 0 );
-    LOG("pdr", std::cerr << __FILE__ << ":" << __LINE__ << "\n");
+    LOG("pdr_verbose", std::cerr << __FILE__ << ":" << __LINE__ << "\n");
     
     Vec_VecForEachLevelStartStop( p->vClauses, vArrayK, k, 1, kMax )
     {
@@ -597,7 +607,7 @@ namespace avy
 
     while ( 1 )
       {
-        LOG("pdr",
+        LOG("pdr_verbose",
             std::cout << "At loop iteration " << k << "\n";
             std::cout.flush (););
         
