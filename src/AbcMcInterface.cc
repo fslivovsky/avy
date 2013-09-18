@@ -102,7 +102,8 @@ AbcMcInterface::AbcMcInterface(string strFileName) :
     // AIG.
     std::cout << "\tRe-Encoding the circuit and dumping to __tmp.aig.\n";
     pTmpCircuit = reEncode(pTmpCircuit);
-    Ioa_WriteAiger(pTmpCircuit, "__tmp.aig",1,0);
+    char sfx[] = "__tmp.aig";
+    Ioa_WriteAiger(pTmpCircuit, sfx,1,0);
     std::cout << "\tDestroying ABC and restarting...\n";
     Abc_Stop();
 
