@@ -161,17 +161,14 @@ void ClsItpSeqMc::transformInterpolantToCNF(
   LOG("cnf",
       std::cout << "Cover for frame: " << nFrame-1 << "\n";
       dummyName (pMan);
-      dumpAig (pMan, pPrev);
-      std::cout << "\n\n";);
+      std::cout << *pPrev  << "\n\n";);
   
 
   Aig_Obj_t* pDriver = Aig_Or(pMan, Aig_ObjChild0(pInterpolant), pPrev);
   pInterpolant->pFanin0 = pDriver;
 
   LOG("cnf",
-      std::cout << "Property: \n";
-      dumpAig (pMan, pDriver);
-      std::cout << "\n\n";);
+      std::cout << "Property: \n" << *pDriver << "\n\n";);
   
 
   Aig_Man_t *pNewMgr = m_McUtil.duplicateAigWithNewPO(pMan, pInterpolant);
