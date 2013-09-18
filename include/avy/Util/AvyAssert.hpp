@@ -17,13 +17,13 @@
 #else
 
 #define AVY_VERIFY(a) AVY_ASSERT(a)
-
 #endif 
 
 
 #ifndef AVY_ASSERT_H_
 #define AVY_ASSERT_H_
 
+#define AVY_UNREACHABLE() ::avy::assertion_failed("UNREACHABLE!", __FILE__, __LINE__)
 #include <cstdlib>
 #include <iostream>
 
