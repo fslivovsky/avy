@@ -81,7 +81,7 @@ AbcMcInterface::AbcMcInterface(string strFileName) :
     , m_iFramePrev(0)
     , m_nLastFrame(0)
     , m_ClausesByFrame(1)
-    , m_VarsByFrame(1)
+      , m_VarsByFrame(1), m_pBadStore (NULL), m_pInitStore(NULL)
 {
     std::cout << "Setting up ABC.\n";
     Abc_Start();
@@ -630,7 +630,7 @@ bool AbcMcInterface::setBad(int nFrame, bool bHasPIs)
 
 Aig_Obj_t* AbcMcInterface::createCombSlice_rec(Aig_Man_t* pOrig, Aig_Man_t* pMan, Aig_Obj_t * pObj)
 {
-    Aig_Obj_t * pRes = (Aig_Obj_t*)(pObj->pData);
+  Aig_Obj_t * pRes = (Aig_Obj_t*)(Aig_Regular (pObj)->pData);
     if ( pRes != NULL )
         return pRes;
 
