@@ -10,13 +10,27 @@
 
 namespace avy
 {
-  std::ostream &PrintAig (std::ostream &out, abc::Aig_Obj_t &obj);
+  std::ostream &PrintAig (std::ostream &out, abc::Aig_Obj_t *obj);
+  std::ostream &PrintAigMan (std::ostream &out, abc::Aig_Man_t *man);
+  
   std::ostream &PrintPdrSet (std::ostream &out, abc::Pdr_Set_t *pCube);
   std::ostream &PrintPdrSets (std::ostream &out, abc::Vec_Ptr_t &cubes);
+
+  inline std::ostream &operator<< (std::ostream &out, abc::Aig_Obj_t *pObj)
+  {
+    PrintAig (out, pObj);
+    return out;
+  }
   
   inline std::ostream &operator<< (std::ostream &out, abc::Aig_Obj_t &obj)
   {
-    PrintAig (out, obj);
+    PrintAig (out, &obj);
+    return out;
+  }
+
+  inline std::ostream &operator<< (std::ostream &out, abc::Aig_Man_t &man)
+  {
+    PrintAigMan (out, &man);
     return out;
   }
 
@@ -25,8 +39,6 @@ namespace avy
     PrintPdrSet (out, &cube);
     return out;
   }
-  
-
 }
 
 

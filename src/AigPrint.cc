@@ -26,7 +26,7 @@ namespace avy
       if ( Aig_ObjIsCi(pObj) )
         {
           if (fCompl) out << "~";
-          out << (char*)pObj->pData;
+          out << "v" << pObj->Id;
           return;
         }
       // EXOR case
@@ -87,15 +87,31 @@ namespace avy
   }
   
 
-  std::ostream &PrintAig (std::ostream &out, abc::Aig_Obj_t &obj)
+  std::ostream &PrintAig (std::ostream &out, abc::Aig_Obj_t *pObj)
   {
-    Aig_Obj_t *pObj = &obj;
     AVY_ASSERT (!Aig_ObjIsCo (pObj));
     
     Vec_Vec_t *vVec = Vec_VecAlloc (10);
     Aig_PrintVerilog (out, pObj, vVec, 0);
     return out;
   }
+
+  std::ostream &PrintAigMan (std::ostream &out, abc::Aig_Man_t *pMan)
+  {
+    Aig_Obj_t *pObj;
+    int i;
+    
+    out << "AIG BEGIN\n";
+    Aig_ManForEachCo (pMan, pObj, i)
+      {
+        out << "o" << i << " := ";
+        PrintAig (out, Aig_ObjChild0 (pObj));
+        out << "\n";
+      }
+    out << "AIG END\n";
+    return out;
+  }
+  
   
 
   std::ostream &PrintPdrSet (std::ostream &out, abc::Pdr_Set_t *pCube)

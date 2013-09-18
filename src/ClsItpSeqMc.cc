@@ -13,6 +13,7 @@
 #include "AigPrint.hpp"
 
 using namespace std;
+using namespace avy;
 
 ClsItpSeqMc::ClsItpSeqMc(string strAigFileName) :
   m_McUtil(strAigFileName) , m_nLowestModifiedFrame(0), 
@@ -119,8 +120,14 @@ bool ClsItpSeqMc::testInterpolationSeq(Aig_Man_t* pInterSeq, int nFrame)
 
 void ClsItpSeqMc::extractInterpolationSeq()
 {
+  
     Aig_Man_t* pMan = m_McUtil.getInterpolationSeq();
 
+    LOG("itp", 
+        std::cerr << "Interpolation sequence:\n"
+        << *pMan << "\n";);
+    
+        
 	// "Skipping" frame 0 since we do not need to do anything with the initial
 	// states in terms of clauses.
 	unsigned nSize = Aig_ManCoNum(pMan);
