@@ -20,7 +20,7 @@ if (CUSTOM_BOOST_ROOT)
 endif()
 
 set (Boost_USE_STATIC_LIBS ON)
-find_package (Boost 1.46.1 REQUIRED)
+find_package (Boost 1.46.1 REQUIRED program_options)
 IF (Boost_FOUND)
   include_directories (${Boost_INCLUDE_DIRS})
 endif ()

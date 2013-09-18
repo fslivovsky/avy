@@ -1,6 +1,8 @@
 #include "Pdr.h"
 #include "proof/pdr/pdrInt.h"
 #include "AbcUtils.h"
+#include "avy/Util/AvyDebug.hpp"
+#include "avy/Util/AvyAssert.hpp"
 
 namespace abc
 {
@@ -49,18 +51,15 @@ namespace avy
     int j;
     Pdr_Set_t *pCube;
 
-    if (isVerbose ())
-      std::cerr << "Adding cubes to level: " << level << "\n";
+    LOG("pdr",
+        std::cerr << "Adding cubes to level: " << level << "\n";);
 
     Vec_PtrForEachEntry (Pdr_Set_t*, pCubes, pCube, j)
       {
-        if (isVerbose ())
-          {
+        LOG("pdr",
             std::cerr << j << ": ";
             dumpCube (std::cerr, pCube);
-            std::cerr << "\n";
-          }
-        
+            std::cerr << "\n";);
         
         Vec_VecPush (m_pPdr->vClauses, level, Pdr_SetDup (pCube));
         m_pPdr->nCubes++;
@@ -145,7 +144,6 @@ namespace avy
 
   int Pdr::solve ()
   {
-
     Pdr_Man_t *p = m_pPdr;
     
     int fPrintClauses = 0;
@@ -165,8 +163,9 @@ namespace avy
 
     while ( 1 )
       {
-        std::cout << "At loop iteration " << k << "\n";
-        std::cout.flush ();
+        LOG("pdr",
+            std::cout << "At loop iteration " << k << "\n";
+            std::cout.flush (););
         
         p->nFrames = k;
         //assert( k == Vec_PtrSize(p->vSolvers)-1 );
@@ -198,7 +197,7 @@ namespace avy
                   break;
                 if ( RetValue == -1 )
                   {
-                    assert(0);
+                    AVY_UNREACHABLE();
                     p->pPars->iFrame = k;
                     return -1;
                   }
@@ -207,13 +206,13 @@ namespace avy
                     RetValue = Pdr_ManBlockCube( p, pCube );
                     if ( RetValue == -1 )
                       {
-                        assert(0);
+                        AVY_UNREACHABLE();
                         p->pPars->iFrame = k;
                         return -1;
                       }
                     if ( RetValue == 0 )
                       {
-                        assert (0);
+                        AVY_UNREACHABLE ();
                       }
                     if ( p->pPars->fVerbose )
                       Pdr_ManPrintProgress( p, 0, Abc_Clock() - clkStart );
@@ -295,7 +294,7 @@ namespace avy
             return -1;
           }
       }
-    assert (0);
+    AVY_UNREACHABLE();
     return -1;
   }    
 

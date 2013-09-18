@@ -11,8 +11,12 @@
 #include <set>
 #include <vector>
 
+#include "avy/Util/AvyDebug.hpp"
+#include "avy/Util/AvyAssert.hpp"
+
 #include "AbcMcInterface.h"
 #include "Pdr.h"
+
 
 using namespace std;
 
