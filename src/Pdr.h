@@ -16,7 +16,7 @@ namespace avy
     Aig_Obj_t* cubeToAig (Pdr_Set_t *pCube, Aig_Man_t *pAig);
 
     int blockCube (Pdr_Set_t *pCube);
-    int pushClauses ();
+    
     Pdr_Set_t *reduceClause(int k, Pdr_Set_t * pCube );
     int generalize (int k, Pdr_Set_t * pCube, 
                     Pdr_Set_t ** ppPred, Pdr_Set_t ** ppCubeMin);
@@ -42,7 +42,27 @@ namespace avy
     Aig_Obj_t *getCover (unsigned level, Aig_Man_t *pAig=0);
     Aig_Obj_t *getCoverDelta (unsigned level, Aig_Man_t *pAig=0);
 
-    int solve ();
+    /**
+     * based on abc::Pdr_ManSolveInt
+     * 
+     * \return 1 if an invariant is found, 0 if not, -1 on internal error
+     */
+    int solve (bool safe = false);
+    
+    /** Special version of solve used internally 
+     */
+    int solveSafe () { return solve (true); }
+    
+        
+    
+
+    /**
+     * based on abc::Pdr_ManPushClauses 
+     * 
+     * \return 1 if an invariant is found, 0 if not, -1 on internal error
+     */
+    int pushClauses ();
+
 
     Aig_Obj_t *getInit (Aig_Man_t *pAig = 0);
     

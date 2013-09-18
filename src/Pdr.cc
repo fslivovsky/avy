@@ -555,11 +555,8 @@ namespace avy
 
   /**
    * Main solve loop.
-
-   * XXX Currently broken to be used in specific way only. Remove
-   * AVY_UNREACHABLE() assertions for other uses.
    */
-  int Pdr::solve ()
+  int Pdr::solve (bool safe)
   {
     Pdr_Man_t *p = m_pPdr;
     
@@ -614,7 +611,7 @@ namespace avy
                   break;
                 if ( RetValue == -1 )
                   {
-                    AVY_UNREACHABLE();
+                    AVY_ASSERT(!safe);
                     p->pPars->iFrame = k;
                     return -1;
                   }
@@ -623,13 +620,13 @@ namespace avy
                     RetValue = blockCube ( pCube );
                     if ( RetValue == -1 )
                       {
-                        AVY_UNREACHABLE();
+                        AVY_ASSERT(!safe);
                         p->pPars->iFrame = k;
                         return -1;
                       }
                     if ( RetValue == 0 )
                       {
-                        AVY_UNREACHABLE ();
+                        AVY_ASSERT (!safe);
                       }
                     if ( p->pPars->fVerbose )
                       Pdr_ManPrintProgress( p, 0, Abc_Clock() - clkStart );
@@ -711,7 +708,7 @@ namespace avy
             return -1;
           }
       }
-    AVY_UNREACHABLE();
+    AVY_ASSERT(!safe);
     return -1;
   }    
 

@@ -200,7 +200,7 @@ void ClsItpSeqMc::transformInterpolantToCNF(
       Vec_PtrFree (pCubes);
       pCubes = NULL;
     }
-  pdr.solve ();
+  pdr.solveSafe ();
 
     
   pCubes = Vec_PtrAlloc (10);
