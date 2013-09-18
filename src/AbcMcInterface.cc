@@ -643,7 +643,7 @@ Aig_Obj_t* AbcMcInterface::createCombSlice_rec(Aig_Man_t* pOrig, Aig_Man_t* pMan
 
 void AbcMcInterface::addClausesToFrame(Vec_Ptr_t* pCubes, int nFrame)
 {
-    int nDelta = m_pInitCnf->nVars + (nFrame-1)*(m_pOneTRCnf->nVars);// + (nFrame-1)*(m_pBadCnf->nVars);
+    int nDelta = m_pInitCnf->nVars + (nFrame)*(m_pOneTRCnf->nVars);// + (nFrame-1)*(m_pBadCnf->nVars);
     Pdr_Set_t* pCube;
     int i;
 
@@ -654,7 +654,7 @@ void AbcMcInterface::addClausesToFrame(Vec_Ptr_t* pCubes, int nFrame)
         for (int j=0; j < pCube->nTotal; j++)
         {
             if (pCube->Lits[j] == -1) continue;
-            Aig_Obj_t *pObj = Saig_ManLi (m_pOneTR, lit_var (pCube->Lits [j]));
+            Aig_Obj_t *pObj = Saig_ManLo (m_pOneTR, lit_var (pCube->Lits [j]));
             assert(m_pOneTRCnf->pVarNums[pObj->Id] > 0);
             int nVar = m_pOneTRCnf->pVarNums[pObj->Id] + nDelta;
             int lit = toLitCond(nVar, 1 ^ lit_sign (pCube->Lits [j]));

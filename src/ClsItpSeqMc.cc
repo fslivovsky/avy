@@ -68,6 +68,8 @@ ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame)
     for (int i = 0; i < nFrame; i++)
     {
         m_McUtil.addTransitionsFromTo(i, i+1);
+        m_McUtil.markPartition(i);
+
         if (i+1 < nFrame)
         {
             Vec_Ptr_t* pCubes = Vec_PtrAlloc(10);
@@ -75,7 +77,7 @@ ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame)
             m_McUtil.addClausesToFrame(pCubes, i+1);
             Vec_PtrFree(pCubes);
         }
-        m_McUtil.markPartition(i);
+
         m_McUtil.prepareGlobalVars(i+1);
     }
 
@@ -114,6 +116,15 @@ bool ClsItpSeqMc::testInterpolationSeq(Aig_Man_t* pInterSeq, int nFrame)
     m_McUtil.setInit();
 
     m_McUtil.addTransitionsFromTo(0, 1);
+
+    Vec_Ptr_t* pCubes = Vec_PtrAlloc(10);
+    m_GlobalPdr.getCoverCubes(nFrame, pCubes);
+    m_McUtil.addClausesToFrame(pCubes, 0);
+    Vec_PtrFree(pCubes);
+    pCubes = Vec_PtrAlloc(10);
+    m_GlobalPdr.getCoverCubes(nFrame+1, pCubes);
+    m_McUtil.addClausesToFrame(pCubes, 1);
+    Vec_PtrFree(pCubes);
 
     if (m_McUtil.setBad(1, false) == false)
         return true;
