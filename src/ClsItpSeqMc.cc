@@ -158,10 +158,10 @@ void ClsItpSeqMc::extractInterpolationSeq()
 	    std::cout << "Checking " << i << endl;
 	    bool r = testInterpolationSeq(pMan, i-1);
 	    assert(r);
-	    Aig_Man_t* pDup = Aig_ManDupSimple(pMan);
+	    //Aig_Man_t* pDup = Aig_ManDupSimple(pMan);
 	    // Get the interpolant as a set of clauses.
-	    transformInterpolantToCNF(i, pDup);
-	    Aig_ManStop(pDup);
+	    transformInterpolantToCNF(i, pMan);
+	    //Aig_ManStop(pDup);
 	}
 
 	Aig_ManStop(pMan);
@@ -196,27 +196,37 @@ void ClsItpSeqMc::transformInterpolantToCNF(
       std::cout << *(Aig_ObjChild0(pInterpolant));
       std::cout << "\n\n";);
 
+  Aig_Man_t* pManPrev = Aig_ManStartFrom(pMan);
   Aig_Obj_t* pPrev;
 
   if (nFrame == 1)
-    pPrev = m_GlobalPdr.getInit (pMan);
+    pPrev = Aig_ManConst0(pManPrev);// m_GlobalPdr.getInit (pMan);
   else
-    pPrev = m_GlobalPdr.getCover (nFrame - 1, pMan);
+    pPrev = m_GlobalPdr.getCover (nFrame - 1, pManPrev);
   
+  pPrev = Aig_ObjCreateCo(pManPrev, pPrev);
+
+  Aig_Man_t* pDupMan = Aig_ManDupSimple(pMan);
+  Aig_Obj_t* pObj;
+  int i;
+  Aig_ManForEachCo(pDupMan, pObj, i)
+      if (i != nFrame - 1)
+          Aig_ManCo(pDupMan, i)->pFanin0 = NULL;
+  Aig_ManCleanup(pDupMan);
+  Aig_ObjRemoveFanout()
+  AVY_ASSERT(Aig_ManCoNum(pDupMan) == 1);
+  //Aig_Man_t* pManOr = createOr(pMan, pInterpolant, pManPrev, pPrev);
+  Aig_Man_t* pManOr = Aig_ManCreateMiter(pDupMan, pManPrev, 2);
+
   LOG("cnf",
       std::cout << "Cover for frame: " << nFrame-1 << "\n";
-      dummyName (pMan);
+      dummyName (pManOr);
       std::cout << *pPrev  << "\n\n";);
   
-
-  Aig_Obj_t* pDriver = Aig_Or(pMan, Aig_ObjChild0(pInterpolant), pPrev);
-  pInterpolant->pFanin0 = pDriver;
-
   LOG("cnf",
-      std::cout << "Property: \n" << *pDriver << "\n\n";);
+      std::cout << "Property: \n" << *Aig_ObjChild0(Aig_ManCo(pManOr, 0)) << "\n\n";);
   
-
-  Aig_Man_t *pNewMgr = m_McUtil.duplicateAigWithNewPO(pMan, pInterpolant);
+  Aig_Man_t *pNewMgr = m_McUtil.duplicateAigWithNewPO(pManOr, Aig_ManCo(pManOr, 0));
   Gia_Man_t* pGia = Gia_ManFromAigSimple(pNewMgr);
   Aig_ManStop(pNewMgr);
   pNewMgr = Gia_ManToAigSimple(pGia);
@@ -307,4 +317,51 @@ void ClsItpSeqMc::justifyClauses(unsigned nFrame, const set<Clause>& cnfInterpol
 bool ClsItpSeqMc::globalPush()
 {
     return false;
+}
+
+Aig_Man_t* ClsItpSeqMc::createOr(Aig_Man_t* pMan1, Aig_Obj_t* p1, Aig_Man_t* pMan2, Aig_Obj_t* p2)
+{
+    assert( Aig_ManRegNum(pMan1) == 0 && Aig_ManRegNum(pMan2) == 0 );
+    assert(Aig_ManCiNum(pMan1) == Aig_ManCiNum(pMan2));
+
+    // create the new manager
+    Aig_Man_t *pNew = Aig_ManStart( Aig_ManObjNumMax(pMan1) + Aig_ManObjNumMax(pMan2) );
+
+    // create the PIs
+    Aig_ManCleanData( pMan1 );
+    Aig_ManCleanData( pMan2 );
+    Aig_ManConst1(pMan1)->pData = Aig_ManConst1(pNew);
+    Aig_ManConst1(pMan2)->pData = Aig_ManConst1(pNew);
+
+    int i;
+    Aig_Obj_t * pObj;
+    Aig_ManForEachCi( pMan1, pObj, i )
+    {
+        pObj->pData = Aig_ObjCreateCi( pNew );
+        Aig_Obj_t* pObj2 = Aig_ManCi(pMan2, i);
+        pObj2->pData = pObj->pData;
+    }
+
+    // set registers
+    pNew->nTruePis = pMan1->nTruePis;
+    pNew->nTruePos = 1;
+    pNew->nRegs    = 0;
+
+    // duplicate internal nodes
+    Aig_ManForEachNode( pMan1, pObj, i )
+        pObj->pData = Aig_And( pNew, Aig_ObjChild0Copy(pObj), Aig_ObjChild1Copy(pObj) );
+
+    Aig_ManForEachNode( pMan2, pObj, i )
+        pObj->pData = Aig_And( pNew, Aig_ObjChild0Copy(pObj), Aig_ObjChild1Copy(pObj) );
+
+    pObj = Aig_Or(pNew, Aig_ObjChild0Copy(p1), Aig_ObjChild0Copy(p2));
+
+    // Create the new output
+    Aig_ObjCreateCo(pNew, pObj);
+
+    Aig_ManCleanup( pNew );
+    Aig_ManCleanData(pMan1);
+    Aig_ManCleanData(pMan2);
+
+    return pNew;
 }

@@ -107,6 +107,8 @@ private:
 
 	bool testInterpolationSeq(Aig_Man_t* pInterSeq, int nFrame);
 
+	Aig_Man_t* createOr(Aig_Man_t* pMan1, Aig_Obj_t* p1, Aig_Man_t* pMan2, Aig_Obj_t* p2);
+
 
 private:
 	// Using our own MC interface to ABC.
