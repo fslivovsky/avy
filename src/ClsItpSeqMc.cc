@@ -11,6 +11,8 @@
 #include "aig/gia/giaAig.h"
 #include "AbcUtils.h"
 #include "AigPrint.hpp"
+#include "boost/logic/tribool.hpp"
+#include "avy/Util/AvyAssert.hpp"
 
 using namespace std;
 using namespace avy;
@@ -146,7 +148,12 @@ void ClsItpSeqMc::extractInterpolationSeq()
 
 	Aig_ManStop(pMan);
 	// Now justify the clauses.
-    //justifyClauses(i, cnfInterpolant);
+        //justifyClauses(i, cnfInterpolant)
+        tribool res = m_GlobalPdr.push ();
+        AVY_ASSERT (res || !res);
+        
+        cout << (res ? "SAFE" : "UNKNOWN") << "\n";
+        
 }
 void ClsItpSeqMc::transformInterpolantToCNF(
     unsigned nFrame,

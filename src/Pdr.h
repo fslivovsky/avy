@@ -3,9 +3,14 @@
 
 #include "proof/pdr/pdrInt.h"
 #include <iostream>
+
+#include "boost/logic/tribool.hpp"
+#include "avy/Util/AvyAssert.hpp"
+
 namespace avy
 {
   using namespace abc;
+  using namespace boost;
   
   class Pdr
   {
@@ -22,7 +27,24 @@ namespace avy
                     Pdr_Set_t ** ppPred, Pdr_Set_t ** ppCubeMin);
     void solverAddClause( int k, Pdr_Set_t * pCube );
     
+    /**
+     * based on abc::Pdr_ManPushClauses 
+     * 
+     * \return 1 if an invariant is found, 0 if not, -1 on internal error
+     */
+    int pushClauses ();
   
+    tribool tbool (int n)
+    {
+      switch (n)
+        {
+        case 1: return true;
+        case 0: return false;
+        case -1: return boost::indeterminate;
+        default: AVY_UNREACHABLE ();
+        }
+    }
+    
 
   public:
     Pdr (Aig_Man_t *pAig);
@@ -52,18 +74,9 @@ namespace avy
     /** Special version of solve used internally 
      */
     int solveSafe () { return solve (true); }
+    tribool push () { return tbool (pushClauses ()); }
     
         
-    
-
-    /**
-     * based on abc::Pdr_ManPushClauses 
-     * 
-     * \return 1 if an invariant is found, 0 if not, -1 on internal error
-     */
-    int pushClauses ();
-
-
     Aig_Obj_t *getInit (Aig_Man_t *pAig = 0);
     
   

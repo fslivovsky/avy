@@ -323,7 +323,9 @@ namespace avy
     int i, j, k, m, RetValue = 0, RetValue2, kMax = Vec_PtrSize(p->vSolvers)-1;
     int Counter = 0;
     abctime clk = Abc_Clock();
-    assert( p->iUseFrame > 0 );
+    //assert( p->iUseFrame > 0 );
+    LOG("pdr", std::cerr << __FILE__ << ":" << __LINE__ << "\n");
+    
     Vec_VecForEachLevelStartStop( p->vClauses, vArrayK, k, 1, kMax )
     {
         Vec_PtrSort( vArrayK, (int (*)(void))Pdr_SetCompare );
