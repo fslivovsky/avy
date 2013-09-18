@@ -12,7 +12,6 @@
 #include "AbcMcInterface.h"
 #include "base/main/main.h"
 #include "aig/ioa/ioa.h"
-#include "aig/gia/giaAig.h"
 
 using namespace abc;
 
@@ -80,7 +79,9 @@ AbcMcInterface::AbcMcInterface(string strFileName) :
     , m_iFramePrev(0)
     , m_nLastFrame(0)
     , m_ClausesByFrame(1)
-      , m_VarsByFrame(1), m_pBadStore (NULL), m_pInitStore(NULL)
+    , m_VarsByFrame(1)
+    , m_pBadStore (NULL)
+    , m_pInitStore(NULL)
 {
     std::cout << "Setting up ABC.\n";
     Abc_Start();
@@ -134,7 +135,7 @@ void AbcMcInterface::addTransitionsFromTo(int nFrom, int nTo)
 	assert(nFrom >= 0 && nFrom == m_nLastFrame && nFrom < nTo);
 
     m_iFramePrev = m_nLastFrame;
-    int nDelta = m_pInitCnf->nVars + (nFrom)*(m_pOneTRCnf->nVars + m_pBadCnf->nVars);
+    int nDelta = m_pInitCnf->nVars + (nFrom)*(m_pOneTRCnf->nVars);// + m_pBadCnf->nVars);
     Cnf_DataLift(m_pOneTRCnf, nDelta);
 
     for ( ; m_nLastFrame < nTo; m_nLastFrame++)
@@ -165,7 +166,7 @@ void AbcMcInterface::addTransitionsFromTo(int nFrom, int nTo)
                 Aig_Obj_t *pObj2 = Saig_ManLi(m_pOneTR, i );
 
                 int nVar = m_pOneTRCnf->pVarNums[pObj->Id]; // This is the global var.
-                int nVar2 = m_pOneTRCnf->pVarNums[pObj2->Id] - m_pOneTRCnf->nVars - m_pBadCnf->nVars;
+                int nVar2 = m_pOneTRCnf->pVarNums[pObj2->Id] - m_pOneTRCnf->nVars;// - m_pBadCnf->nVars;
 
                 Lits[0] = toLitCond(nVar , 0 );
                 Lits[1] = toLitCond(nVar2, 1 );
@@ -182,12 +183,12 @@ void AbcMcInterface::addTransitionsFromTo(int nFrom, int nTo)
 
         logCnfVars(m_pOneTR, m_pOneTRCnf);
 
-        Cnf_DataLift(m_pOneTRCnf, m_pOneTRCnf->nVars + m_pBadCnf->nVars);
+        Cnf_DataLift(m_pOneTRCnf, m_pOneTRCnf->nVars);// + m_pBadCnf->nVars);
     }
 #if DEBUG
     sat_solver_store_write(m_pSat, "init_tr.cnf");
 #endif
-    Cnf_DataLift(m_pOneTRCnf, -nDelta - (nTo-nFrom)*(m_pOneTRCnf->nVars + m_pBadCnf->nVars));
+    Cnf_DataLift(m_pOneTRCnf, -nDelta - (nTo-nFrom)*(m_pOneTRCnf->nVars));// + m_pBadCnf->nVars));
 }
 
 // ************************************************************************
@@ -195,35 +196,17 @@ void AbcMcInterface::addTransitionsFromTo(int nFrom, int nTo)
 // ************************************************************************
 void AbcMcInterface::prepareGlobalVars(int nFrame)
 {
-    int nDelta = m_pInitCnf->nVars + (nFrame-1)*(m_pOneTRCnf->nVars + m_pBadCnf->nVars);
-    Cnf_DataLift(m_pOneTRCnf, nDelta);
+    int nDelta = m_pInitCnf->nVars + (nFrame-1)*(m_pOneTRCnf->nVars);// + m_pBadCnf->nVars);
 
     m_GlobalVars.resize(nFrame);
 
     Aig_Obj_t *pObj;
     int i, Lits[2];
-    if (nFrame == 1)
+    Saig_ManForEachLi(m_pOneTR, pObj, i)
     {
-        Saig_ManForEachLi(m_pOneTR, pObj, i)
-        {
-            int nVar = m_pOneTRCnf->pVarNums[pObj->Id];
-            m_GlobalVars[nFrame-1].push_back(nVar);
-        }
+        int nVar = m_pOneTRCnf->pVarNums[pObj->Id] + nDelta;
+        m_GlobalVars[nFrame-1].push_back(nVar);
     }
-    else
-    {
-        Saig_ManForEachLo( m_pOneTR, pObj, i )
-        {
-            Aig_Obj_t *pObj2 = Saig_ManLi(m_pOneTR, i );
-
-            int nVar = m_pOneTRCnf->pVarNums[pObj2->Id]; // This is the global var.
-
-            m_GlobalVars[nFrame-1].push_back(nVar);
-        }
-    }
-
-
-    Cnf_DataLift(m_pOneTRCnf, -nDelta);
 }
 
 bool AbcMcInterface::addCNFToSAT(Cnf_Dat_t *pCnf)
@@ -259,7 +242,7 @@ eResult AbcMcInterface::solveSat()
     sat_solver_store_write(m_pSat, (char*)name);
 #endif
     //sat_solver_bookmark(m_pSat);
-    VarNum = m_pBadCnf->pVarNums[pObj->Id] + (m_pInitCnf->nVars) + (m_nLastFrame - 1)*(m_pOneTRCnf->nVars + m_pBadCnf->nVars) + m_pOneTRCnf->nVars;
+    VarNum = m_pBadCnf->pVarNums[pObj->Id] + (m_pInitCnf->nVars) + (m_nLastFrame - 1)*(m_pOneTRCnf->nVars)/* + m_pBadCnf->nVars)*/ + m_pOneTRCnf->nVars;
     Lit = toLitCond( VarNum, Aig_IsComplement(pObj) ) ;
     if (addClauseToSat(&Lit, &Lit +1) == false)
         return FALSE;
@@ -343,6 +326,8 @@ Aig_Man_t* AbcMcInterface::getInterpolationSeq()
     Ints_Man_t* pManInter = Ints_ManAlloc(m_nLastFrame);
     Aig_Man_t* pMan = (Aig_Man_t *)Ints_ManInterpolate( pManInter, (Sto_Man_t *)pSatCnf, 0, (void**)vSharedVars, 0 );
     Ints_ManFree( pManInter );
+
+    pMan = simplifyCombAig(pMan);
 
     //Gia_Man_t* pInter = (Gia_Man_t *)Int2_ManReadInterpolant( m_pSat );
     //Gia_ManPrintStats( pInter, 0, 0, 0 );
@@ -456,8 +441,9 @@ Aig_Man_t* AbcMcInterface::duplicateAigWithNewPO(Aig_Man_t* pMan, Aig_Obj_t *pNe
     }
 
     // Create the new output
-    pObj = createCombSlice_rec(pMan, pNew, Aig_ObjChild0(pNewPO)); // Is this needed in this case?
+    //pObj = createCombSlice_rec(pMan, pNew, Aig_ObjChild0(pNewPO)); // Is this needed in this case?
     //assert(pObj == Aig_ObjChild0Copy(pNewPO));
+    assert(Aig_ObjChild0Copy(pNewPO) != NULL);
     Aig_ObjCreateCo(pNew, Aig_Not(Aig_ObjChild0Copy(pNewPO)));
 
     Saig_ManForEachLi( p, pObj, i )
@@ -587,7 +573,7 @@ bool AbcMcInterface::setBad(int nFrame, bool bHasPIs)
 {
     assert(nFrame > 0);
     int nDelta = m_pInitCnf->nVars +
-                 (nFrame-1)*(m_pOneTRCnf->nVars + m_pBadCnf->nVars);
+                 (nFrame-1)*(m_pOneTRCnf->nVars);// + m_pBadCnf->nVars);
 
     // Prepare CNF.
     Cnf_DataLift(m_pBadCnf, nDelta + m_pOneTRCnf->nVars);
@@ -653,5 +639,31 @@ Aig_Obj_t* AbcMcInterface::createCombSlice_rec(Aig_Man_t* pOrig, Aig_Man_t* pMan
     assert( pRes != NULL );
     pObj->pData = pRes;
     return pRes;
+}
+
+void AbcMcInterface::addClausesToFrame(Vec_Ptr_t* pCubes, int nFrame)
+{
+    int nDelta = m_pInitCnf->nVars + (nFrame-1)*(m_pOneTRCnf->nVars);// + (nFrame-1)*(m_pBadCnf->nVars);
+    Pdr_Set_t* pCube;
+    int i;
+
+    Vec_PtrForEachEntry(Pdr_Set_t*, pCubes, pCube, i)
+    {
+        lit* pClause = ABC_ALLOC(lit, pCube->nTotal);
+        int nCounter=0;
+        for (int j=0; j < pCube->nTotal; j++)
+        {
+            if (pCube->Lits[j] == -1) continue;
+            Aig_Obj_t *pObj = Saig_ManLi (m_pOneTR, lit_var (pCube->Lits [j]));
+            assert(m_pOneTRCnf->pVarNums[pObj->Id] > 0);
+            int nVar = m_pOneTRCnf->pVarNums[pObj->Id] + nDelta;
+            int lit = toLitCond(nVar, 1 ^ lit_sign (pCube->Lits [j]));
+
+            pClause[nCounter++] = lit;
+        }
+
+        addClauseToSat(pClause, pClause+nCounter);
+        ABC_FREE(pClause);
+    }
 }
 

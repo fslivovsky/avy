@@ -68,6 +68,13 @@ ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame)
     for (int i = 0; i < nFrame; i++)
     {
         m_McUtil.addTransitionsFromTo(i, i+1);
+        if (i+1 < nFrame)
+        {
+            Vec_Ptr_t* pCubes = Vec_PtrAlloc(10);
+            m_GlobalPdr.getCoverCubes(i+1, pCubes);
+            m_McUtil.addClausesToFrame(pCubes, i+1);
+            Vec_PtrFree(pCubes);
+        }
         m_McUtil.markPartition(i);
         m_McUtil.prepareGlobalVars(i+1);
     }
