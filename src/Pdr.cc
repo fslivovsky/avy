@@ -43,7 +43,25 @@ namespace avy
       Pdr_ManCreateSolver (m_pPdr, i);
   }
   
-
+  void Pdr::Print (std::ostream &out)
+  {
+    out << "PDR BEGIN\n";
+    out << "Frames: " << maxFrames () << "\n";
+    
+    Vec_Ptr_t *pCubes = Vec_PtrAlloc (10);    
+    for (unsigned i = 0; i < maxFrames (); ++i) 
+      {
+        out << "F" << i << ": ";
+        Vec_PtrClear (pCubes);
+        if (m_pPdr->pPars->fVerbose) getCoverDeltaCubes (i, pCubes);
+        out << "size: " << Vec_PtrSize (pCubes) << "\n";
+        PrintPdrSets (out, *pCubes);
+      }
+    Vec_PtrFree (pCubes);
+    
+    out << "PDR END\n";
+  }
+  
   void Pdr::addCoverCubes (unsigned level, Vec_Ptr_t *pCubes)
   {
     ensureFrames (level);

@@ -45,7 +45,8 @@ namespace avy
         }
     }
     
-
+    void Print (std::ostream &out);
+    
   public:
     Pdr (Aig_Man_t *pAig);
     ~Pdr ();
@@ -64,6 +65,8 @@ namespace avy
     Aig_Obj_t *getCover (unsigned level, Aig_Man_t *pAig=0);
     Aig_Obj_t *getCoverDelta (unsigned level, Aig_Man_t *pAig=0);
 
+    unsigned maxFrames () { return Vec_PtrSize (m_pPdr->vSolvers); }
+    
     /**
      * based on abc::Pdr_ManSolveInt
      * 
@@ -78,9 +81,14 @@ namespace avy
     
         
     Aig_Obj_t *getInit (Aig_Man_t *pAig = 0);
-    
-  
+
+    friend std::ostream &operator<< (std::ostream& out, Pdr &pdr);
   };
+
+  inline std::ostream &operator<< (std::ostream &out, Pdr &pdr) 
+  { pdr.Print (out); return out; }
+    
+
 }
 
   
