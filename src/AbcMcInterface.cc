@@ -13,12 +13,68 @@
 #include "AbcMcInterface.h"
 #include "base/main/main.h"
 #include "aig/ioa/ioa.h"
+#include "aig/gia/giaAig.h"
 
 using namespace abc;
 
 #define DEBUG 0
 
 //extern int Cmd_CommandExecute(void *pAbc, char *sCommand);
+
+Aig_Man_t* reEncode(Aig_Man_t* p)
+{
+    // Only support single property for now.
+    assert(p->nTruePos == 1);
+    Aig_Man_t * pNew;
+    Aig_Obj_t * pObj;
+    int i;
+    assert( Aig_ManRegNum(p) > 0 );
+    // create the new manager
+    pNew = Aig_ManStart( Aig_ManObjNumMax(p) );
+    pNew->pName = Abc_UtilStrsav( p->pName );
+    pNew->pSpec = Abc_UtilStrsav( p->pSpec );
+    // create the PIs
+    Aig_ManCleanData( p );
+    Aig_ManConst1(p)->pData = Aig_ManConst1(pNew);
+    Aig_Obj_t* pPI = Aig_ObjCreateCi(pNew);
+    Aig_ManForEachCi( p, pObj, i )
+        pObj->pData = Aig_ObjCreateCi( pNew );
+    // set registers
+    pNew->nTruePis = p->nTruePis+1;
+    pNew->nTruePos = p->nTruePos;
+    pNew->nRegs    = p->nRegs;
+    pNew->nConstrs = Saig_ManConstrNum(p);
+    // duplicate internal nodes
+    Aig_ManForEachNode( p, pObj, i )
+        pObj->pData = Aig_And( pNew, Aig_ObjChild0Copy(pObj), Aig_ObjChild1Copy(pObj) );
+
+    Aig_Obj_t *pLi, *pLo;
+    Saig_ManForEachLiLo( p, pLi, pLo, i )
+    {
+        //Aig_Obj_t* ppp = Aig_Or(pNew, Aig_Not(pPI), Aig_Not(Aig_ObjCopy(pLo)));
+        Aig_Obj_t* pTmp = Aig_And(pNew, Aig_ObjChild0Copy(pLi), Aig_Not(pPI));
+        Aig_Regular(pLi->pFanin0)->pData = pTmp;
+        pLi->pFanin0 = Aig_Regular(pLi->pFanin0);
+    }
+
+    // add the PO
+    pObj = Aig_ManCo(p, 0 );
+    Aig_ObjCreateCo(pNew, Aig_ObjChild0Copy(pObj) );
+
+    // create constraint outputs
+    Saig_ManForEachPo( p, pObj, i )
+    {
+        if ( i < Saig_ManPoNum(p)-Saig_ManConstrNum(p) )
+            continue;
+        Aig_ObjCreateCo( pNew, Aig_Not( Aig_ObjChild0Copy(pObj) ) );
+    }
+
+    Saig_ManForEachLi( p, pObj, i )
+        Aig_ObjCreateCo( pNew, Aig_ObjChild0Copy(pObj) );
+
+    Aig_ManCleanup( pNew );
+    return pNew;
+}
 
 AbcMcInterface::AbcMcInterface(string strFileName) :
       m_pSat(NULL)
@@ -39,11 +95,26 @@ AbcMcInterface::AbcMcInterface(string strFileName) :
 
     std::cout << "\tGetting the network from the ABC frame.\n";
     Abc_Ntk_t* pNtk = Abc_FrameReadNtk(m_pAbcFramework);
-    m_pAig = Abc_NtkToDar(pNtk, 0, 1);
+    Aig_Man_t* pTmpCircuit = Abc_NtkToDar(pNtk, 0, 1);
 
-    std::cout << "\tSetup the SAT solver.\n";
-    // create a SAT solver
-    //reinitializeSAT();
+    // Wanna be on the safe side with the ABC framework, so going to stop it
+    // and reload. Otherwise, the ABC Network will not be in-sync with the underlying
+    // AIG.
+    std::cout << "\tRe-Encoding the circuit and dumping to __tmp.aig.\n";
+    pTmpCircuit = reEncode(pTmpCircuit);
+    Ioa_WriteAiger(pTmpCircuit, "__tmp.aig",1,0);
+    std::cout << "\tDestroying ABC and restarting...\n";
+    Abc_Stop();
+
+    Abc_Start();
+    m_pAbcFramework = Abc_FrameGetGlobalFrame();
+
+    std::cout << "\tReading the AIG...\n";
+    Cmd_CommandExecute(m_pAbcFramework, "read __tmp.aig");
+
+    std::cout << "\tGetting the network from the ABC frame.\n";
+    pNtk = Abc_FrameReadNtk(m_pAbcFramework);
+    m_pAig = Abc_NtkToDar(pNtk, 0, 1);
 
     m_pOneTR = duplicateAigWithoutPOs(m_pAig);
     m_pOneTRCnf = Cnf_Derive(m_pOneTR, Aig_ManRegNum(m_pOneTR));
