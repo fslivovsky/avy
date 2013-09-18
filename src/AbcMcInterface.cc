@@ -396,6 +396,7 @@ Aig_Man_t* AbcMcInterface::duplicateAigWithNewPO(Aig_Man_t* pMan, Aig_Obj_t *pNe
     pNew->pSpec = Abc_UtilStrsav( p->pSpec );
     // create the PIs
     Aig_ManCleanData( p );
+    Aig_ManCleanData( pMan );
     Aig_ManConst1(p)->pData = Aig_ManConst1(pNew);
 
     int i;
@@ -423,6 +424,7 @@ Aig_Man_t* AbcMcInterface::duplicateAigWithNewPO(Aig_Man_t* pMan, Aig_Obj_t *pNe
     assert(Aig_ManCiNum(pMan) == Saig_ManRegNum(pNew));
 
     // Now set the "leaves" of the interpolant manager.
+    Aig_ManConst1(pMan)->pData = Aig_ManConst1(pNew);
     Saig_ManForEachLo(m_pAig, pObj, i)
     {
         assert(Aig_ManCiNum(pMan) > i);
