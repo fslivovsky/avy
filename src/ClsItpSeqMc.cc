@@ -10,6 +10,7 @@
 
 #include "aig/gia/giaAig.h"
 #include "AbcUtils.h"
+#include "AigPrint.hpp"
 
 using namespace std;
 
@@ -145,10 +146,9 @@ void ClsItpSeqMc::transformInterpolantToCNF(
   dummyName (pMan);  
   Aig_Obj_t* pInterpolant = Aig_ManCo(pMan, nFrame-1);
 
-  //AvyEnableLog ("cnf");
   LOG("cnf",
       std::cout << "Interpolant for frame: " << nFrame << "\n";
-      dumpAig (pMan, Aig_ObjChild0(pInterpolant));
+      std::cout << *(Aig_ObjChild0(pInterpolant));
       std::cout << "\n\n";);
 
   Aig_Obj_t* pPrev;
