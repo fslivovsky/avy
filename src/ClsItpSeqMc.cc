@@ -129,9 +129,10 @@ void ClsItpSeqMc::extractInterpolationSeq()
 	    // by checking I_{i-1} & TR => I_i'
 	    bool r = testInterpolationSeq(pMan, i-1);
 	    assert(r);
+	    Aig_Man_t* pDup = Aig_ManDupSimple(pMan);
 	    // Get the interpolant as a set of clauses.
-	    transformInterpolantToCNF(i, pMan);
-
+	    transformInterpolantToCNF(i, pDup);
+	    Aig_ManStop(pDup);
 	}
 
 	// Now justify the clauses.
