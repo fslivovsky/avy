@@ -20,7 +20,8 @@ namespace avy
     Pdr_Set_t *reduceClause(int k, Pdr_Set_t * pCube );
     int generalize (int k, Pdr_Set_t * pCube, 
                     Pdr_Set_t ** ppPred, Pdr_Set_t ** ppCubeMin);
-
+    void solverAddClause( int k, Pdr_Set_t * pCube );
+    
   
 
   public:

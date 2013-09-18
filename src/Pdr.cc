@@ -65,7 +65,7 @@ namespace avy
         m_pPdr->nCubes++;
         
         for (int i = 1; i <= level; ++i)
-          Pdr_ManSolverAddClause (m_pPdr, i, pCube);
+          solverAddClause (i, pCube);
       }
   }
   
@@ -139,6 +139,25 @@ namespace avy
     if (!pAig) pAig = m_pAig;
   }
 
+  void Pdr::solverAddClause(int k, Pdr_Set_t * pCube )
+  {
+    LOG("pdr_verbose", 
+        std::cerr << "Adding cube to frame " << k << "\n";
+        dumpCube (std::cerr, pCube);
+        std::cerr << "\n";);
+    
+    Pdr_Man_t *p = m_pPdr;
+    sat_solver * pSat;
+    Vec_Int_t * vLits;
+    int RetValue;
+    pSat  = Pdr_ManSolver(p, k);
+    vLits = Pdr_ManCubeToLits( p, k, pCube, 1, 0 );
+    RetValue = sat_solver_addclause( pSat, Vec_IntArray(vLits), 
+                                     Vec_IntArray(vLits) + Vec_IntSize(vLits) );
+    assert( RetValue == 1 );
+    sat_solver_compress( pSat );
+  }
+  
   int Pdr::generalize (int k, Pdr_Set_t * pCube, 
                        Pdr_Set_t ** ppPred, Pdr_Set_t ** ppCubeMin)
   {
@@ -347,7 +366,7 @@ namespace avy
             }
 
             // if it can be moved, add it to the next frame
-            Pdr_ManSolverAddClause( p, k+1, pCubeK );
+            solverAddClause( k+1, pCubeK );
             // check if the clause subsumes others
             Vec_PtrForEachEntry( Pdr_Set_t *, vArrayK1, pCubeK1, i )
             {
@@ -500,7 +519,7 @@ namespace avy
             p->nCubes++;
             // add clause
             for ( i = 1; i <= k; i++ )
-              Pdr_ManSolverAddClause( p, i, pCubeMin );
+              solverAddClause( i, pCubeMin );
             // schedule proof obligation
             if ( !p->pPars->fShortest )
               {
