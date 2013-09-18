@@ -1,6 +1,6 @@
 #include "Pdr.h"
 #include "proof/pdr/pdrInt.h"
-#include "AbcUtils.h"
+#include "AigPrint.hpp"
 #include "avy/Util/AvyDebug.hpp"
 #include "avy/Util/AvyAssert.hpp"
 
@@ -57,9 +57,7 @@ namespace avy
     Vec_PtrForEachEntry (Pdr_Set_t*, pCubes, pCube, j)
       {
         LOG("pdr",
-            std::cerr << j << ": ";
-            dumpCube (std::cerr, pCube);
-            std::cerr << "\n";);
+            std::cerr << j << ": " << *pCube << "\n";);
         
         Vec_VecPush (m_pPdr->vClauses, level, Pdr_SetDup (pCube));
         m_pPdr->nCubes++;
@@ -142,9 +140,7 @@ namespace avy
   void Pdr::solverAddClause(int k, Pdr_Set_t * pCube )
   {
     LOG("pdr_verbose", 
-        std::cerr << "Adding cube to frame " << k << "\n";
-        dumpCube (std::cerr, pCube);
-        std::cerr << "\n";);
+        std::cerr << "Adding cube to frame " << k << "\n" << *pCube << "\n";);
     
     Pdr_Man_t *p = m_pPdr;
     sat_solver * pSat;

@@ -97,4 +97,31 @@ namespace avy
     return out;
   }
   
+
+  std::ostream &PrintPdrSet (std::ostream &out, abc::Pdr_Set_t *pCube)
+  {
+    for (int i = 0; i < pCube->nLits; ++i)
+      {
+        if (lit_sign (pCube->Lits[i]))
+          out << "-";
+        
+        out << lit_var (pCube->Lits[i]) << " ";
+      }    
+    return out;
+  }
+
+  std::ostream &PrintPdrSets (std::ostream &out, Vec_Ptr_t &cubes)
+  {
+    Vec_Ptr_t *pCubes = &cubes;
+    
+    int j;
+    Pdr_Set_t *pCube;
+    out << "CUBES BEGIN\n";
+    Vec_PtrForEachEntry (Pdr_Set_t*, pCubes, pCube, j)
+      out << j << ": " << *pCube << "\n";
+    out << "CUBES END\n";
+    return out;
+  }
+
 }
+

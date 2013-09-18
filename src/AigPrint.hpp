@@ -6,15 +6,27 @@
 #include <iostream>
 
 #include "aig/aig/aig.h"
+#include "proof/pdr/pdrInt.h"
+
 namespace avy
 {
   std::ostream &PrintAig (std::ostream &out, abc::Aig_Obj_t &obj);
+  std::ostream &PrintPdrSet (std::ostream &out, abc::Pdr_Set_t *pCube);
+  std::ostream &PrintPdrSets (std::ostream &out, abc::Vec_Ptr_t &cubes);
   
   inline std::ostream &operator<< (std::ostream &out, abc::Aig_Obj_t &obj)
   {
     PrintAig (out, obj);
     return out;
   }
+
+  inline std::ostream &operator<< (std::ostream &out, abc::Pdr_Set_t &cube)
+  {
+    PrintPdrSet (out, &cube);
+    return out;
+  }
+  
+
 }
 
 
