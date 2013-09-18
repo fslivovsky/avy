@@ -165,10 +165,19 @@ void ClsItpSeqMc::extractInterpolationSeq()
 	}
 
 	Aig_ManStop(pMan);
+        
+        LOG ("pdr",
+             cerr << "Global Pdr before push\n" << m_GlobalPdr << "\n";);
+
 	// Now justify the clauses.
         //justifyClauses(i, cnfInterpolant)
         tribool res = m_GlobalPdr.push ();
         AVY_ASSERT (res || !res);
+
+        LOG ("pdr", 
+             cerr << "Global Pdr after push\n" << m_GlobalPdr << "\n";);
+        
+
         
         cout << (res ? "SAFE" : "UNKNOWN") << "\n";
         
