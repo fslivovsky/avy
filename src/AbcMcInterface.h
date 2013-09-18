@@ -168,11 +168,6 @@ public:
         m_pBadCnfStore = NULL;
     }
 
-	// PDR
-	Pdr_Man_t* setupPdrMan(Aig_Man_t* pMan);
-	void ensurePdrFrames(Pdr_Man_t* pPdr, int nFrame);
-	void addCubesToPdrFrame(Pdr_Man_t* pPdr, Vec_Ptr_t* pCubes, int nFrame);
-	void getCubesFromPdrFrame(Pdr_Man_t* pPdr, int nFrame, Vec_Ptr_t* pCubes);
 
 private:
 	Aig_Man_t * duplicateAigWithoutPOs( Aig_Man_t * p );
