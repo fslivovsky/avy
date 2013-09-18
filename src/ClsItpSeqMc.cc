@@ -216,7 +216,6 @@ void ClsItpSeqMc::transformInterpolantToCNF(
       if (i != nFrame - 1)
           Aig_ManCo(pDupMan, i)->pFanin0 = NULL;
   Aig_ManCleanup(pDupMan);
-  Aig_ObjRemoveFanout()
   AVY_ASSERT(Aig_ManCoNum(pDupMan) == 1);
   //Aig_Man_t* pManOr = createOr(pMan, pInterpolant, pManPrev, pPrev);
   Aig_Man_t* pManOr = Aig_ManCreateMiter(pDupMan, pManPrev, 2);

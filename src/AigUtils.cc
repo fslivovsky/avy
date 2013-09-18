@@ -7,6 +7,9 @@ using namespace abc;
 namespace avy
 {
 
+  /** 
+   * Duplicate pCombMan but keep only one specified output
+   */
   Aig_Man_t *Aig_ManDupSinglePo (Aig_Man_t *pCombMan, int nPo)
   {
     AVY_ASSERT ( Aig_ManRegNum (pCombMan) == 0 );
@@ -39,8 +42,8 @@ namespace avy
   
   
   /** 
-      Replace or create PO of pSeqMan with pMiter. 
-      CI of pMiter are mapped to Registers of pSeqMan.
+      Replace or create PO of pSeqMan with pCombMan. 
+      CI of pCombMan are mapped to Registers of pSeqMan.
    */
   Aig_Man_t *Aig_ManReplacePo (Aig_Man_t *pSeqMan, Aig_Man_t *pCombMan, bool fCompl=false)
   {
