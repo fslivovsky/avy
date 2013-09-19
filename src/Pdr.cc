@@ -619,7 +619,6 @@ namespace avy
             // check if the output is trivially solved
             if ( Aig_ObjChild0(pObj) == Aig_ManConst0(p->pAig) )
               {
-                assert (0);
                 continue;
               }
             // check if the output is trivially solved
