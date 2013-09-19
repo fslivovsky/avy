@@ -624,7 +624,7 @@ namespace avy
             // check if the output is trivially solved
             if ( Aig_ObjChild0(pObj) == Aig_ManConst1(p->pAig) )
               {
-                assert( 0 );
+                AVY_ASSERT (!safe);
               }
             // try to solve this output
             if ( p->pTime4Outs )
