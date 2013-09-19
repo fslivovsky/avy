@@ -109,6 +109,7 @@ public:
 
 	void reinitializeSAT(int nFrame)
 	{
+	    m_bTrivial = false;
 	    if (m_pSat != NULL) sat_solver_delete(m_pSat);
 	    m_pSat = sat_solver_new();
         sat_solver_store_alloc( m_pSat, nFrame );
@@ -248,6 +249,8 @@ private:
     vector<set<int> >     m_VarsByFrame;
 
     vector<vector<int> >  m_GlobalVars;
+
+    bool m_bTrivial;
 };
 
 #endif // ABC_MC_INTERFACE_H

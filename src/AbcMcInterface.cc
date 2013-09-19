@@ -82,6 +82,7 @@ AbcMcInterface::AbcMcInterface(string strFileName) :
     , m_VarsByFrame(1)
     , m_pBadStore (NULL)
     , m_pInitStore(NULL)
+    , m_bTrivial(false)
 {
     std::cout << "Setting up ABC.\n";
     Abc_Start();
@@ -245,7 +246,10 @@ eResult AbcMcInterface::solveSat()
     VarNum = m_pBadCnf->pVarNums[pObj->Id] + (m_pInitCnf->nVars) + (m_nLastFrame - 1)*(m_pOneTRCnf->nVars)/* + m_pBadCnf->nVars)*/ + m_pOneTRCnf->nVars;
     Lit = toLitCond( VarNum, Aig_IsComplement(pObj) ) ;
     if (addClauseToSat(&Lit, &Lit +1) == false)
+    {
+        m_bTrivial = true;
         return FALSE;
+    }
     markPartition(m_nLastFrame);
     sat_solver_store_mark_roots( m_pSat );
     //RetValue = sat_solver_solve( m_pSat, &Lit, &Lit + 1, (ABC_INT64_T)10000000, (ABC_INT64_T)0, (ABC_INT64_T)0, (ABC_INT64_T)0 );
@@ -300,6 +304,15 @@ eResult AbcMcInterface::solveSat()
 // ************************************************************************
 Aig_Man_t* AbcMcInterface::getInterpolationSeq()
 {
+    if (m_bTrivial == true)
+    {
+        assert(m_pAig->nRegs > 0);
+        Aig_Man_t* pMan = Aig_ManStart(10000);
+        Aig_IthVar(pMan, m_pAig->nRegs-1);
+        for (int i=0; i < m_nLastFrame; i++)
+            Aig_ObjCreateCo(pMan, Aig_ManConst1(pMan));
+        return pMan;
+    }
     void* pSatCnf = sat_solver_store_release( m_pSat );
     sat_solver_delete( m_pSat );
     m_pSat = NULL;
@@ -664,7 +677,8 @@ void AbcMcInterface::addClausesToFrame(Vec_Ptr_t* pCubes, int nFrame)
             pClause[nCounter++] = lit;
         }
 
-        addClauseToSat(pClause, pClause+nCounter);
+        bool bRes = addClauseToSat(pClause, pClause+nCounter);
+        assert(bRes);
         ABC_FREE(pClause);
     }
 }
