@@ -38,6 +38,8 @@ namespace avy
     Aig_ManCleanData (pCombMan);
     
     Aig_ManCleanup( pNew );
+
+    return pNew;
   }
   
   

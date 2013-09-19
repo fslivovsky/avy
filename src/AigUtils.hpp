@@ -5,7 +5,7 @@
 
 namespace avy
 {
-  abc::Aig_Man_t *Aig_ManCreatePo (abc::Aig_Man_t *pMan, abc::Aig_Man_t *pMiter);
+  abc::Aig_Man_t *Aig_ManReplacePo (abc::Aig_Man_t *pMan, abc::Aig_Man_t *pMiter, bool fComp);
   abc::Aig_Man_t *Aig_ManDupSinglePo (abc::Aig_Man_t *pCombMan, int nPo);
 }
 
