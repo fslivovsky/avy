@@ -1,5 +1,6 @@
 #include "AigUtils.hpp"
 #include "aig/saig/saig.h"
+#include "aig/gia/giaAig.h"
 
 #include "avy/Util/AvyAssert.hpp"
 
@@ -117,5 +118,54 @@ namespace avy
     Aig_ManCleanup( pNew );
     return pNew;
   }
+
+  Aig_Man_t *Aig_ManGiaDup (Aig_Man_t *pAig)
+  {
+    Gia_Man_t *pGia = Gia_ManFromAigSimple (pAig);
+    return Gia_ManToAigSimple (pGia);
+  }
+  
+  Aig_Man_t *Aig_ManRebuild (Aig_Man_t **ppAig)
+  {
+    Aig_Man_t *pRes = Aig_ManGiaDup (*ppAig);
+    Aig_ManStop (*ppAig);
+    *ppAig = pRes;
+    return pRes;
+  }
+
+  bool Aig_ObjDbgCompare (Aig_Obj_t *pObj1, Aig_Obj_t *pObj2)
+  {
+    AVY_ASSERT (Aig_IsComplement (pObj1) == Aig_IsComplement (pObj2));
+    pObj1 = Aig_Regular (pObj1);
+    pObj2 = Aig_Regular (pObj2);
+    if (Aig_ObjId (pObj1) != Aig_ObjId (pObj2))
+      {
+        std::cerr  << "Left: " << Aig_ObjId (pObj1) 
+                   << " | Right: " << Aig_ObjId (pObj2) << "\n";
+        AVY_UNREACHABLE ();
+      }
+    
+    return true;
+  }
+  
+  bool Aig_ManDbgCompare (abc::Aig_Man_t *pAig1, abc::Aig_Man_t *pAig2)
+  {
+    AVY_ASSERT (Aig_ManCiNum (pAig1) == Aig_ManCiNum (pAig2));
+    AVY_ASSERT (Aig_ManCoNum (pAig1) == Aig_ManCoNum (pAig2));
+    AVY_ASSERT (Aig_ManBufNum (pAig1) == Aig_ManBufNum (pAig2));
+    AVY_ASSERT (Aig_ManAndNum (pAig1) == Aig_ManAndNum (pAig2));
+    AVY_ASSERT (Aig_ManNodeNum (pAig1) == Aig_ManNodeNum (pAig2));
+
+    Aig_Obj_t *pObj;
+    int i;
+    Aig_ManForEachCi (pAig1, pObj, i)
+      Aig_ObjDbgCompare (pObj, Aig_ManCi (pAig2, i));
+    Aig_ManForEachCo (pAig1, pObj, i)
+      Aig_ObjDbgCompare (pObj, Aig_ManCo (pAig2, i));
+    return true;
+  }
+  
+
+  
   
 }

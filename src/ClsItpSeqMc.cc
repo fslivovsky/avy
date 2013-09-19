@@ -229,11 +229,12 @@ void ClsItpSeqMc::transformInterpolantToCNF(
   LOG("cnf",
       std::cout << "Property: \n" << *Aig_ObjChild0(Aig_ManCo(pManOr, 0)) << "\n\n";);
   
-  Aig_Man_t *pNewMgr = Aig_ManReplacePo(m_McUtil.getCircuit(), pManOr, true);//m_McUtil.duplicateAigWithNewPO(pManOr, Aig_ManCo(pManOr, 0));
-  Aig_ManStop(pManOr);
-  Gia_Man_t* pGia = Gia_ManFromAigSimple(pNewMgr);
+  Aig_Man_t *pNewMgr = Aig_ManReplacePo(m_McUtil.getCircuit(), pManOr, true);
+  Aig_Man_t *pTmp = Aig_ManGiaDup (pNewMgr);
+  LOG("gia", Aig_ManDbgCompare (pNewMgr, pTmp););
   Aig_ManStop(pNewMgr);
-  pNewMgr = Gia_ManToAigSimple(pGia);
+  pNewMgr = pTmp;
+  pTmp = NULL;
 
   dummyName (pNewMgr);
   
