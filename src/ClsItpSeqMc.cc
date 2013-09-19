@@ -13,6 +13,7 @@
 #include "AigPrint.hpp"
 #include "boost/logic/tribool.hpp"
 #include "avy/Util/AvyAssert.hpp"
+#include "AigUtils.hpp"
 
 using namespace std;
 using namespace avy;
@@ -209,13 +210,7 @@ void ClsItpSeqMc::transformInterpolantToCNF(
   
   pPrev = Aig_ObjCreateCo(pManPrev, pPrev);
 
-  Aig_Man_t* pDupMan = Aig_ManDupSimple(pMan);
-  Aig_Obj_t* pObj;
-  int i;
-  Aig_ManForEachCo(pDupMan, pObj, i)
-      if (i != nFrame - 1)
-          Aig_ManCo(pDupMan, i)->pFanin0 = NULL;
-  Aig_ManCleanup(pDupMan);
+  Aig_Man_t* pDupMan = Aig_ManDupSinglePo(pMan, nFrame-1);
   AVY_ASSERT(Aig_ManCoNum(pDupMan) == 1);
   //Aig_Man_t* pManOr = createOr(pMan, pInterpolant, pManPrev, pPrev);
   Aig_Man_t* pManOr = Aig_ManCreateMiter(pDupMan, pManPrev, 2);
@@ -228,7 +223,7 @@ void ClsItpSeqMc::transformInterpolantToCNF(
   LOG("cnf",
       std::cout << "Property: \n" << *Aig_ObjChild0(Aig_ManCo(pManOr, 0)) << "\n\n";);
   
-  Aig_Man_t *pNewMgr = m_McUtil.duplicateAigWithNewPO(pManOr, Aig_ManCo(pManOr, 0));
+  Aig_Man_t *pNewMgr = Aig_ManReplacePo(m_McUtil.getCircuit(), pManOr, true);//m_McUtil.duplicateAigWithNewPO(pManOr, Aig_ManCo(pManOr, 0));
   Gia_Man_t* pGia = Gia_ManFromAigSimple(pNewMgr);
   Aig_ManStop(pNewMgr);
   pNewMgr = Gia_ManToAigSimple(pGia);
