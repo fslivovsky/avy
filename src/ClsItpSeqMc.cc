@@ -154,6 +154,9 @@ void ClsItpSeqMc::extractInterpolationSeq()
 	unsigned nSize = Aig_ManCoNum(pMan);
 	for (unsigned i = 1; i <= nSize; i++)
 	{
+	    if (Aig_ManCo(pMan, i-1) == Aig_ManConst1(pMan))
+	        continue;
+
 	    // Test the validity of the interpolation-seq
 	    // by checking I_{i-1} & TR => I_i'
 	    std::cout << "Checking " << i << endl;
@@ -215,6 +218,9 @@ void ClsItpSeqMc::transformInterpolantToCNF(
   //Aig_Man_t* pManOr = createOr(pMan, pInterpolant, pManPrev, pPrev);
   Aig_Man_t* pManOr = Aig_ManCreateMiter(pDupMan, pManPrev, 2);
 
+  Aig_ManStop(pManPrev);
+  Aig_ManStop(pDupMan);
+
   LOG("cnf",
       std::cout << "Cover for frame: " << nFrame-1 << "\n";
       dummyName (pManOr);
@@ -224,6 +230,7 @@ void ClsItpSeqMc::transformInterpolantToCNF(
       std::cout << "Property: \n" << *Aig_ObjChild0(Aig_ManCo(pManOr, 0)) << "\n\n";);
   
   Aig_Man_t *pNewMgr = Aig_ManReplacePo(m_McUtil.getCircuit(), pManOr, true);//m_McUtil.duplicateAigWithNewPO(pManOr, Aig_ManCo(pManOr, 0));
+  Aig_ManStop(pManOr);
   Gia_Man_t* pGia = Gia_ManFromAigSimple(pNewMgr);
   Aig_ManStop(pNewMgr);
   pNewMgr = Gia_ManToAigSimple(pGia);
