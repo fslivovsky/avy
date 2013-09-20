@@ -1,5 +1,7 @@
-#ifndef ABC_MC_INTERFACE_H
-#define ABC_MC_INTERFACE_H
+#ifndef ABC_BMC_SOLVER_H
+#define ABC_BMC_SOLVER_H
+
+#include "AbcMCInterface.h"
 
 #include "aig/aig/aig.h"
 #include "aig/saig/saig.h"
@@ -34,27 +36,15 @@ using namespace std;
 // 3. Generation of CNF formula
 //
 // Can also be implemented for other frameworks: add an Interface class
-// with general utility functions (class AbcMcInterface : public McInterface).
+// with general utility functions (class BMCSolver : public McInterface).
 
-namespace abc
-{
-  extern Aig_Man_t * Abc_NtkToDar( Abc_Ntk_t * pNtk, int fExors, int fRegisters );
-}
-
-
-enum eResult {
-    FALSE = -1,
-    UNDEF = 0,
-    TRUE = 1
-};
-
-class AbcMcInterface
+class BMCSolver
 {
 public:
 
-    AbcMcInterface(std::string strFileName);
+    BMCSolver(Aig_Man_t* pAig);
 
-	~AbcMcInterface()
+	~BMCSolver()
 	{
 		Abc_Stop();
 	}
@@ -65,7 +55,7 @@ public:
 	// phase nFrom to phase nTo. It should be possible to create the
 	// unrolling in an incremental fashion.
 	// NOTE: The property is not asserted in the resulting AIG.
-	void addTransitionsFromTo(int nFrom, int nTo);
+	void addTransitionsFromTo(unsigned nFrom, unsigned nTo);
 	bool setInit();
 	bool setBad(int nFrame, bool bHasPIs = true);
 
@@ -73,14 +63,7 @@ public:
 
 	eResult solveSat();
 
-	Aig_Man_t * duplicateAigWithNewPO(Aig_Man_t* pMan, Aig_Obj_t* pNewPO);
-
-	Aig_Man_t* getInterpolationSeq();
-
-	void markPartition(int part)
-	{
-	    sat_solver_store_mark_clauses_a(m_pSat, part);
-	}
+	Aig_Man_t* getInterpolant();
 
 	void startInterpolationSeq(int nSize)
 	{
@@ -90,7 +73,7 @@ public:
 	        m_pSat->pInt2 = NULL;
 	    }
 	    prepareGlobalVars(nSize);
-	    sat_solver_set_seqsize(m_pSat, nSize);
+	    sat_solver2_set_seqsize(m_pSat, nSize);
 	    int ** vGlobal = ABC_ALLOC(int*, nSize);
 	    int nGloVarsNum = m_GlobalVars[0].size();
 
@@ -110,14 +93,9 @@ public:
 	void reinitializeSAT(int nFrame)
 	{
 	    m_bTrivial = false;
-	    if (m_pSat != NULL) sat_solver_delete(m_pSat);
-	    m_pSat = sat_solver_new();
-        sat_solver_store_alloc( m_pSat, nFrame );
-        /*m_pSat->nLearntStart = 10000;
-        m_pSat->nLearntDelta =  5000;
-        m_pSat->nLearntRatio =    75;
-        m_pSat->nLearntMax   = m_pSat->nLearntStart;*/
-        sat_solver_setnvars( m_pSat, m_pInitCnf->nVars + nFrame*m_pOneTRCnf->nVars + m_pBadCnf->nVars );
+	    if (m_pSat != NULL) sat_solver2_delete(m_pSat);
+	    m_pSat = sat_solver2_new();
+        sat_solver2_setnvars( m_pSat, m_pInitCnf->nVars + nFrame*m_pOneTRCnf->nVars + m_pBadCnf->nVars );
         m_nLastFrame = m_iFramePrev = 0;
         m_GlobalVars.clear();
 	}
@@ -189,34 +167,44 @@ public:
 
 	void addClausesToFrame(Vec_Ptr_t* pCubes, int nFrame);
 
+	void setInterpolationFrame(int nFrame) { m_nInterpolationFrame = nFrame; }
+
 private:
 	Aig_Man_t * duplicateAigWithoutPOs( Aig_Man_t * p );
 
 	void createInitMan();
 	void createBadMan();
 
-
-	Aig_Obj_t* createCombSlice_rec(Aig_Man_t* pOrig, Aig_Man_t* pMan, Aig_Obj_t * pObj);
-
 	bool addClauseToSat(lit* begin, lit* end)
 	{
-	    int Cid = sat_solver_addclause(m_pSat, begin, end);
+	    int Cid = sat_solver2_addclause(m_pSat, begin, end, -1);
 
-	    //clause2_set_partA(m_pSat, Cid, m_nLastFrame);
+	    if (m_nInterpolationFrame > 0 &&
+	        m_nInterpolationFrame == m_nLastFrame)
+	    {
+	        clause2_set_partA(m_pSat, Cid, 1);
+	    }
 	    //m_ClausesByFrame[m_nLastFrame].insert(Cid);
 	    return (Cid != 0);
 	}
 
-	void logCnfVars(Aig_Man_t* pMan, Cnf_Dat_t* pCnf)
+	void markCnfVars(Aig_Man_t* pMan, Cnf_Dat_t* pCnf)
 	{
 	    Aig_Obj_t* pObj;
 	    int i;
-        //Aig_ManForEachObj( pMan, pObj, i )
-            //if ( pCnf->pVarNums[pObj->Id] >= 0)
-                //var_set_partA(m_pSat, pCnf->pVarNums[pObj->Id], m_nLastFrame+1);
+        Aig_ManForEachObj( pMan, pObj, i )
+            if ( pCnf->pVarNums[pObj->Id] >= 0)
+                var_set_partA(m_pSat, pCnf->pVarNums[pObj->Id], 1);
                 //m_VarsByFrame[m_nLastFrame].insert(pCnf->pVarNums[pObj->Id]);
 	}
 
+	unsigned getNumOfGlueRemovalVars(unsigned nFrame)
+	{
+	    if (m_bAddGlueRemovalLiteral == false) return 0;
+	    if (m_nLevelRemoval >= 0) return 1;
+
+	    return nFrame+1;
+	}
 private:
 	Abc_Frame_t* 	      m_pAbcFramework;
 
@@ -238,7 +226,7 @@ private:
     Cnf_Dat_t*            m_pBadCnfStore;   // CNF representation of one TR
 
     // SAT solver
-    sat_solver*          m_pSat;           // SAT solver
+    sat_solver2*          m_pSat;           // SAT solver
 
     int                   m_iFramePrev;     // previous frame
     int                   m_nLastFrame;     // last frame
@@ -251,7 +239,11 @@ private:
     vector<vector<int> >  m_GlobalVars;
 
     bool m_bTrivial;
+
     bool m_bAddGlueRemovalLiteral;
+    int m_nLevelRemoval;
+
+    int m_nInterpolationFrame;
 };
 
 #endif // ABC_MC_INTERFACE_H

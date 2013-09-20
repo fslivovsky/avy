@@ -14,7 +14,7 @@
 #include "avy/Util/AvyDebug.h"
 #include "AbcMcInterface.h"
 #include "Pdr.h"
-
+#include "BMCSolver.h"
 
 using namespace std;
 
@@ -134,6 +134,8 @@ private:
 	// Don't want to apply reasoning where no meaningfull clauses were added.
 	// Still need to figure out if this is possible/needed in our settings.
 	unsigned m_nLowestModifiedFrame;
+
+    std::vector<BMCSolver*> m_FrameInterpolatingSolvers;
 };
 
 #endif // CLS_ITP_SEQ_MC_H

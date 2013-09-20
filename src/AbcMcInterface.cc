@@ -83,6 +83,7 @@ AbcMcInterface::AbcMcInterface(string strFileName) :
     , m_pBadStore (NULL)
     , m_pInitStore(NULL)
     , m_bTrivial(false)
+    , m_bAddGlueRemovalLiteral(false)
 {
     std::cout << "Setting up ABC.\n";
     Abc_Start();
@@ -345,8 +346,8 @@ Aig_Man_t* AbcMcInterface::getInterpolationSeq()
     //Gia_Man_t* pInter = (Gia_Man_t *)Int2_ManReadInterpolant( m_pSat );
     //Gia_ManPrintStats( pInter, 0, 0, 0 );
     Aig_ManPrintStats(pMan);
-    Aig_ManDump(pMan);
-    Aig_ManCleanData(pMan);
+    //Aig_ManDump(pMan);
+    //Aig_ManCleanData(pMan);
     //pMan->nTruePis = Aig_ManCiNum(pMan);
     //pMan->nTruePos = Aig_ManCoNum(pMan);
     //pMan->nRegs = 0;
