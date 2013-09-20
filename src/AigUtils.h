@@ -58,6 +58,13 @@ namespace avy
    */
   abc::Aig_Man_t *Aig_ManSimplifyComb (abc::Aig_Man_t *p);
   
+
+  /**
+   * Insert a reset PI, called r.
+   * When r is true, the registers are reset to 0
+   */
+  abc::Aig_Man_t *Aig_CreateReset (abc::Aig_Man_t *p);
+  
 }
 
 
