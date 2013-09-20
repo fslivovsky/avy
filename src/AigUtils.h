@@ -3,8 +3,25 @@
 
 #include "aig/aig/aig.h"
 
+#include "boost/shared_ptr.hpp"
+
 namespace avy
 {
+
+
+  typedef boost::shared_ptr<abc::Aig_Man_t> AigManPtr;
+  
+  namespace 
+  { struct aig_deleter 
+    { void operator() (abc::Aig_Man_t* p) { if (p) abc::Aig_ManStop (p); } }; }
+  
+  inline AigManPtr aigPtr (abc::Aig_Man_t *p) 
+  { return AigManPtr (p, aig_deleter ());}
+
+  inline AigManPtr newAigPtr (int nNodesMax) 
+  { return aigPtr (abc::Aig_ManStart (nNodesMax)); }
+  
+
   abc::Aig_Man_t *Aig_ManReplacePo (abc::Aig_Man_t *pSeqMan, 
                                     abc::Aig_Man_t *pCombMan, bool fComp);
   /** 
