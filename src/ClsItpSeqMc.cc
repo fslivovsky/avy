@@ -171,22 +171,9 @@ void ClsItpSeqMc::extractInterpolationSeq()
 	}
 
 	Aig_ManStop(pMan);
-        
-        LOG ("pdr",
-             cerr << "Global Pdr before push\n" << m_GlobalPdr << "\n";);
 
 	// Now justify the clauses.
-        //justifyClauses(i, cnfInterpolant)
-        tribool res = m_GlobalPdr.push ();
-        AVY_ASSERT (res || !res);
-
-        LOG ("pdr", 
-             cerr << "Global Pdr after push\n" << m_GlobalPdr << "\n";);
-        
-
-        
-        cout << (res ? "SAFE" : "UNKNOWN") << "\n";
-        
+        //justifyClauses(i, cnfInterpolant)        
 }
 void ClsItpSeqMc::transformInterpolantToCNF(
     unsigned nFrame,
@@ -320,7 +307,15 @@ void ClsItpSeqMc::justifyClauses(unsigned nFrame, const set<Clause>& cnfInterpol
 
 bool ClsItpSeqMc::globalPush()
 {
-    return false;
+  LOG ("pdr",
+       cerr << "Global Pdr before push\n" << m_GlobalPdr << "\n";);
+  tribool res = m_GlobalPdr.push ();
+  AVY_ASSERT (res || !res);
+
+  LOG ("pdr", 
+       cerr << "Global Pdr after push\n" << m_GlobalPdr << "\n";);
+        
+  return res == true;
 }
 
 Aig_Man_t* ClsItpSeqMc::createOr(Aig_Man_t* pMan1, Aig_Obj_t* p1, Aig_Man_t* pMan2, Aig_Obj_t* p2)
