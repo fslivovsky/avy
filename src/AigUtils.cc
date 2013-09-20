@@ -75,7 +75,8 @@ namespace avy
       Replace or create PO of pSeqMan using pCombMan. 
       CI of pCombMan are mapped to Registers of pSeqMan.
    */
-  Aig_Man_t *Aig_ManReplacePo (Aig_Man_t *pSeqMan, Aig_Man_t *pCombMan, bool fCompl=false)
+  Aig_Man_t *Aig_ManReplacePo (Aig_Man_t *pSeqMan, Aig_Man_t *pCombMan, 
+                               bool fCompl=false)
   {
     // Only one property output.
     AVY_ASSERT(Saig_ManPoNum(pSeqMan) - Saig_ManConstrNum(pSeqMan) == 1 
