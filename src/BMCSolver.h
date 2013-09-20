@@ -1,7 +1,7 @@
 #ifndef ABC_BMC_SOLVER_H
 #define ABC_BMC_SOLVER_H
 
-#include "AbcMCInterface.h"
+#include "AbcMcInterface.h"
 
 #include "aig/aig/aig.h"
 #include "aig/saig/saig.h"
