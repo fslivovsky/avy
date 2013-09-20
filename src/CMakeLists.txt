@@ -1,9 +1,9 @@
 add_library (ClauseItpSeq STATIC 
-  AbcMcInterface.cc ClsItpSeqMc.cc)
+  AbcMcInterface.cc ClsItpSeqMc.cc Global.cc)
 add_library (AbcCpp Pdr.cc AigPrint.cc AbcUtils.cpp AigUtils.cc)
 add_library (AvyDebug AvyDebug.cpp)
 add_executable (main main.cc)
-target_link_libraries (main 
+target_link_libraries (main
   ClauseItpSeq 
   AbcCpp
   AvyDebug
