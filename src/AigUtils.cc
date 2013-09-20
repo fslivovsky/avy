@@ -9,35 +9,61 @@ namespace avy
 {
 
   /** 
-   * Duplicate pCombMan but keep only one specified output
+   * Duplicate p but keep only one specified output , or none if nPo is -1
    */
-  Aig_Man_t *Aig_ManDupSinglePo (Aig_Man_t *pCombMan, int nPo)
+  Aig_Man_t *Aig_ManDupSinglePo (Aig_Man_t *p, int nPo, bool fKeepRegs)
   {
-    AVY_ASSERT ( Aig_ManRegNum (pCombMan) == 0 );
-    AVY_ASSERT ( Aig_ManCoNum (pCombMan) >= nPo );
+    AVY_ASSERT ( Aig_ManRegNum (p) == 0 );
+    AVY_ASSERT ( nPo < 0 || Aig_ManCoNum (p) >= nPo );
 
     // create the new manager
-    Aig_Man_t *pNew = Aig_ManStart( Aig_ManObjNumMax(pCombMan));
-    pNew->pName = Abc_UtilStrsav( pCombMan->pName );
-    pNew->pSpec = Abc_UtilStrsav( pCombMan->pSpec );
+    Aig_Man_t *pNew = Aig_ManStart( Aig_ManObjNumMax(p));
+    pNew->pName = Abc_UtilStrsav( p->pName );
+    pNew->pSpec = Abc_UtilStrsav( p->pSpec );
+    pNew->nTruePis = p->nTruePis;
+    if (nPo < 0 )
+      pNew->nTruePos = Saig_ManConstrNum (p);
+    else
+      pNew->nTruePos = Saig_ManConstrNum (p) + 1;
+    pNew->nRegs = p->nRegs;
+    
 
     // -- move nodes
-    Aig_ManConst1(pCombMan)->pData = Aig_ManConst1(pNew);
+    Aig_ManConst1(p)->pData = Aig_ManConst1(pNew);
     
     // -- inputs
     int i;
     Aig_Obj_t * pObj;
-    Aig_ManForEachCi( pCombMan, pObj, i ) pObj->pData = Aig_ObjCreateCi( pNew );
+    Aig_ManForEachCi( p, pObj, i ) pObj->pData = Aig_ObjCreateCi( pNew );
 
     // duplicate internal nodes
-    Aig_ManForEachNode( pCombMan, pObj, i )
-      pObj->pData = Aig_And( pNew, Aig_ObjChild0Copy(pObj), Aig_ObjChild1Copy(pObj) );
+    Aig_ManForEachNode( p, pObj, i )
+      pObj->pData = Aig_And( pNew, Aig_ObjChild0Copy(pObj), 
+                             Aig_ObjChild1Copy(pObj) );
 
-    AVY_ASSERT (Aig_ObjChild0Copy (Aig_ManCo(pCombMan, nPo)) != NULL);
-    Aig_ObjCreateCo (pNew, Aig_ObjChild0Copy (Aig_ManCo(pCombMan, nPo)));
+    // create constraint outputs
+    Saig_ManForEachPo( p, pObj, i )
+      {
+        if ( i < Saig_ManPoNum(p)-Saig_ManConstrNum(p) )
+          continue;
+        Aig_ObjCreateCo( pNew, Aig_Not( Aig_ObjChild0Copy(pObj) ) );
+      }
 
-    Aig_ManCleanData (pCombMan);
+    if (fKeepRegs)
+      {
+        // -- registers
+        Saig_ManForEachLi( p, pObj, i )
+          Aig_ObjCreateCo( pNew, Aig_ObjChild0Copy(pObj) );
+      }
     
+        
+    if (nPo >= 0)
+      {
+        AVY_ASSERT (Aig_ObjChild0Copy (Aig_ManCo(p, nPo)) != NULL);
+        Aig_ObjCreateCo (pNew, Aig_ObjChild0Copy (Aig_ManCo(p, nPo)));
+      }
+
+    Aig_ManCleanData (p);
     Aig_ManCleanup( pNew );
 
     return pNew;
@@ -45,7 +71,7 @@ namespace avy
   
   
   /** 
-      Replace or create PO of pSeqMan with pCombMan. 
+      Replace or create PO of pSeqMan using pCombMan. 
       CI of pCombMan are mapped to Registers of pSeqMan.
    */
   Aig_Man_t *Aig_ManReplacePo (Aig_Man_t *pSeqMan, Aig_Man_t *pCombMan, bool fCompl=false)

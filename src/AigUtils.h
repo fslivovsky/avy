@@ -7,7 +7,18 @@ namespace avy
 {
   abc::Aig_Man_t *Aig_ManReplacePo (abc::Aig_Man_t *pSeqMan, 
                                     abc::Aig_Man_t *pCombMan, bool fComp);
-  abc::Aig_Man_t *Aig_ManDupSinglePo (abc::Aig_Man_t *pCombMan, int nPo);
+  /** 
+   * Duplicate an AIG but
+   * keep only single po nPo 
+   * or no po if nPo is -1
+   * remove registers unless fKeepRegs is true
+   */
+  abc::Aig_Man_t *Aig_ManDupSinglePo (abc::Aig_Man_t *p, int nPo, 
+                                      bool fKeepRegs=true);
+  
+  inline abc::Aig_Man_t *Aig_ManDupNoPo (abc::Aig_Man_t *p)
+  { return Aig_ManDupSinglePo (p, -1, true); }
+  
 
   /** 
    * Duplicate an Aig via Gia 
