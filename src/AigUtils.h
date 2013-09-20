@@ -35,6 +35,12 @@ namespace avy
    * Structurally compare two Aig for debugging
    */
   bool Aig_ManDbgCompare (abc::Aig_Man_t *pAig1, abc::Aig_Man_t *pAig2);
+
+  /**
+   * Generic simplification
+   */
+  abc::Aig_Man_t *Aig_ManSimplifyComb (abc::Aig_Man_t *p);
+  
 }
 
 

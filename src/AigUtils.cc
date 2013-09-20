@@ -1,5 +1,6 @@
 #include "aig/saig/saig.h"
 #include "aig/gia/giaAig.h"
+#include "proof/dch/dch.h"
 
 #include "AigUtils.h"
 #include "avy/Util/AvyAssert.h"
@@ -192,6 +193,18 @@ namespace avy
   }
   
 
+  Aig_Man_t *Aig_ManSimplifyComb (Aig_Man_t *p)
+  {
+    Dch_Pars_t pars;
+    Dch_ManSetDefaultParams(&pars);
+    pars.nWords = 16;
+    Gia_Man_t* pGia = Gia_ManFromAigSimple(p);
+    Gia_Man_t *pSynGia = Gia_ManFraigSweep(pGia, (void*)(&pars));
+    Gia_ManStop(pGia);
+    Aig_Man_t* pSyn = Gia_ManToAigSimple(pSynGia);
+    Gia_ManStop(pSynGia);
+    return pSyn;
+  }
   
   
 }
