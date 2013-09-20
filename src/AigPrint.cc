@@ -1,5 +1,5 @@
-#include "AigPrint.hpp"
-#include "avy/Util/AvyAssert.hpp"
+#include "AigPrint.h"
+#include "avy/Util/AvyAssert.h"
 using namespace abc;
 
 namespace avy

@@ -1,8 +1,8 @@
-#include "AigUtils.hpp"
 #include "aig/saig/saig.h"
 #include "aig/gia/giaAig.h"
 
-#include "avy/Util/AvyAssert.hpp"
+#include "AigUtils.h"
+#include "avy/Util/AvyAssert.h"
 
 using namespace abc;
 namespace avy

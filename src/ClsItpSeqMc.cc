@@ -9,10 +9,10 @@
 #include <iostream>
 
 #include "aig/gia/giaAig.h"
-#include "AigPrint.hpp"
+#include "AigPrint.h"
 #include "boost/logic/tribool.hpp"
-#include "avy/Util/AvyAssert.hpp"
-#include "AigUtils.hpp"
+#include "avy/Util/AvyAssert.h"
+#include "AigUtils.h"
 
 using namespace std;
 using namespace avy;

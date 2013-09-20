@@ -1,5 +1,5 @@
-#include "avy/Util/AvyDebug.hpp"
-#include "avy/Util/AvyAssert.hpp"
+#include "avy/Util/AvyDebug.h"
+#include "avy/Util/AvyAssert.h"
 
 #include <string>
 #include <set>

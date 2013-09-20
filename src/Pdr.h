@@ -5,7 +5,7 @@
 #include <iostream>
 
 #include "boost/logic/tribool.hpp"
-#include "avy/Util/AvyAssert.hpp"
+#include "avy/Util/AvyAssert.h"
 
 namespace avy
 {

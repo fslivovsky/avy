@@ -2,7 +2,7 @@
 #define __AVY__DEBUG__HPP_
 #include <string>
 #include <set>
-
+#include "AvyAssert.h"
 
 namespace avy
 {

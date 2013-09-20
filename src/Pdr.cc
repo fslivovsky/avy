@@ -1,8 +1,8 @@
 #include "Pdr.h"
 #include "proof/pdr/pdrInt.h"
-#include "AigPrint.hpp"
-#include "avy/Util/AvyDebug.hpp"
-#include "avy/Util/AvyAssert.hpp"
+#include "AigPrint.h"
+#include "avy/Util/AvyDebug.h"
+#include "avy/Util/AvyAssert.h"
 
 namespace abc
 {

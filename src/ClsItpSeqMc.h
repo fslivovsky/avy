@@ -11,9 +11,7 @@
 #include <set>
 #include <vector>
 
-#include "avy/Util/AvyDebug.hpp"
-#include "avy/Util/AvyAssert.hpp"
-
+#include "avy/Util/AvyDebug.h"
 #include "AbcMcInterface.h"
 #include "Pdr.h"
 
