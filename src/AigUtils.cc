@@ -26,7 +26,10 @@ namespace avy
       pNew->nTruePos = Saig_ManConstrNum (p);
     else
       pNew->nTruePos = Saig_ManConstrNum (p) + 1;
-    pNew->nRegs = p->nRegs;
+    if (fKeepRegs)
+      pNew->nRegs = p->nRegs;
+    else
+      pNew->nRegs = 0;
     
 
     // -- move nodes
