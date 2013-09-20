@@ -210,7 +210,7 @@ namespace avy
     return pSyn;
   }
 
-  Aig_Man_t *Aig_CreateReset (Aig_Man_t *p)
+  Aig_Man_t *Aig_AddResetPi (Aig_Man_t *p)
   {
     // Only support single property for now.
     AVY_ASSERT(p->nTruePos == 1 && "Assuming single PO");
@@ -267,6 +267,19 @@ namespace avy
 
     Aig_ManCleanup( pNew );
     return pNew;
+  }
+
+  Aig_Man_t *Aig_CreateAllZero (unsigned nPiNum)
+  {
+    int i;
+    AVY_ASSERT (nPiNum > 0 );
+    Aig_Obj_t ** ppInputs = ABC_ALLOC( Aig_Obj_t *, nPiNum );
+    Aig_Man_t *p = Aig_ManStart( nPiNum );
+    for ( i = 0; i < nPiNum; i++ ) ppInputs[i] = Aig_Not( Aig_ObjCreateCi(p) );
+    Aig_Obj_t *pRes = Aig_Multi( p, ppInputs, nPiNum, AIG_OBJ_AND );
+    Aig_ObjCreateCo(p, pRes );
+    ABC_FREE( ppInputs );
+    return p;
   }
   
   

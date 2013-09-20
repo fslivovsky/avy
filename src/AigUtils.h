@@ -63,8 +63,13 @@ namespace avy
    * Insert a reset PI, called r.
    * When r is true, the registers are reset to 0
    */
-  abc::Aig_Man_t *Aig_CreateReset (abc::Aig_Man_t *p);
-  
+  abc::Aig_Man_t *Aig_AddResetPi (abc::Aig_Man_t *p);
+
+  /**
+   * Create an AIG with PO = AND (!PI_0, ..., !PI_N)
+   */
+  abc::Aig_Man_t *Aig_CreateAllZero (unsigned nPiNum);
+ 
 }
 
 

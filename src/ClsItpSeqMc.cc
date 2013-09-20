@@ -65,7 +65,6 @@ bool ClsItpSeqMc::prove()
 ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame)
 {
     cout << "Solving frame: " << nFrame << endl;
-    m_McUtil.startInterpolationSeq(nFrame);
     m_McUtil.reinitializeSAT(nFrame);
     m_McUtil.setInit();
     for (int i = 0; i < nFrame; i++)
