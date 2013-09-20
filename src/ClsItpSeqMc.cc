@@ -9,7 +9,6 @@
 #include <iostream>
 
 #include "aig/gia/giaAig.h"
-#include "AbcUtils.h"
 #include "AigPrint.hpp"
 #include "boost/logic/tribool.hpp"
 #include "avy/Util/AvyAssert.hpp"
@@ -195,7 +194,6 @@ void ClsItpSeqMc::transformInterpolantToCNF(
 {
   using namespace avy;
 
-  dummyName (pMan);  
   Aig_Obj_t* pInterpolant = Aig_ManCo(pMan, nFrame-1);
 
   LOG("cnf",
@@ -223,7 +221,6 @@ void ClsItpSeqMc::transformInterpolantToCNF(
 
   LOG("cnf",
       std::cout << "Cover for frame: " << nFrame-1 << "\n";
-      dummyName (pManOr);
       std::cout << *pPrev  << "\n\n";);
   
   LOG("cnf",
@@ -236,8 +233,6 @@ void ClsItpSeqMc::transformInterpolantToCNF(
   pNewMgr = pTmp;
   pTmp = NULL;
 
-  dummyName (pNewMgr);
-  
   Pdr pdr (pNewMgr);
   Vec_Ptr_t *pCubes = NULL;
   pdr.setLimit (nFrame == 1 ? 2 : 3);
