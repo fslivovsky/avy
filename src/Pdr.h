@@ -41,8 +41,8 @@ namespace avy
         case 1: return true;
         case 0: return false;
         case -1: return boost::indeterminate;
-        default: AVY_UNREACHABLE ();
         }
+    AVY_UNREACHABLE ();
     }
     
     void Print (std::ostream &out);

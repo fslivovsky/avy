@@ -36,7 +36,7 @@
 
 namespace avy
 {
-  inline void assertion_failed (char const *expr, char const * file, long line)
+  inline void __attribute__ ((noreturn))  assertion_failed (char const *expr, char const * file, long line) 
   {
     std::cerr << "Error:" << file << ":" << line << ":" 
               << " Assertion: " << expr << "\n";
