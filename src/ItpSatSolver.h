@@ -9,9 +9,14 @@
 
 #include "sat/bsat/satSolver.h"
 
+#include <vector>
+
 namespace avy
 {
   using namespace abc;
+  
+  typedef std::vector<lit> LitVector;
+  
   
   /// Thin wrapper around interpolating sat solver
   class ItpSatSolver : boost::noncopyable
@@ -84,23 +89,39 @@ namespace avy
     
     /// true if the context is decided 
     bool isSolved () { return m_Trivial || m_State || !m_State; }
-    
-    /// decide current context
-    boost::tribool solve ()
+
+    /// decide context with assumptions
+    boost::tribool solve (LitVector &assumptions)
     {
       if (isTrivial ()) return false;
+      if (!assumptions.empty ()) m_State = boost::indeterminate;
+      
       if (isSolved ()) return m_State;
       
       AVY_ASSERT (m_pSat != NULL);
       
       sat_solver_store_mark_roots( m_pSat );
-      int RetValue = sat_solver_solve( m_pSat, NULL,  NULL, 
+      lit *beg = NULL;
+      if (!assumptions.empty ()) beg = &assumptions[0];
+      int RetValue = sat_solver_solve( m_pSat, beg,  beg + assumptions.size (),
                                        (ABC_INT64_T)10000000, (ABC_INT64_T)0, 
                                        (ABC_INT64_T)0, (ABC_INT64_T)0 );
       
       m_State = tbool (RetValue);
       return m_State;
+      
     }
+
+    /// a pointer to the unsat core
+    int core (int **out) { return sat_solver_final (m_pSat, out); }
+    
+    /// decide current context
+    boost::tribool solve ()
+    {
+      LitVector v;
+      return solve (v);
+    }
+
     bool isTrivial () { return m_Trivial; }
     
 
