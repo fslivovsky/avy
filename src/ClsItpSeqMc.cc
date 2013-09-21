@@ -168,8 +168,11 @@ void ClsItpSeqMc::extractInterpolationSeq()
 	    transformInterpolantToCNF(i, pMan);
 	    //Aig_ManStop(pDup);
 
-            if (m_GlobalPdr.push ()) cerr << "SAFE\n";
-            m_GlobalPdr.statusLn (cerr);
+        if (m_GlobalPdr.push ()) {
+            cerr << "SAFE\n";
+            break;
+        }
+        m_GlobalPdr.statusLn (cerr);
 	}
 
 	Aig_ManStop(pMan);
@@ -200,7 +203,7 @@ void ClsItpSeqMc::transformInterpolantToCNF(
   
   pPrev = Aig_ObjCreateCo(pManPrev, pPrev);
 
-  Aig_Man_t* pDupMan = Aig_ManDupSinglePo(pMan, nFrame-1);
+  Aig_Man_t* pDupMan = Aig_ManDupSinglePo(pMan, nFrame-1, false);
   AVY_ASSERT(Aig_ManCoNum(pDupMan) == 1);
   //Aig_Man_t* pManOr = createOr(pMan, pInterpolant, pManPrev, pPrev);
   Aig_Man_t* pManOr = Aig_ManCreateMiter(pDupMan, pManPrev, 2);
