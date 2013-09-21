@@ -19,6 +19,13 @@
 #define AVY_VERIFY(a) AVY_ASSERT(a)
 #endif 
 
+#undef AVY_DEBUG
+#if defined(AVY_NDEBUG) || defined(NDEBUG)
+#define AVY_DEBUG(CODE) do { } while (0)
+#else
+#define AVY_DEBUG(CODE) do { CODE } while (0)
+#endif
+
 
 #ifndef AVY_ASSERT_H_
 #define AVY_ASSERT_H_
