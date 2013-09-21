@@ -380,10 +380,9 @@ bool AbcMcInterface::setBad(int nFrame, bool bHasPIs)
         assert ( i <= Aig_ManRegNum(m_pOneTR));
         Aig_Obj_t* pObj2 = Aig_ManCi(m_pBad, (bHasPIs) ? m_pOneTR->nTruePis+i : i );
 
-        int nVar  = m_pOneTRCnf->pVarNums[pObj->Id];
-        int nVar2 = m_pBadCnf->pVarNums[pObj2->Id]; // This is a global var
+        int nVar  = m_pOneTRCnf->pVarNums[pObj->Id]; // This is a global var
+        int nVar2 = m_pBadCnf->pVarNums[pObj2->Id]; 
 
-        //m_GlobalVars[m_nLastFrame].push_back(nVar2);
 
         Lits[0] = toLitCond(nVar , 0 );
         Lits[1] = toLitCond(nVar2, 1 );

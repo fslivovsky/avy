@@ -211,7 +211,13 @@ private:
     vector<set<int> >     m_ClausesByFrame;
     vector<set<int> >     m_VarsByFrame;
 
-    vector<vector<int> >  m_GlobalVars;
+  // -- shared variables for the interpolation.
+  // -- Frame0 = Init  : no globals
+  // -- Frame1 = glue(Init,0) & TR(0,1)   : Li(1) = m_GlobalVars[0]
+  // -- Frame2 = glue(1,2) & TR(1,2)      : Li(2) = m_GlobalVars[1]
+  // -- FrameN = glue(N,N+1) & TR(N,N+1)  : Li(N) = m_GlobalVars[N]
+  // -- Frame{N+1} = Bad(N+1)             : Li(N+1) = m_GlobalVars[N+1]
+  vector<vector<int> >  m_GlobalVars;
 
     bool m_bTrivial;
     bool m_bAddGlueRemovalLiteral;
