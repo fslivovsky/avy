@@ -2,6 +2,7 @@
 #include "misc/vec/vec.h"
 #include "sat/bsat/satStore.h"
 
+#include "avy/Util/Global.h" 
 namespace avy
 {
   /// Compute an interpolant. User provides the list of shared variables
@@ -35,7 +36,7 @@ namespace avy
     Aig_ManStop (pMan);
     pMan = tmp; tmp = NULL;
 
-    Aig_ManPrintStats(pMan);
+    VERBOSE(1, Aig_ManPrintStats(pMan););
 
     // Release memory
     Sto_ManFree( pSatCnf );
