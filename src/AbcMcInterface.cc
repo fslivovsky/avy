@@ -126,11 +126,14 @@ void AbcMcInterface::addTransitionsFromTo(int nFrom, int nTo)
             {
                 Aig_Obj_t *pObj2 = Saig_ManLi(m_pOneTR, i );
 
-                int nVar = m_pOneTRCnf->pVarNums[pObj->Id]; // This is the global var.
+                int nVar = m_pOneTRCnf->pVarNums[pObj->Id]; 
+                // This is the global var.
                 int nVar2 = m_pOneTRCnf->pVarNums[pObj2->Id] - m_pOneTRCnf->nVars;// - m_pBadCnf->nVars;
 
                 // -- add forall i . Tr_{from}.Li.i = TR_{from+1}.Lo.i
-                // -- latch outputs are global
+                // -- latch inputs are global (i.e., output of TR_i is global)
+                // -- this is more uniform than taken latch outpus as global
+
                 Lits[0] = toLitCond(nVar , 0 );
                 Lits[1] = toLitCond(nVar2, 1 );
                 addClauseToSat(Lits, Lits+2);
