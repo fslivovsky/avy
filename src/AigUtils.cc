@@ -14,7 +14,7 @@ namespace avy
    */
   Aig_Man_t *Aig_ManDupSinglePo (Aig_Man_t *p, int nPo, bool fKeepRegs)
   {
-    AVY_ASSERT ( Aig_ManRegNum (p) == 0 );
+    AVY_ASSERT ( fKeepRegs == false || Aig_ManRegNum (p) > 0 );
     AVY_ASSERT ( nPo < 0 || Aig_ManCoNum (p) >= nPo );
 
     // create the new manager
