@@ -80,7 +80,7 @@ namespace avy
     unsigned varSize (unsigned nStart, unsigned nStop, bool fWithBad)
     {
       unsigned nVars = 0;
-      for (unsigned i = nStart; i  < nStop; ++i) nVars += trVarSize ();
+      for (unsigned i = nStart; i  < nStop; ++i) nVars += trVarSize (i);
       if (fWithBad) nVars += badVarSize ();
       return nVars;
     }
@@ -162,7 +162,7 @@ namespace avy
         AVY_VERIFY (solver.addClause (m_cnfTr->pClauses [i], m_cnfTr->pClauses[i+1]));
     }
 
-    return addGlueCnf (solver, nFrame, nOffset, nOffset + cnfVarSize (nFrame));
+    return addGlueCnf (solver, nFrame, nOffset, nOffset + trVarSize (nFrame));
   }
 
   
