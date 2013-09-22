@@ -9,70 +9,18 @@
 #include <assert.h>
 #include <iostream>
 
+#include "avy/Util/AvyAssert.h"
+#include "AigUtils.h"
+
 #include "AbcMcInterface.h"
 #include "base/main/main.h"
 #include "aig/ioa/ioa.h"
 
 using namespace abc;
+using namespace avy;
 
 #define DEBUG 0
 
-//extern int Cmd_CommandExecute(void *pAbc, char *sCommand);
-
-Aig_Man_t* reEncode(Aig_Man_t* p)
-{
-    // Only support single property for now.
-    assert(p->nTruePos == 1);
-    Aig_Man_t * pNew;
-    Aig_Obj_t * pObj;
-    int i;
-    assert( Aig_ManRegNum(p) > 0 );
-    // create the new manager
-    pNew = Aig_ManStart( Aig_ManObjNumMax(p) );
-    pNew->pName = Abc_UtilStrsav( p->pName );
-    pNew->pSpec = Abc_UtilStrsav( p->pSpec );
-    // create the PIs
-    Aig_ManCleanData( p );
-    Aig_ManConst1(p)->pData = Aig_ManConst1(pNew);
-    Aig_Obj_t* pPI = Aig_ObjCreateCi(pNew);
-    Aig_ManForEachCi( p, pObj, i )
-        pObj->pData = Aig_ObjCreateCi( pNew );
-    // set registers
-    pNew->nTruePis = p->nTruePis+1;
-    pNew->nTruePos = p->nTruePos;
-    pNew->nRegs    = p->nRegs;
-    pNew->nConstrs = Saig_ManConstrNum(p);
-    // duplicate internal nodes
-    Aig_ManForEachNode( p, pObj, i )
-        pObj->pData = Aig_And( pNew, Aig_ObjChild0Copy(pObj), Aig_ObjChild1Copy(pObj) );
-
-    Aig_Obj_t *pLi, *pLo;
-    Saig_ManForEachLiLo( p, pLi, pLo, i )
-    {
-        //Aig_Obj_t* ppp = Aig_Or(pNew, Aig_Not(pPI), Aig_Not(Aig_ObjCopy(pLo)));
-        Aig_Obj_t* pTmp = Aig_And(pNew, Aig_ObjChild0Copy(pLi), Aig_Not(pPI));
-        Aig_Regular(pLi->pFanin0)->pData = pTmp;
-        pLi->pFanin0 = Aig_Regular(pLi->pFanin0);
-    }
-
-    // add the PO
-    pObj = Aig_ManCo(p, 0 );
-    Aig_ObjCreateCo(pNew, Aig_ObjChild0Copy(pObj) );
-
-    // create constraint outputs
-    Saig_ManForEachPo( p, pObj, i )
-    {
-        if ( i < Saig_ManPoNum(p)-Saig_ManConstrNum(p) )
-            continue;
-        Aig_ObjCreateCo( pNew, Aig_Not( Aig_ObjChild0Copy(pObj) ) );
-    }
-
-    Saig_ManForEachLi( p, pObj, i )
-        Aig_ObjCreateCo( pNew, Aig_ObjChild0Copy(pObj) );
-
-    Aig_ManCleanup( pNew );
-    return pNew;
-}
 
 AbcMcInterface::AbcMcInterface(string strFileName) :
       m_pSat(NULL)
@@ -97,16 +45,23 @@ AbcMcInterface::AbcMcInterface(string strFileName) :
 
     std::cout << "\tGetting the network from the ABC frame.\n";
     Abc_Ntk_t* pNtk = Abc_FrameReadNtk(m_pAbcFramework);
+    
+
     Aig_Man_t* pTmpCircuit = Abc_NtkToDar(pNtk, 0, 1);
 
     // Wanna be on the safe side with the ABC framework, so going to stop it
     // and reload. Otherwise, the ABC Network will not be in-sync with the underlying
     // AIG.
     std::cout << "\tRe-Encoding the circuit and dumping to __tmp.aig.\n";
-    pTmpCircuit = reEncode(pTmpCircuit);
+    Aig_Man_t *pTmpCircuit2 = Aig_AddResetPi (pTmpCircuit);
+    // -- XXX Should the circuit be stoped, or is it cleared by Abc?
+    //Aig_ManStop (pTmpCircuit);
+    pTmpCircuit = pTmpCircuit2;
+
     char sfx[] = "__tmp.aig";
     Ioa_WriteAiger(pTmpCircuit, sfx,1,0);
     std::cout << "\tDestroying ABC and restarting...\n";
+    // XXX Should pTmpCircuit be stopped?
     Abc_Stop();
 
     Abc_Start();
@@ -119,7 +74,7 @@ AbcMcInterface::AbcMcInterface(string strFileName) :
     pNtk = Abc_FrameReadNtk(m_pAbcFramework);
     m_pAig = Abc_NtkToDar(pNtk, 0, 1);
 
-    m_pOneTR = duplicateAigWithoutPOs(m_pAig);
+    m_pOneTR = Aig_ManDupNoPo (m_pAig);
     m_pOneTRCnf = Cnf_Derive(m_pOneTR, Aig_ManRegNum(m_pOneTR));
     createInitMan();
     createBadMan();
@@ -128,7 +83,8 @@ AbcMcInterface::AbcMcInterface(string strFileName) :
     m_pBadCnf = Cnf_Derive(m_pBad, Aig_ManCoNum(m_pBad));
     //Cnf_DataWriteIntoFile(m_pBadCnf, "bad.cnf", 0, NULL, NULL);
 
-    std::cout << m_pInitCnf->nVars << " " << m_pOneTRCnf->nVars << " " << m_pBadCnf->nVars << "\n";
+    std::cout << m_pInitCnf->nVars << " " << m_pOneTRCnf->nVars 
+              << " " << m_pBadCnf->nVars << "\n";
     std::cout << "Done setting up ABC.\n";
 }
 
@@ -151,7 +107,10 @@ void AbcMcInterface::addTransitionsFromTo(int nFrom, int nTo)
                 Aig_Obj_t *pObj2 = Saig_ManLo(m_pOneTR, i );
 
                 int nVar = m_pOneTRCnf->pVarNums[pObj2->Id];
-
+                
+                // -- connect intitial state with Lo of Tr
+                // -- add forall i . Init.Ci.i = TR1.Lo.i
+                
                 Lits[0] = toLitCond(m_pInitCnf->pVarNums[pObj->Id], 0 );
                 Lits[1] = toLitCond(nVar, 1 );
                 addClauseToSat(Lits, Lits+2);
@@ -167,8 +126,13 @@ void AbcMcInterface::addTransitionsFromTo(int nFrom, int nTo)
             {
                 Aig_Obj_t *pObj2 = Saig_ManLi(m_pOneTR, i );
 
-                int nVar = m_pOneTRCnf->pVarNums[pObj->Id]; // This is the global var.
+                int nVar = m_pOneTRCnf->pVarNums[pObj->Id]; 
+                // This is the global var.
                 int nVar2 = m_pOneTRCnf->pVarNums[pObj2->Id] - m_pOneTRCnf->nVars;// - m_pBadCnf->nVars;
+
+                // -- add forall i . Tr_{from}.Li.i = TR_{from+1}.Lo.i
+                // -- latch inputs are global (i.e., output of TR_i is global)
+                // -- this is more uniform than taken latch outpus as global
 
                 Lits[0] = toLitCond(nVar , 0 );
                 Lits[1] = toLitCond(nVar2, 1 );
@@ -180,17 +144,15 @@ void AbcMcInterface::addTransitionsFromTo(int nFrom, int nTo)
             }
         }
 
-        if (addCNFToSAT(m_pOneTRCnf) == false)
-            assert(false);
+        AVY_VERIFY (addCNFToSAT(m_pOneTRCnf) != false);
 
-        logCnfVars(m_pOneTR, m_pOneTRCnf);
-
-        Cnf_DataLift(m_pOneTRCnf, m_pOneTRCnf->nVars);// + m_pBadCnf->nVars);
+        Cnf_DataLift(m_pOneTRCnf, m_pOneTRCnf->nVars);
     }
 #if DEBUG
     sat_solver_store_write(m_pSat, "init_tr.cnf");
 #endif
-    Cnf_DataLift(m_pOneTRCnf, -nDelta - (nTo-nFrom)*(m_pOneTRCnf->nVars));// + m_pBadCnf->nVars));
+    Cnf_DataLift(m_pOneTRCnf, 
+                 -nDelta - (nTo-nFrom)*(m_pOneTRCnf->nVars));
 }
 
 // ************************************************************************
@@ -198,7 +160,7 @@ void AbcMcInterface::addTransitionsFromTo(int nFrom, int nTo)
 // ************************************************************************
 void AbcMcInterface::prepareGlobalVars(int nFrame)
 {
-    int nDelta = m_pInitCnf->nVars + (nFrame-1)*(m_pOneTRCnf->nVars);// + m_pBadCnf->nVars);
+    int nDelta = m_pInitCnf->nVars + (nFrame-1)*(m_pOneTRCnf->nVars);
 
     m_GlobalVars.resize(nFrame);
 
@@ -216,9 +178,7 @@ bool AbcMcInterface::addCNFToSAT(Cnf_Dat_t *pCnf)
     for (int i = 0; i < pCnf->nClauses; i++)
     {
         if ( addClauseToSat(pCnf->pClauses[i], pCnf->pClauses[i+1]) == false)
-        {
-            return false;
-        }
+          return false;
     }
     return true;
 }
@@ -228,14 +188,6 @@ eResult AbcMcInterface::solveSat()
     Aig_Obj_t * pObj;
     int i, k, VarNum, Lit, RetValue;
 
-    /*if ( m_pSat->qtail != m_pSat->qhead )
-    {
-        RetValue = sat_solver_simplify(m_pSat);
-        assert( RetValue != 0 );
-    }*/
-
-    //if ( m_nConfMaxAll && m_pSat->stats.conflicts > m_nConfMaxAll )
-    //    return l_Undef;
     pObj = Aig_ManCo(m_pBad, 0);
 # if DEBUG
     std::ostringstream os;
@@ -244,7 +196,11 @@ eResult AbcMcInterface::solveSat()
     sat_solver_store_write(m_pSat, (char*)name);
 #endif
     //sat_solver_bookmark(m_pSat);
-    VarNum = m_pBadCnf->pVarNums[pObj->Id] + (m_pInitCnf->nVars) + (m_nLastFrame - 1)*(m_pOneTRCnf->nVars)/* + m_pBadCnf->nVars)*/ + m_pOneTRCnf->nVars;
+    // XXX Seems like the formula below can be simplified.
+    VarNum = m_pBadCnf->pVarNums[pObj->Id] + 
+      (m_pInitCnf->nVars) + (m_nLastFrame - 1)*(m_pOneTRCnf->nVars) +
+      m_pOneTRCnf->nVars;
+
     Lit = toLitCond( VarNum, Aig_IsComplement(pObj) ) ;
     if (addClauseToSat(&Lit, &Lit +1) == false)
     {
@@ -253,8 +209,9 @@ eResult AbcMcInterface::solveSat()
     }
     markPartition(m_nLastFrame);
     sat_solver_store_mark_roots( m_pSat );
-    //RetValue = sat_solver_solve( m_pSat, &Lit, &Lit + 1, (ABC_INT64_T)10000000, (ABC_INT64_T)0, (ABC_INT64_T)0, (ABC_INT64_T)0 );
-    RetValue = sat_solver_solve( m_pSat, NULL,  NULL, (ABC_INT64_T)10000000, (ABC_INT64_T)0, (ABC_INT64_T)0, (ABC_INT64_T)0 );
+    RetValue = sat_solver_solve( m_pSat, NULL,  NULL, 
+                                 (ABC_INT64_T)10000000, (ABC_INT64_T)0, 
+                                 (ABC_INT64_T)0, (ABC_INT64_T)0 );
 
     if ( RetValue == l_False ) // unsat
     {
@@ -338,205 +295,25 @@ Aig_Man_t* AbcMcInterface::getInterpolationSeq()
 
     // Create the interpolating manager and extract the interpolation-seq
     Ints_Man_t* pManInter = Ints_ManAlloc(m_nLastFrame);
-    Aig_Man_t* pMan = (Aig_Man_t *)Ints_ManInterpolate( pManInter, (Sto_Man_t *)pSatCnf, 0, (void**)vSharedVars, 0 );
+    Aig_Man_t* pMan = (Aig_Man_t *)Ints_ManInterpolate( pManInter,
+                                                        (Sto_Man_t *)pSatCnf, 
+                                                        0, (void**)vSharedVars,
+                                                        0 );
     Ints_ManFree( pManInter );
 
-    pMan = simplifyCombAig(pMan);
+    Aig_Man_t *tmp = Aig_ManSimplifyComb (pMan);
+    Aig_ManStop (pMan);
+    pMan = tmp; tmp = NULL;
 
-    //Gia_Man_t* pInter = (Gia_Man_t *)Int2_ManReadInterpolant( m_pSat );
-    //Gia_ManPrintStats( pInter, 0, 0, 0 );
     Aig_ManPrintStats(pMan);
-    //Aig_ManDump(pMan);
-    //Aig_ManCleanData(pMan);
-    //pMan->nTruePis = Aig_ManCiNum(pMan);
-    //pMan->nTruePos = Aig_ManCoNum(pMan);
-    //pMan->nRegs = 0;
 
     // Release memory
     Sto_ManFree( (Sto_Man_t *)pSatCnf );
-    for (int i=0; i < m_nLastFrame; i++)
-        Vec_IntErase(vSharedVars[i]);
+    for (int i=0; i < m_nLastFrame; i++) Vec_IntErase (vSharedVars[i]);
     ABC_FREE(vSharedVars);
     return pMan;
 }
 
-Aig_Man_t* AbcMcInterface::duplicateAigWithoutPOs(Aig_Man_t* p)
-{
-    Aig_Man_t * pNew;
-    Aig_Obj_t * pObj;
-    int i;
-    assert( Aig_ManRegNum(p) > 0 );
-    // create the new manager
-    pNew = Aig_ManStart( Aig_ManObjNumMax(p) );
-    pNew->pName = Abc_UtilStrsav( p->pName );
-    pNew->pSpec = Abc_UtilStrsav( p->pSpec );
-    // create the PIs
-    Aig_ManCleanData( p );
-    Aig_ManConst1(p)->pData = Aig_ManConst1(pNew);
-    Aig_ManForEachCi( p, pObj, i )
-        pObj->pData = Aig_ObjCreateCi( pNew );
-    // set registers
-    pNew->nTruePis = p->nTruePis;
-    pNew->nTruePos = Saig_ManConstrNum(p);
-    pNew->nRegs    = p->nRegs;
-    // duplicate internal nodes
-    Aig_ManForEachNode( p, pObj, i )
-        pObj->pData = Aig_And( pNew, Aig_ObjChild0Copy(pObj), Aig_ObjChild1Copy(pObj) );
-
-    // create constraint outputs
-    Saig_ManForEachPo( p, pObj, i )
-    {
-        if ( i < Saig_ManPoNum(p)-Saig_ManConstrNum(p) )
-            continue;
-        Aig_ObjCreateCo( pNew, Aig_Not( Aig_ObjChild0Copy(pObj) ) );
-    }
-
-    Saig_ManForEachLi( p, pObj, i )
-        Aig_ObjCreateCo( pNew, Aig_ObjChild0Copy(pObj) );
-    Aig_ManCleanup( pNew );
-    return pNew;
-}
-
-Aig_Man_t* AbcMcInterface::duplicateAigWithNewPO(Aig_Man_t* pMan, Aig_Obj_t *pNewPO)
-{
-    Aig_Man_t* p = m_pAig;
-    // Only one property output.
-    assert(Saig_ManPoNum(p) - Saig_ManConstrNum(p) == 1);
-
-    assert( Aig_ManRegNum(p) > 0 );
-    // create the new manager
-    Aig_Man_t *pNew = Aig_ManStart( Aig_ManObjNumMax(p) );
-    pNew->pName = Abc_UtilStrsav( p->pName );
-    pNew->pSpec = Abc_UtilStrsav( p->pSpec );
-    // create the PIs
-    Aig_ManCleanData( p );
-    Aig_ManCleanData( pMan );
-    Aig_ManConst1(p)->pData = Aig_ManConst1(pNew);
-
-    int i;
-    Aig_Obj_t * pObj;
-    Aig_ManForEachCi( p, pObj, i )
-        pObj->pData = Aig_ObjCreateCi( pNew );
-
-    // set registers
-    pNew->nTruePis = p->nTruePis;
-    pNew->nTruePos = Saig_ManConstrNum(p) + 1;
-    pNew->nRegs    = p->nRegs;
-
-    // duplicate internal nodes
-    Aig_ManForEachNode( p, pObj, i )
-        pObj->pData = Aig_And( pNew, Aig_ObjChild0Copy(pObj), Aig_ObjChild1Copy(pObj) );
-
-    // create constraint outputs
-    Saig_ManForEachPo( p, pObj, i )
-    {
-        if ( i < Saig_ManPoNum(p)-Saig_ManConstrNum(p) )
-            continue;
-        Aig_ObjCreateCo( pNew, Aig_Not( Aig_ObjChild0Copy(pObj) ) );
-    }
-
-    assert(Aig_ManCiNum(pMan) == Saig_ManRegNum(pNew));
-
-    // Now set the "leaves" of the interpolant manager.
-    Aig_ManConst1(pMan)->pData = Aig_ManConst1(pNew);
-    Saig_ManForEachLo(m_pAig, pObj, i)
-    {
-        assert(Aig_ManCiNum(pMan) > i);
-        Aig_Obj_t* pIntObj = Aig_ManCi(pMan, i);
-        pIntObj->pData = pObj->pData;
-    }
-
-    Aig_ManForEachCi(pMan, pObj, i)
-        assert(pObj->pData != NULL);
-
-    Aig_ManForEachNode(pMan, pObj, i)
-    {
-        //cout << "Creating node: " << i << endl;
-        pObj->pData = Aig_And( pNew, Aig_ObjChild0Copy(pObj), Aig_ObjChild1Copy(pObj) );
-        assert(pObj->pData != NULL);
-    }
-
-    // Create the new output
-    //pObj = createCombSlice_rec(pMan, pNew, Aig_ObjChild0(pNewPO)); // Is this needed in this case?
-    //assert(pObj == Aig_ObjChild0Copy(pNewPO));
-    assert(Aig_ObjChild0Copy(pNewPO) != NULL);
-    Aig_ObjCreateCo(pNew, Aig_Not(Aig_ObjChild0Copy(pNewPO)));
-
-    Saig_ManForEachLi( p, pObj, i )
-        Aig_ObjCreateCo( pNew, Aig_ObjChild0Copy(pObj) );
-    Aig_ManCleanup( pNew );
-    Aig_ManCleanData(pMan);
-    return pNew;
-}
-
-void AbcMcInterface::createInitMan()
-{
-    int i;
-    int nRegs = Aig_ManRegNum(m_pAig);
-    assert(nRegs > 0 );
-    Aig_Obj_t ** ppInputs = ABC_ALLOC( Aig_Obj_t *, nRegs );
-    m_pInit = Aig_ManStart( nRegs );
-    for ( i = 0; i < nRegs; i++ )
-        ppInputs[i] = Aig_Not( Aig_ObjCreateCi(m_pInit) );
-    Aig_Obj_t *pRes = Aig_Multi( m_pInit, ppInputs, nRegs, AIG_OBJ_AND );
-    Aig_ObjCreateCo(m_pInit, pRes );
-    ABC_FREE( ppInputs );
-}
-
-void AbcMcInterface::createBadMan()
-{
-    // Only support one PO now.
-    assert(Saig_ManPoNum(m_pAig) - Saig_ManConstrNum(m_pAig) == 1);
-    assert(Saig_ManConstrNum(m_pAig) == 0);
-    Aig_Obj_t * pObj = NULL;
-    int i;
-    assert( Aig_ManRegNum(m_pAig) > 0 );
-    // create the new manager
-    m_pBad = Aig_ManStart( Aig_ManObjNumMax(m_pAig) );
-    m_pBad->pName = Abc_UtilStrsav(m_pAig->pName );
-    m_pBad->pSpec = Abc_UtilStrsav(m_pAig->pSpec );
-
-    // create the PIs
-    Aig_ManCleanData(m_pAig);
-    Aig_ManConst1(m_pAig)->pData = Aig_ManConst1(m_pBad);
-    Aig_ManForEachCi(m_pAig, pObj, i )
-        pObj->pData = Aig_ObjCreateCi( m_pBad );
-
-    // set registers
-    m_pBad->nRegs    = 0;
-    m_pBad->nTruePis = Aig_ManCiNum(m_pAig);
-    m_pBad->nTruePos = 1 + Saig_ManConstrNum(m_pAig);
-
-    // duplicate internal nodes
-    Aig_ManForEachNode(m_pAig, pObj, i )
-        pObj->pData = Aig_And( m_pBad, Aig_ObjChild0Copy(pObj), Aig_ObjChild1Copy(pObj) );
-
-    // add the PO
-    pObj = Aig_ManCo(m_pAig, 0 );
-    Aig_ObjCreateCo(m_pBad, Aig_ObjChild0Copy(pObj) );
-
-    // create constraint outputs
-    Saig_ManForEachPo(m_pAig, pObj, i )
-    {
-        if ( i < Saig_ManPoNum(m_pAig)-Saig_ManConstrNum(m_pAig) )
-            continue;
-        Aig_ObjCreateCo( m_pBad, Aig_Not( Aig_ObjChild0Copy(pObj) ) );
-    }
-
-    Aig_ManCleanup(m_pBad);
-
-    /*
-    // Map Const1
-    Aig_ManConst1(m_pAig)->pData = Aig_ManConst1(m_pBad);
-    // Traverse backwards untill the first PIs/LOs
-    Aig_Obj_t* pRes = createCombSlice_rec(m_pBad, Aig_ObjFanin0(Aig_ManCo(m_pAig, 0)));
-
-    // Create a single CO.
-    Aig_ObjCreateCo(m_pBad, Aig_NotCond(pRes, Aig_ObjFaninC0(Aig_ManCo(m_pAig, 0))));
-
-    // Now clean the Data field of the AIG.
-    Aig_ManCleanData(m_pAig);*/
-}
 
 Aig_Man_t* AbcMcInterface::createArbitraryCombMan(Aig_Man_t* pMan, int nOut)
 {
@@ -579,7 +356,6 @@ Aig_Man_t* AbcMcInterface::createArbitraryCombMan(Aig_Man_t* pMan, int nOut)
 
 bool AbcMcInterface::setInit()
 {
-    logCnfVars(m_pInit, m_pInitCnf);
     bool bRes = addCNFToSAT(m_pInitCnf);
     //sat_solver_store_write(m_pSat, "init.cnf");
     return bRes;
@@ -604,10 +380,9 @@ bool AbcMcInterface::setBad(int nFrame, bool bHasPIs)
         assert ( i <= Aig_ManRegNum(m_pOneTR));
         Aig_Obj_t* pObj2 = Aig_ManCi(m_pBad, (bHasPIs) ? m_pOneTR->nTruePis+i : i );
 
-        int nVar  = m_pOneTRCnf->pVarNums[pObj->Id];
-        int nVar2 = m_pBadCnf->pVarNums[pObj2->Id]; // This is a global var
+        int nVar  = m_pOneTRCnf->pVarNums[pObj->Id]; // This is a global var
+        int nVar2 = m_pBadCnf->pVarNums[pObj2->Id]; 
 
-        //m_GlobalVars[m_nLastFrame].push_back(nVar2);
 
         Lits[0] = toLitCond(nVar , 0 );
         Lits[1] = toLitCond(nVar2, 1 );
@@ -619,7 +394,6 @@ bool AbcMcInterface::setBad(int nFrame, bool bHasPIs)
     }
 
     bool bRes = addCNFToSAT(m_pBadCnf);
-    logCnfVars(m_pBad, m_pBadCnf);
 
     // Revert CNF to its original state
     Cnf_DataLift(m_pBadCnf, -nDelta - m_pOneTRCnf->nVars);
@@ -630,32 +404,6 @@ bool AbcMcInterface::setBad(int nFrame, bool bHasPIs)
     return bRes;
 }
 
-Aig_Obj_t* AbcMcInterface::createCombSlice_rec(Aig_Man_t* pOrig, Aig_Man_t* pMan, Aig_Obj_t * pObj)
-{
-  Aig_Obj_t * pRes = (Aig_Obj_t*)(Aig_Regular (pObj)->pData);
-    if ( pRes != NULL )
-        return pRes;
-
-    // 1. For each PI and LO, simply create a CI.
-    // 2. For each LO, CO or just a node, traverse backwards to create the logic.
-    if ( Aig_ObjIsCi(pObj))
-        pRes = Aig_ObjCreateCi(pMan);
-    else if ( Aig_ObjIsCo( pObj ) )
-    {
-        // Can this happen for comb slice?!
-        assert(false);
-    }
-    else
-    {
-        createCombSlice_rec(pOrig, pMan, Aig_ObjFanin0(pObj));
-        createCombSlice_rec(pOrig, pMan, Aig_ObjFanin1(pObj));
-
-        pRes = Aig_And( pMan, Aig_ObjChild0Copy(pObj), Aig_ObjChild1Copy(pObj) );
-    }
-    assert( pRes != NULL );
-    pObj->pData = pRes;
-    return pRes;
-}
 
 void AbcMcInterface::addClausesToFrame(Vec_Ptr_t* pCubes, int nFrame)
 {

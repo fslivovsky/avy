@@ -16,6 +16,8 @@
 #include "aig/gia/giaAig.h"
 #include "proof/dch/dch.h"
 
+#include "AigUtils.h"
+#include "avy/Util/AvyAssert.h"
 //#include "PeriploContext.h"
 
 #include <string>
@@ -26,6 +28,7 @@
 
 using namespace abc;
 using namespace std;
+using namespace avy;
 
 // An interface to the ABC framework.
 // Should give utilities such as:
@@ -38,7 +41,8 @@ using namespace std;
 
 namespace abc
 {
-  extern Aig_Man_t * Abc_NtkToDar( Abc_Ntk_t * pNtk, int fExors, int fRegisters );
+  extern Aig_Man_t * Abc_NtkToDar( Abc_Ntk_t * pNtk, int fExors, 
+                                   int fRegisters );
 }
 
 
@@ -73,7 +77,6 @@ public:
 
 	eResult solveSat();
 
-	Aig_Man_t * duplicateAigWithNewPO(Aig_Man_t* pMan, Aig_Obj_t* pNewPO);
 
 	Aig_Man_t* getInterpolationSeq();
 
@@ -82,30 +85,6 @@ public:
 	    sat_solver_store_mark_clauses_a(m_pSat, part);
 	}
 
-	void startInterpolationSeq(int nSize)
-	{
-	    /*if (m_pSat->pInt2 != NULL)
-	    {
-	        Int2_ManStop(m_pSat->pInt2);
-	        m_pSat->pInt2 = NULL;
-	    }
-	    prepareGlobalVars(nSize);
-	    sat_solver_set_seqsize(m_pSat, nSize);
-	    int ** vGlobal = ABC_ALLOC(int*, nSize);
-	    int nGloVarsNum = m_GlobalVars[0].size();
-
-	    for (int i = 0; i < nSize; i++)
-	    {
-	        vGlobal[i] = ABC_ALLOC(int, nGloVarsNum);
-	        for (int j = 0; j < nGloVarsNum; j++)
-	            vGlobal[i][j] = m_GlobalVars[i][j];
-	    }
-
-	    m_pSat->pInt2 = Int2_ManStart( m_pSat, vGlobal, nGloVarsNum );
-	    for (int i = 0; i < nSize; i++)
-	        ABC_FREE(vGlobal[i]);
-	    ABC_FREE(vGlobal);*/
-	}
 
 	void reinitializeSAT(int nFrame)
 	{
@@ -117,7 +96,10 @@ public:
         m_pSat->nLearntDelta =  5000;
         m_pSat->nLearntRatio =    75;
         m_pSat->nLearntMax   = m_pSat->nLearntStart;*/
-        sat_solver_setnvars( m_pSat, m_pInitCnf->nVars + nFrame*m_pOneTRCnf->nVars + m_pBadCnf->nVars );
+        sat_solver_setnvars( m_pSat, 
+                             m_pInitCnf->nVars + 
+                             nFrame*m_pOneTRCnf->nVars + 
+                             m_pBadCnf->nVars );
         m_nLastFrame = m_iFramePrev = 0;
         m_GlobalVars.clear();
 	}
@@ -173,30 +155,21 @@ public:
         m_pBadCnfStore = NULL;
     }
 
-	Aig_Man_t* simplifyCombAig(Aig_Man_t* pMan)
-	{
-	    Dch_Pars_t pars;
-        Dch_ManSetDefaultParams(&pars);
-        pars.nWords = 16;
-        Gia_Man_t* pGia = Gia_ManFromAigSimple(pMan);
-        Aig_ManStop(pMan);
-        Gia_Man_t *pSynGia = Gia_ManFraigSweep(pGia, (void*)(&pars));
-        Gia_ManStop(pGia);
-        Aig_Man_t* pSyn = Gia_ManToAigSimple(pSynGia);
-        Gia_ManStop(pSynGia);
-        return pSyn;
-	}
-
 	void addClausesToFrame(Vec_Ptr_t* pCubes, int nFrame);
 
 private:
-	Aig_Man_t * duplicateAigWithoutPOs( Aig_Man_t * p );
+  void createInitMan() 
+  {m_pInit = Aig_CreateAllZero (Aig_ManRegNum (m_pAig)); }
+ 
+  void createBadMan() 
+  {
+    AVY_ASSERT (Saig_ManPoNum(m_pAig) - Saig_ManConstrNum(m_pAig) == 1);
+    AVY_ASSERT (Saig_ManConstrNum(m_pAig) == 0);
 
-	void createInitMan();
-	void createBadMan();
+    m_pBad = Aig_ManDupSinglePo (m_pAig, 0, false);
+    Aig_ManRebuild (&m_pBad);
+  }
 
-
-	Aig_Obj_t* createCombSlice_rec(Aig_Man_t* pOrig, Aig_Man_t* pMan, Aig_Obj_t * pObj);
 
 	bool addClauseToSat(lit* begin, lit* end)
 	{
@@ -205,16 +178,6 @@ private:
 	    //clause2_set_partA(m_pSat, Cid, m_nLastFrame);
 	    //m_ClausesByFrame[m_nLastFrame].insert(Cid);
 	    return (Cid != 0);
-	}
-
-	void logCnfVars(Aig_Man_t* pMan, Cnf_Dat_t* pCnf)
-	{
-	    Aig_Obj_t* pObj;
-	    int i;
-        //Aig_ManForEachObj( pMan, pObj, i )
-            //if ( pCnf->pVarNums[pObj->Id] >= 0)
-                //var_set_partA(m_pSat, pCnf->pVarNums[pObj->Id], m_nLastFrame+1);
-                //m_VarsByFrame[m_nLastFrame].insert(pCnf->pVarNums[pObj->Id]);
 	}
 
 private:
@@ -248,7 +211,13 @@ private:
     vector<set<int> >     m_ClausesByFrame;
     vector<set<int> >     m_VarsByFrame;
 
-    vector<vector<int> >  m_GlobalVars;
+  // -- shared variables for the interpolation.
+  // -- Frame0 = Init  : no globals
+  // -- Frame1 = glue(Init,0) & TR(0,1)   : Li(1) = m_GlobalVars[0]
+  // -- Frame2 = glue(1,2) & TR(1,2)      : Li(2) = m_GlobalVars[1]
+  // -- FrameN = glue(N,N+1) & TR(N,N+1)  : Li(N) = m_GlobalVars[N]
+  // -- Frame{N+1} = Bad(N+1)             : Li(N+1) = m_GlobalVars[N+1]
+  vector<vector<int> >  m_GlobalVars;
 
     bool m_bTrivial;
     bool m_bAddGlueRemovalLiteral;

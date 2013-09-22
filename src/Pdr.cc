@@ -143,19 +143,22 @@ namespace avy
     assert (level > 0);
     if (!pAig) pAig = m_pAig;
     
-    Vec_Ptr_t *pCubes = Vec_PtrAlloc (10);
-    getCoverCubes (level, pCubes);
     
-    int j;
-    Pdr_Set_t *pCube;
+
     Aig_Obj_t *pRes = Aig_ManConst1 (pAig);
-    
-    Vec_PtrForEachEntry (Pdr_Set_t *, pCubes, pCube, j)
+    int i;
+    Vec_Ptr_t *vVec;
+    Vec_VecForEachLevelStart (m_pPdr->vClauses, vVec, i, level)
       {
-        Aig_Obj_t *pAigCube = cubeToAig (pCube, pAig);
-        pRes = Aig_And (pAig, pRes, Aig_Not (pAigCube));
+        int j;
+        Pdr_Set_t *pCube;
+        Vec_PtrForEachEntry (Pdr_Set_t*, vVec, pCube, j)
+          {
+            Aig_Obj_t *pAigCube = cubeToAig (pCube, pAig);
+            pRes = Aig_And (pAig, pRes, Aig_Not (pAigCube));
+          }
       }
-    
+
     return pRes;    
   }
   
@@ -163,6 +166,18 @@ namespace avy
   {
     assert (level > 0);
     if (!pAig) pAig = m_pAig;
+
+    Vec_Ptr_t *vVec = Vec_VecEntry (m_pPdr->vClauses, level);
+    int j;
+    Pdr_Set_t *pCube;
+    Aig_Obj_t *pRes = Aig_ManConst1 (pAig);
+    
+    Vec_PtrForEachEntry (Pdr_Set_t*, vVec, pCube, j)
+      {
+        Aig_Obj_t *pAigCube = cubeToAig (pCube, pAig);
+        pRes = Aig_And (pAig, pRes, Aig_Not (pAigCube));
+      }
+    return pRes;
   }
 
   void Pdr::solverAddClause(int k, Pdr_Set_t * pCube )

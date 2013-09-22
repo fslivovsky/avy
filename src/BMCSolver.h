@@ -177,24 +177,24 @@ public:
 	void setInterpolationFrame(int nFrame) { m_nInterpolationFrame = nFrame; }
 
 	void markInitCnfVars()
-    {
-        markCnfVars(m_pInit, m_pInitCnf);
-    }
+	    {
+	        markCnfVars(m_pInit, m_pInitCnf);
+	    }
 
-    void markClausesForAPart(unsigned nFrame)
-    {
-        AVY_ASSERT(nFrame <= m_nLastFrame);
-        AVY_ASSERT(nFrame < m_ClausesByFrame.size());
+	    void markClausesForAPart(unsigned nFrame)
+	    {
+	        AVY_ASSERT(nFrame <= m_nLastFrame);
+	        AVY_ASSERT(nFrame < m_ClausesByFrame.size());
 
-        set<int>& clauses = m_ClausesByFrame[nFrame];
+	        set<int>& clauses = m_ClausesByFrame[nFrame];
 
-        for(set<int>::iterator itClause = clauses.begin();
-            itClause != clauses.end();
-            itClause++)
-        {
-            clause2_set_partA(m_pSat, *itClause, 1);
-        }
-    }
+	        for(set<int>::iterator itClause = clauses.begin();
+	            itClause != clauses.end();
+	            itClause++)
+	        {
+	            clause2_set_partA(m_pSat, *itClause, 1);
+	        }
+	    }
 
 private:
 	Aig_Man_t * duplicateAigWithoutPOs( Aig_Man_t * p );

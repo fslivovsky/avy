@@ -26,7 +26,9 @@ std::string parseCmdLine (int argc, char** argv)
     ("print-params", "print current parameters")
     ("log,L", po::value< vector<string> >(), "log levels to enable")
     ("itp", po::value<unsigned> (&gParams.itp)->default_value(0), 
-     "Interpolation system: 0 - McM, 1 - Mcm-prime");
+     "Interpolation system: 0 - McM, 1 - Mcm-prime")
+    ("verbose,v", po::value<unsigned> (&gParams.verbosity)->default_value(0),
+     "Verbosity level: 0 means silent");
 
   po::options_description hidden("Hidden options");
   hidden.add_options()
