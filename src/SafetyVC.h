@@ -20,6 +20,19 @@ namespace avy
   
   inline CnfPtr cnfPtr (abc::Cnf_Dat_t *p) { return CnfPtr (p, cnf_deleter()); }
 
+  /// Lifts Cnf for the lifetime of the instance
+  class ScoppedCnfLift 
+  {
+    CnfPtr &m_Cnf;
+    int m_nOffset;
+               
+  public:
+    ScoppedCnfLift (CnfPtr &cnf, int nOffset) : m_Cnf(cnf), m_nOffset(nOffset)
+    { Cnf_DataLift (&*m_Cnf, m_nOffset); }
+    ~ScoppedCnfLift () { Cnf_DataLift (&*m_Cnf, -m_nOffset); }
+  };
+  
+
   /**
    * Safety Verification Condition: decide satisfiability of Init & Tr^i & Bad
    * Tr is given by an Aig with a single Po
@@ -35,9 +48,6 @@ namespace avy
     AigManPtr m_Tr;  
     /// the bad state
     AigManPtr m_Bad;
-
-
-    /** Cnf */
 
     /// Cnf of Tr
     CnfPtr m_cnfTr;
@@ -64,10 +74,20 @@ namespace avy
     
 
     /// number of Cnf variables needed for the Tr of nFrame
-    unsigned cnfVarSize (unsigned nFrame) { return m_cnfTr->nVars; }
+    unsigned trVarSize (unsigned nFrame) { return m_cnfTr->nVars; }
     
     /// number of Cnf variables for Bad
     unsigned badVarSize () { return m_cnfBad->nVars; }
+
+    /// number of Cnf variables for frames nStart up to, but not including nStop
+    unsigned varSize (unsigned nStart, unsigned nStop, bool fWithBad)
+    {
+      unsigned nVars = 0;
+      for (unsigned i = nStart; i  < nStop; ++i) nVars += trVarSize ();
+      if (fWithBad) nVars += badVarSize ();
+      return nVars;
+    }
+    
     
     
     /** Add Cnf of one Tr to the solver
@@ -109,11 +129,11 @@ namespace avy
         // -- add equality constraints
         Lits [0] = toLitCond (liVar, 0);
         Lits [1] = toLitCond (loVar, 1);
-        solver.addClause (Lits, Lits+2, 0);
+        solver.addClause (Lits, Lits+2);
         
         Lits [0] = lit_neg (Lits [0]);
         Lits [1] = lit_neg (Lits [1]);
-        solver.addClause (Lits, Lits+2, 0);
+        solver.addClause (Lits, Lits+2);
         
       }
 
@@ -137,13 +157,13 @@ namespace avy
           }
       }
 
-    // -- add clauses
-    for (int i = 0; i < m_cnfTr->nClauses; ++i)
-      {
-        AVY_VERIFY (solver.addClause (m_cnfTr->pClauses [i], 
-                                      m_cnfTr->pClauses[i+1], nOffset));
-      }
-    
+    {
+      ScoppedCnfLift scLift (m_cnfTr, nOffset);
+
+      // -- add clauses
+      for (int i = 0; i < m_cnfTr->nClauses; ++i)
+        AVY_VERIFY (solver.addClause (m_cnfTr->pClauses [i], m_cnfTr->pClauses[i+1]));
+    }
 
     return addGlueCnf (solver, nFrame, nOffset, nOffset + cnfVarSize (nFrame));
   }
@@ -152,10 +172,11 @@ namespace avy
   template <typename S>
   unsigned SafetyVC::addBadCnf (S &solver, unsigned nOffset)
   {
+    ScoppedCnfLift scLift (m_cnfBad, nOffset);
     // -- add clauses
     for (int i = 0; i < m_cnfBad->nClauses; ++i)
       AVY_VERIFY (solver.addClause (m_cnfBad->pClauses [i], 
-                                    m_cnfBad->pClauses[i+1], nOffset));
+                                    m_cnfBad->pClauses[i+1]));
     
     return nOffset + badVarSize ();
   }

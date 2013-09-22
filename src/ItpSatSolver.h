@@ -71,12 +71,10 @@ namespace avy
     void markParitition (unsigned nPart)
     { sat_solver_store_mark_clauses_a (m_pSat, nPart); }
 
-    /// add a clause, and offset the VARIABLES of the clause by nVarsPlus
-    bool addClause (lit* begin, lit* end, unsigned nVarsPlus=0)
+    /// add a clause
+    bool addClause (lit* begin, lit* end)
     {
-      if (nVarsPlus > 0) for (lit *it = begin; it != end; ++it) *it += 2*nVarsPlus;
       m_Trivial = !sat_solver_addclause (m_pSat, begin, end); 
-      if (nVarsPlus > 0) for (lit *it = begin; it != end; ++it) *it -= 2*nVarsPlus;
       return !m_Trivial;
     }
     
