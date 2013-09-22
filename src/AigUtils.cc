@@ -245,12 +245,14 @@ namespace avy
       {
         Aig_Obj_t* pTmp = Aig_And(pNew, Aig_ObjChild0Copy(pLi), 
                                   Aig_Not(pResetPi));
+        
         Aig_Regular(pLi->pFanin0)->pData = pTmp;
         // XXX This changes the input AIG. Seems like a bad thing to do!
+        // XXX Instead, if Aig_ObjFanin0C(pLi) then negate pTmp and drop regular.
         pLi->pFanin0 = Aig_Regular(pLi->pFanin0);
       }
 
-    // -- create the single PO
+    // -- re-create the single PO
     pObj = Aig_ManCo(p, 0 );
     Aig_ObjCreateCo(pNew, Aig_ObjChild0Copy(pObj) );
 

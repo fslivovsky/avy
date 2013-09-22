@@ -24,6 +24,8 @@ namespace avy
 
     // Create the interpolating manager and extract the interpolation-seq
     // XXX is it m_nParts or m_nParts+1?
+    // XXX Ints_ManAlloc (x), requires x to be the number of computed interpolants
+    // XXX this is nParts - 1
     Ints_Man_t* pManInter = Ints_ManAlloc(m_nParts);
     // XXX how to wire fMcM properly?
     Aig_Man_t* pMan = (Aig_Man_t *) Ints_ManInterpolate( pManInter,
