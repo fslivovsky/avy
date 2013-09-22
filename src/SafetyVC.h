@@ -8,14 +8,12 @@
 
 namespace avy
 {
-
+  /// smart pointer for Cnf_Dat_t. 
   typedef boost::shared_ptr<abc::Cnf_Dat_t> CnfPtr;
   namespace 
-  {
+  { 
     struct cnf_deleter
-    {
-      void operator() (abc::Cnf_Dat_t* p) { if (p) abc::Cnf_DataFree (p); } 
-    };
+    { void operator() (abc::Cnf_Dat_t* p) { if (p) abc::Cnf_DataFree (p); } };
   }
   
   inline CnfPtr cnfPtr (abc::Cnf_Dat_t *p) { return CnfPtr (p, cnf_deleter()); }
@@ -34,7 +32,7 @@ namespace avy
   
 
   /**
-   * Safety Verification Condition: decide satisfiability of Init & Tr^i & Bad
+   * Safety Verification Condition: encodes Init & Tr^i & Bad
    * Tr is given by an Aig with a single Po
    * Bad is the driver of the Po of Tr
    * Init is zero for all registers
@@ -54,7 +52,6 @@ namespace avy
     
     /// Cnf of Bad sates
     CnfPtr m_cnfBad;
-
 
     /// initialize given a circuit
     void init (abc::Aig_Man_t *pCircuit);
@@ -143,7 +140,7 @@ namespace avy
   template <typename S>
   unsigned SafetyVC::addTrCnf (S &solver, unsigned nFrame, unsigned nOffset)
   {
-    // add clauses for initial state
+    // add clauses for Init
     if (nFrame == 0)
       {
         Aig_Obj_t *pObj;
