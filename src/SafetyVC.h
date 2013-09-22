@@ -4,6 +4,7 @@
 #include "AigUtils.h"
 #include "ItpSatSolver.h"
 #include "sat/cnf/cnf.h"
+#include "aig/saig/saig.h"
 
 namespace avy
 {
@@ -52,7 +53,8 @@ namespace avy
     /// \param nOldOffset is the offset at which Tr of nFrame was added
     /// \param nNewOffset is the offset from which new Cnf vars can be allocated
     /// \return new offset for Cnf vars. Should be nNewOffset if glue does not consume vars
-    unsigned addGlueCnf (ItpSatSolver &solver, unsigned nFrame, 
+    template<typename S>
+    unsigned addGlueCnf (S &solver, unsigned nFrame, 
                          unsigned nOldOffset, unsigned nNewOffset);
 
 
@@ -81,12 +83,83 @@ namespace avy
      * \param nOffset offset to allocate CNF variables from
      * \return next free Cnf variable
      */
-    unsigned addTrCnf (ItpSatSolver &solver, unsigned nFrame, unsigned nOffset);
-    unsigned addBadCnf (ItpSatSolver &solver, unsigned nOffset);
-
-
+    template <typename S>
+    unsigned addTrCnf (S &solver, unsigned nFrame, unsigned nOffset);
+    template <typename S>
+    unsigned addBadCnf (S &solver, unsigned nOffset);
   };
- }
+
+  template <typename S> unsigned SafetyVC::addGlueCnf (S &solver, unsigned nFrame, 
+                                                       unsigned nOldOffset, 
+                                                       unsigned nNewOffset)
+  {
+    int i;
+    Aig_Obj_t *pLo, *pLi;
+    lit Lits[2];
+    
+    Saig_ManForEachLo (&*m_Tr, pLo, i)
+      {
+        pLi = Saig_ManLi (&*m_Tr, i);
+        int liVar = m_cnfTr->pVarNums [pLi->Id];
+        int loVar = m_cnfTr->pVarNums [pLo->Id];
+
+        liVar += nOldOffset;
+        loVar += nNewOffset;
+        
+        // -- add equality constraints
+        Lits [0] = toLitCond (liVar, 0);
+        Lits [1] = toLitCond (loVar, 1);
+        solver.addClause (Lits, Lits+2, 0);
+        
+        Lits [0] = lit_neg (Lits [0]);
+        Lits [1] = lit_neg (Lits [1]);
+        solver.addClause (Lits, Lits+2, 0);
+        
+      }
+
+    return nNewOffset;
+  }
+
+  template <typename S>
+  unsigned SafetyVC::addTrCnf (S &solver, unsigned nFrame, unsigned nOffset)
+  {
+    // add clauses for initial state
+    if (nFrame == 0)
+      {
+        Aig_Obj_t *pObj;
+        int i;
+        lit Lits[1];
+        
+        Saig_ManForEachLo (&*m_Tr, pObj, i)
+          {
+            Lits[0] = toLitCond (m_cnfTr->pVarNums [pObj->Id], 0);
+            solver.addClause (Lits, Lits + 1, nOffset);
+          }
+      }
+
+    // -- add clauses
+    for (int i = 0; i < m_cnfTr->nClauses; ++i)
+      {
+        AVY_VERIFY (solver.addClause (m_cnfTr->pClauses [i], 
+                                      m_cnfTr->pClauses[i+1], nOffset));
+      }
+    
+
+    return addGlueCnf (solver, nFrame, nOffset, nOffset + cnfVarSize (nFrame));
+  }
+
+  
+  template <typename S>
+  unsigned SafetyVC::addBadCnf (S &solver, unsigned nOffset)
+  {
+    // -- add clauses
+    for (int i = 0; i < m_cnfBad->nClauses; ++i)
+      AVY_VERIFY (solver.addClause (m_cnfBad->pClauses [i], 
+                                    m_cnfBad->pClauses[i+1], nOffset));
+    
+    return nOffset + badVarSize ();
+  }
+}
 
 
 
