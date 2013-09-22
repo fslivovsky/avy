@@ -252,7 +252,7 @@ namespace avy
         pLi->pFanin0 = Aig_Regular(pLi->pFanin0);
       }
 
-    // -- create the single PO
+    // -- re-create the single PO
     pObj = Aig_ManCo(p, 0 );
     Aig_ObjCreateCo(pNew, Aig_ObjChild0Copy(pObj) );
 
