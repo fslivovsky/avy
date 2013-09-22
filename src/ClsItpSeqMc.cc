@@ -17,6 +17,8 @@
 using namespace std;
 using namespace avy;
 
+#define SOLVE_TMP 1 // TEMPORARY !!
+
 ClsItpSeqMc::ClsItpSeqMc(string strAigFileName) :
   m_McUtil(strAigFileName) , m_nLowestModifiedFrame(0), 
   m_GlobalPdr (m_McUtil.getCircuit ())
@@ -62,6 +64,7 @@ bool ClsItpSeqMc::prove()
 	return false;
 }
 
+#if !SOLVE_TMP
 ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame)
 {
     cout << "Solving frame: " << nFrame << endl;
@@ -100,6 +103,7 @@ ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame)
 
     return UNKNOWN;
 }
+#endif
 
 bool ClsItpSeqMc::testInterpolationSeq(Aig_Man_t* pInterSeq, int nFrame)
 {
@@ -368,7 +372,7 @@ Aig_Man_t* ClsItpSeqMc::createOr(Aig_Man_t* pMan1, Aig_Obj_t* p1, Aig_Man_t* pMa
     return pNew;
 }
 
-#if 0
+#if SOLVE_TMP
 ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame)
 {
     AVY_ASSERT(nFrame >= 1);
@@ -381,51 +385,43 @@ ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame)
         pSolver->setInit();
     m_FrameInterpolatingSolvers.push_back(pSolver);
 
+    eResult res = UNDEF;
+    Aig_Man_t* pInterpolantMan = NULL;
     unsigned nCurrentFrame = nFrame;
+    Vec_Ptr_t* vInterpolants = Vec_PtrAlloc(nFrame);
     for(vector<BMCSolver*>::iterator itSolver = m_FrameInterpolatingSolvers.begin();
         itSolver != m_FrameInterpolatingSolvers.end();
         itSolver++)
     {
         AVY_ASSERT(nCurrentFrame >= 1);
         pSolver = *itSolver;
+
         if (nCurrentFrame < nFrame)
         {
             // Define the init state
-            //pSolver->markCnfVars();
+            pSolver->setInitMan(pInterpolantMan);
+            pSolver->markInitCnfVars();
+            pSolver->markClausesForAPart(0);
         }
+
+        pSolver->addTransitionsFromTo(nCurrentFrame-1, nCurrentFrame);
 
         pSolver->setBad(nCurrentFrame);
-        eResult res = pSolver->solveSat();
+        res = pSolver->solveSat();
         if (res != FALSE)
             break;
+        pInterpolantMan = pSolver->getInterpolant();
+        Vec_PtrPush(vInterpolants, pInterpolantMan);
         nCurrentFrame--;
-
     }
 
-    for (int i = 0; i < nFrame; i++)
+    Aig_Man_t* pInterpolationSeq = Aig_ManDupArray(vInterpolants);
+    int i;
+    Vec_PtrForEachEntry(Aig_Man_t*, vInterpolants, pInterpolantMan, i)
     {
-        m_McUtil.addTransitionsFromTo(i, i+1);
-        m_McUtil.markPartition(i);
-
-        if (i+1 < nFrame)
-        {
-            Vec_Ptr_t* pCubes = Vec_PtrAlloc(10);
-            m_GlobalPdr.getCoverCubes(i+1, pCubes);
-            m_McUtil.addClausesToFrame(pCubes, i+1);
-            Vec_PtrFree(pCubes);
-        }
-
-        m_McUtil.prepareGlobalVars(i+1);
+        Aig_ManStop(pInterpolantMan);
     }
-
-    m_McUtil.setBad(nFrame);
-    m_McUtil.markPartition(nFrame);
-
-    /*Cnf_Dat_t* pCnf = m_McUtil.createCNFRepresentation();
-    m_McUtil.updateSATSolverWithCNF(pCnf);
-    m_McUtil.destroyCnfRepresentation(pCnf);*/
-
-    eResult res = m_McUtil.solveSat();
+    Vec_PtrFree(vInterpolants);
 
     if (res == TRUE)
         return FALSIFIED;

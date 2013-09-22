@@ -30,6 +30,9 @@ BMCSolver::BMCSolver(Aig_Man_t* pAig) :
     , m_bAddGlueRemovalLiteral(false)
     , m_nLevelRemoval(-1)
 {
+    m_pSat = sat_solver2_new();
+    sat_solver2_setnvars( m_pSat, 5000);
+
     m_pOneTR = duplicateAigWithoutPOs(m_pAig);
     m_pOneTRCnf = Cnf_Derive(m_pOneTR, Aig_ManRegNum(m_pOneTR));
     createInitMan();
@@ -63,11 +66,11 @@ void BMCSolver::addTransitionsFromTo(unsigned nFrom, unsigned nTo)
 
                 Lits[0] = toLitCond(m_pInitCnf->pVarNums[pObj->Id], 0 );
                 Lits[1] = toLitCond(nVar, 1 );
-                addClauseToSat(Lits, Lits+nOffset);
+                addClauseToSat(Lits, Lits+nOffset, m_nLastFrame);
 
                 Lits[0] = toLitCond(m_pInitCnf->pVarNums[pObj->Id], 1 );
                 Lits[1] = toLitCond(nVar, 0 );
-                addClauseToSat(Lits, Lits+nOffset);
+                addClauseToSat(Lits, Lits+nOffset, m_nLastFrame);
             }
         }
         else
@@ -81,15 +84,15 @@ void BMCSolver::addTransitionsFromTo(unsigned nFrom, unsigned nTo)
 
                 Lits[0] = toLitCond(nVar , 0 );
                 Lits[1] = toLitCond(nVar2, 1 );
-                addClauseToSat(Lits, Lits+nOffset);
+                addClauseToSat(Lits, Lits+nOffset, m_nLastFrame);
 
                 Lits[0] = toLitCond(nVar , 1 );
                 Lits[1] = toLitCond(nVar2, 0 );
-                addClauseToSat(Lits, Lits+nOffset);
+                addClauseToSat(Lits, Lits+nOffset, m_nLastFrame);
             }
         }
 
-        if (addCNFToSAT(m_pOneTRCnf) == false)
+        if (addCNFToSAT(m_pOneTRCnf, m_nLastFrame) == false)
             assert(false);
 
         markCnfVars(m_pOneTR, m_pOneTRCnf);
@@ -121,11 +124,13 @@ void BMCSolver::prepareGlobalVars(int nFrame)
     }
 }
 
-bool BMCSolver::addCNFToSAT(Cnf_Dat_t *pCnf)
+bool BMCSolver::addCNFToSAT(Cnf_Dat_t *pCnf, unsigned nFrame)
 {
+    AVY_ASSERT (nFrame <= m_nLastFrame);
+
     for (int i = 0; i < pCnf->nClauses; i++)
     {
-        if ( addClauseToSat(pCnf->pClauses[i], pCnf->pClauses[i+1]) == false)
+        if ( addClauseToSat(pCnf->pClauses[i], pCnf->pClauses[i+1], nFrame) == false)
         {
             return false;
         }
@@ -156,20 +161,20 @@ eResult BMCSolver::solveSat()
     //sat_solver2_bookmark(m_pSat);
     VarNum = m_pBadCnf->pVarNums[pObj->Id] + (m_pInitCnf->nVars + 1) + (m_nLastFrame - 1)*(m_pOneTRCnf->nVars + 1)/* + m_pBadCnf->nVars)*/ + m_pOneTRCnf->nVars;
     Lit = toLitCond( VarNum, Aig_IsComplement(pObj) ) ;
-    if (addClauseToSat(&Lit, &Lit +1) == false)
+    /*if (addClauseToSat(&Lit, &Lit +1, m_nLastFrame) == false)
     {
         m_bTrivial = true;
         return FALSE;
-    }
-    //RetValue = sat_solver2_solve( m_pSat, &Lit, &Lit + 1, (ABC_INT64_T)10000000, (ABC_INT64_T)0, (ABC_INT64_T)0, (ABC_INT64_T)0 );
-    RetValue = sat_solver2_solve( m_pSat, NULL,  NULL, (ABC_INT64_T)10000000, (ABC_INT64_T)0, (ABC_INT64_T)0, (ABC_INT64_T)0 );
+    }*/
+    RetValue = sat_solver2_solve( m_pSat, &Lit, &Lit + 1, (ABC_INT64_T)10000000, (ABC_INT64_T)0, (ABC_INT64_T)0, (ABC_INT64_T)0 );
+    //RetValue = sat_solver2_solve( m_pSat, NULL,  NULL, (ABC_INT64_T)10000000, (ABC_INT64_T)0, (ABC_INT64_T)0, (ABC_INT64_T)0 );
 
     if ( RetValue == l_False ) // unsat
     {
         // add final unit clause
-#if 0
+#if 1
         Lit = lit_neg( Lit );
-        addClauseToSat(&Lit, &Lit + 1);
+        addClauseToSat(&Lit, &Lit + 1, m_nLastFrame);
         // add learned units
         /*for ( k = 0; k < veci_size(&m_pSat->unit_lits); k++ )
         {
@@ -360,7 +365,7 @@ Aig_Man_t* BMCSolver::createArbitraryCombMan(Aig_Man_t* pMan, int nOut)
 bool BMCSolver::setInit()
 {
     markCnfVars(m_pInit, m_pInitCnf);
-    bool bRes = addCNFToSAT(m_pInitCnf);
+    bool bRes = addCNFToSAT(m_pInitCnf, 0);
     //sat_solver2_store_write(m_pSat, "init.cnf");
     return bRes;
 }
@@ -392,14 +397,14 @@ bool BMCSolver::setBad(int nFrame, bool bHasPIs)
 
         Lits[0] = toLitCond(nVar , 0 );
         Lits[1] = toLitCond(nVar2, 1 );
-        addClauseToSat(Lits, Lits+nOffset);
+        addClauseToSat(Lits, Lits+nOffset, nFrame);
 
         Lits[0] = toLitCond(nVar , 1 );
         Lits[1] = toLitCond(nVar2, 0 );
-        addClauseToSat(Lits, Lits+nOffset);
+        addClauseToSat(Lits, Lits+nOffset, nFrame);
     }
 
-    bool bRes = addCNFToSAT(m_pBadCnf);
+    bool bRes = addCNFToSAT(m_pBadCnf, nFrame);
     markCnfVars(m_pBad, m_pBadCnf);
 
     // Revert CNF to its original state
@@ -411,7 +416,7 @@ bool BMCSolver::setBad(int nFrame, bool bHasPIs)
     return bRes;
 }
 
-void BMCSolver::addClausesToFrame(Vec_Ptr_t* pCubes, int nFrame)
+void BMCSolver::addClausesToFrame(Vec_Ptr_t* pCubes, unsigned nFrame)
 {
     int nDelta = m_pInitCnf->nVars + 1 + (nFrame)*(m_pOneTRCnf->nVars + 1);// + (nFrame-1)*(m_pBadCnf->nVars);
     Pdr_Set_t* pCube;
@@ -432,7 +437,7 @@ void BMCSolver::addClausesToFrame(Vec_Ptr_t* pCubes, int nFrame)
             pClause[nCounter++] = lit;
         }
 
-        bool bRes = addClauseToSat(pClause, pClause+nCounter);
+        bool bRes = addClauseToSat(pClause, pClause+nCounter, nFrame);
         assert(bRes);
         ABC_FREE(pClause);
     }

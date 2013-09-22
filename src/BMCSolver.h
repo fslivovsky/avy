@@ -1,6 +1,7 @@
 #ifndef ABC_BMC_SOLVER_H
 #define ABC_BMC_SOLVER_H
 
+#include "avy/Util/AvyDebug.h"
 #include "AbcMCInterface.h"
 
 #include "aig/aig/aig.h"
@@ -59,7 +60,7 @@ public:
 	bool setInit();
 	bool setBad(int nFrame, bool bHasPIs = true);
 
-	bool addCNFToSAT(Cnf_Dat_t *pCnf);
+	bool addCNFToSAT(Cnf_Dat_t *pCnf, unsigned nFrame);
 
 	eResult solveSat();
 
@@ -106,24 +107,30 @@ public:
 
 	Aig_Man_t* setBadMan(Aig_Man_t* pBad)
 	{
-	    assert(m_pBadStore == NULL);
+	    if (m_pBadStore == NULL)
+	    {
+	        m_pBadStore = m_pBad;
+	        m_pBadCnfStore = m_pBadCnf;
+	    }
+
 	    Aig_Man_t* pTemp = m_pBad;
 	    m_pBad = pBad;
-	    m_pBadCnfStore = m_pBadCnf;
 	    m_pBadCnf = Cnf_Derive(m_pBad, Aig_ManCoNum(m_pBad));
 
-	    m_pBadStore = pTemp;
 	    return pTemp;
 	}
 	Aig_Man_t* setInitMan(Aig_Man_t* pInit)
 	{
-	    assert(m_pInitStore == NULL);
-	    Aig_Man_t* pTemp = m_pInit;
+	    if (m_pInitStore == NULL)
+	    {
+	        m_pInitStore = m_pInit;
+	        m_pInitCnfStore = m_pInitCnf;
+	    }
+
+        Aig_Man_t* pTemp = m_pInit;
         m_pInit = pInit;
-        m_pInitCnfStore = m_pInitCnf;
         m_pInitCnf = Cnf_Derive(m_pInit, 0);
 
-        m_pInitStore = pTemp;
         return pTemp;
 	}
 
@@ -165,9 +172,29 @@ public:
         return pSyn;
 	}
 
-	void addClausesToFrame(Vec_Ptr_t* pCubes, int nFrame);
+	void addClausesToFrame(Vec_Ptr_t* pCubes, unsigned nFrame);
 
 	void setInterpolationFrame(int nFrame) { m_nInterpolationFrame = nFrame; }
+
+	void markInitCnfVars()
+    {
+        markCnfVars(m_pInit, m_pInitCnf);
+    }
+
+    void markClausesForAPart(unsigned nFrame)
+    {
+        AVY_ASSERT(nFrame <= m_nLastFrame);
+        AVY_ASSERT(nFrame < m_ClausesByFrame.size());
+
+        set<int>& clauses = m_ClausesByFrame[nFrame];
+
+        for(set<int>::iterator itClause = clauses.begin();
+            itClause != clauses.end();
+            itClause++)
+        {
+            clause2_set_partA(m_pSat, *itClause, 1);
+        }
+    }
 
 private:
 	Aig_Man_t * duplicateAigWithoutPOs( Aig_Man_t * p );
@@ -175,8 +202,10 @@ private:
 	void createInitMan();
 	void createBadMan();
 
-	bool addClauseToSat(lit* begin, lit* end)
+	bool addClauseToSat(lit* begin, lit* end, unsigned nFrame)
 	{
+	    AVY_ASSERT(nFrame <= m_nLastFrame);
+
 	    int Cid = sat_solver2_addclause(m_pSat, begin, end, -1);
 
 	    if (m_nInterpolationFrame > 0 &&
@@ -184,7 +213,7 @@ private:
 	    {
 	        clause2_set_partA(m_pSat, Cid, 1);
 	    }
-	    //m_ClausesByFrame[m_nLastFrame].insert(Cid);
+	    m_ClausesByFrame[nFrame].insert(Cid);
 	    return (Cid != 0);
 	}
 
