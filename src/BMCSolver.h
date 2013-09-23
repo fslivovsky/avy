@@ -47,7 +47,9 @@ public:
 
 	~BMCSolver()
 	{
-		Abc_Stop();
+	    //Int2_ManStop(m_pSat->pInt2);
+		sat_solver2_delete(m_pSat);
+		ABC_FREE(m_vGVars);
 	}
 
 	Aig_Man_t* getCircuit() { return m_pAig; }
@@ -125,11 +127,15 @@ public:
 	    {
 	        m_pInitStore = m_pInit;
 	        m_pInitCnfStore = m_pInitCnf;
+	        Cnf_DataLift(m_pInitCnf, -m_nVars);
 	    }
+	    else
+	        Cnf_DataFree(m_pInitCnf);
 
         Aig_Man_t* pTemp = m_pInit;
         m_pInit = pInit;
         m_pInitCnf = Cnf_Derive(m_pInit, 0);
+        Cnf_DataLift(m_pInitCnf, m_nVars);
 
         return pTemp;
 	}
@@ -141,6 +147,8 @@ public:
 	    Cnf_DataFree(m_pInitCnf);
 	    m_pInit = m_pInitStore;
 	    m_pInitCnf = m_pInitCnfStore;
+
+	    Cnf_DataLift(m_pInitCnf, m_nVars);
 
 	    m_pInitStore = NULL;
 	    m_pInitCnfStore = NULL;
@@ -174,27 +182,41 @@ public:
 
 	void addClausesToFrame(Vec_Ptr_t* pCubes, unsigned nFrame);
 
-	void setInterpolationFrame(int nFrame) { m_nInterpolationFrame = nFrame; }
+	void setInterpolationFrame(int nFrame)
+	{
+	    m_nInterpolationFrame = nFrame;
+	}
 
 	void markInitCnfVars()
-	    {
-	        markCnfVars(m_pInit, m_pInitCnf);
-	    }
+    {
+        //markCnfVars(m_pInit, m_pInitCnf);
+    }
 
-	    void markClausesForAPart(unsigned nFrame)
-	    {
-	        AVY_ASSERT(nFrame <= m_nLastFrame);
-	        AVY_ASSERT(nFrame < m_ClausesByFrame.size());
+    void markClausesForAPart(unsigned nFrame)
+    {
+        AVY_ASSERT(nFrame <= m_nLastFrame);
+        AVY_ASSERT(nFrame < m_ClausesByFrame.size());
 
-	        set<int>& clauses = m_ClausesByFrame[nFrame];
+        for (int i = 0; i <= nFrame; i++)
+        {
+            set<int>& clauses = m_ClausesByFrame[i];
 
-	        for(set<int>::iterator itClause = clauses.begin();
-	            itClause != clauses.end();
-	            itClause++)
-	        {
-	            clause2_set_partA(m_pSat, *itClause, 1);
-	        }
-	    }
+            for(set<int>::iterator itClause = clauses.begin();
+                itClause != clauses.end();
+                itClause++)
+            {
+                clause* c = clause2_read(m_pSat, *itClause);
+                for (int j = 0; j < c->size; j++)
+                {
+                    if (c->lits[j] < 0) continue;
+                    int v = lit_var(c->lits[j]);
+                    var_set_partA(m_pSat, v, 1);
+                }
+                clause2_set_partA(m_pSat, *itClause, 1);
+            }
+        }
+    }
+
 
 private:
 	Aig_Man_t * duplicateAigWithoutPOs( Aig_Man_t * p );
@@ -204,15 +226,15 @@ private:
 
 	bool addClauseToSat(lit* begin, lit* end, unsigned nFrame)
 	{
-	    AVY_ASSERT(nFrame <= m_nLastFrame);
+	    //AVY_ASSERT(nFrame <= m_nLastFrame);
 
 	    int Cid = sat_solver2_addclause(m_pSat, begin, end, -1);
 
-	    if (m_nInterpolationFrame > 0 &&
-	        m_nInterpolationFrame == m_nLastFrame)
+	    /*if (m_nInterpolationFrame > 0 &&
+	        m_nInterpolationFrame > nFrame)
 	    {
 	        clause2_set_partA(m_pSat, Cid, 1);
-	    }
+	    }*/
 	    m_ClausesByFrame[nFrame].insert(Cid);
 	    return (Cid != 0);
 	}
@@ -273,6 +295,10 @@ private:
     int m_nLevelRemoval;
 
     int m_nInterpolationFrame;
+    Vec_Int_t * m_vGVars;
+    unsigned m_nVars;
+    vector<vector<int> > m_CurrentVarsByFrame;
+    vector<vector<int> > m_NextVarsByFrame;
 };
 
 #endif // ABC_MC_INTERFACE_H
