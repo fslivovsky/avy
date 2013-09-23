@@ -1,4 +1,5 @@
 #include "SafetyVC.h"
+#include "AigPrint.h"
 
 #include "aig/saig/saig.h"
 
@@ -16,17 +17,23 @@ namespace avy
 
     // -- save circuit
     m_Circuit = aigPtr (Aig_ManDupSimple (pCircuit));
+
     
     // -- construct Tr 
     Aig_Man_t *pTr = Aig_ManDupNoPo (pCircuit);
     Aig_ManRebuild (&pTr);
     m_Tr = aigPtr (pTr);
-    m_cnfTr = cnfPtr (Cnf_Derive (m_Tr.get (), Aig_ManRegNum (m_Tr.get ())));    
+    m_cnfTr = cnfPtr (Cnf_Derive (&*m_Tr, Aig_ManRegNum (m_Tr.get ())));    
 
     // -- construct Bad
     Aig_Man_t *pBad = Aig_ManDupSinglePo (pCircuit, 0, false);
     Aig_ManRebuild (&pBad);
     m_Bad = aigPtr (pBad);
-    m_cnfBad = cnfPtr (Cnf_Derive (&*m_Tr, Aig_ManCoNum (&*m_Bad)));
+    m_cnfBad = cnfPtr (Cnf_Derive (&*m_Bad, Aig_ManCoNum (&*m_Bad)));
+
+    LOG ("tr", logs () 
+         << "m_Circuit is: " << *m_Circuit << "\n"
+         << "m_Tr is: \n " << *m_Tr << "\n"
+         << "m_Bad is: " << *m_Bad << "\n";);
   }
 }
