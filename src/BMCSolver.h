@@ -2,7 +2,7 @@
 #define ABC_BMC_SOLVER_H
 
 #include "avy/Util/AvyDebug.h"
-#include "AbcMCInterface.h"
+#include "AbcMcInterface.h"
 
 #include "aig/aig/aig.h"
 #include "aig/saig/saig.h"

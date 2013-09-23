@@ -4,7 +4,7 @@
 #include "boost/noncopyable.hpp"
 #include "boost/logic/tribool.hpp"
 
-#include "avy/util/AvyDebug.h"
+#include "avy/Util/AvyDebug.h"
 #include "AigUtils.h"
 
 #include "sat/bsat/satSolver.h"
