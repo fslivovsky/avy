@@ -5,6 +5,7 @@
 #include "boost/logic/tribool.hpp"
 
 #include "avy/Util/AvyDebug.h"
+#include "avy/Util/Global.h"
 #include "AigUtils.h"
 
 #include "sat/bsat/satSolver.h"
@@ -71,7 +72,7 @@ namespace avy
     }
 
     /// Mark currently unmarked clauses as belonging to partition nPart
-    void markParitition (unsigned nPart)
+    void markPartition (unsigned nPart)
     { 
       AVY_ASSERT (nPart < m_nParts);
       sat_solver_store_mark_clauses_a (m_pSat, nPart); 
@@ -81,6 +82,10 @@ namespace avy
     bool addClause (lit* begin, lit* end)
     {
       m_Trivial = !sat_solver_addclause (m_pSat, begin, end); 
+      LOG("sat", logs () << "NEW CLS: ";
+          for (lit *it = begin; it != end; ++it)
+            logs () << *it << " ";
+          logs () << "\n";);
       return !m_Trivial;
     }
     
