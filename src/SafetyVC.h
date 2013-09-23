@@ -149,8 +149,8 @@ namespace avy
         
         Saig_ManForEachLo (&*m_Tr, pObj, i)
           {
-            Lits[0] = toLitCond (m_cnfTr->pVarNums [pObj->Id], 0);
-            solver.addClause (Lits, Lits + 1, nOffset);
+            Lits[0] = toLitCond (m_cnfTr->pVarNums [pObj->Id] + nOffset, 1);
+            solver.addClause (Lits, Lits + 1);
           }
       }
 
