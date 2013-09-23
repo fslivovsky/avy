@@ -47,7 +47,8 @@ namespace avy
     
   public:
     /// create a solver with nParts partitions and nVars variables
-    ItpSatSolver (unsigned nParts, unsigned nVars) : m_pSat (0) { reset (nParts, nVars); }
+    ItpSatSolver (unsigned nParts, unsigned nVars) : m_pSat (0) 
+    { reset (nParts, nVars); }
     
     ~ItpSatSolver ()
     {
@@ -58,18 +59,23 @@ namespace avy
     /// reset and allocate nParts partitions and nVars variables
     void reset (unsigned nParts, unsigned nVars)
     {
+      AVY_ASSERT (nParts >= 2 && "require at least 2 partitions");
       if (m_pSat) sat_solver_delete (m_pSat);
       m_nParts = nParts;
       m_Trivial = false;
       m_State = boost::indeterminate;
       m_pSat = sat_solver_new ();
-      sat_solver_store_alloc (m_pSat, nParts);
+      // -- allocate space for nParts-1 interpolants
+      sat_solver_store_alloc (m_pSat, nParts-1);
       sat_solver_setnvars (m_pSat, nVars);
     }
 
     /// Mark currently unmarked clauses as belonging to partition nPart
     void markParitition (unsigned nPart)
-    { sat_solver_store_mark_clauses_a (m_pSat, nPart); }
+    { 
+      AVY_ASSERT (nPart < m_nParts);
+      sat_solver_store_mark_clauses_a (m_pSat, nPart); 
+    }
 
     /// add a clause
     bool addClause (lit* begin, lit* end)
@@ -126,7 +132,6 @@ namespace avy
     /// Compute an interpolant. User provides the list of shared variables
     /// Variables can only be shared between adjacent partitions.
     /// fMcM == true for McMillan, and false for McMillan'
-    // XXX Why is vSharedVars not Vec_Vec_t? It would make it easier to grow
     Aig_Man_t* getInterpolant (Vec_Int_t** vSharedVars, bool fMcM=true);
   };
   
