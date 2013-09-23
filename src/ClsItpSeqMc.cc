@@ -38,10 +38,11 @@ bool ClsItpSeqMc::prove()
 	// Start the BMC loop
 	for (unsigned nFrame = 1; nFrame <= nMaxFrame; nFrame++)
 	{
+	    Aig_Man_t* pInterSeq;
 		// Add a frame to the transition relation &
 		// Inject clauses if some exist &
 		// Solve the resulting formula
-		if (solveTimeFrame(nFrame) == FALSIFIED)
+		if (solveTimeFrame(nFrame, &pInterSeq) == FALSIFIED)
 		{
 			// A CEX is found
 		    cout << "Found a CEX at frame: " << nFrame << endl;
@@ -51,7 +52,7 @@ bool ClsItpSeqMc::prove()
 		cout << "No CEX at frame: " << nFrame << endl;
 
 		// Extract an interpolation-sequence.
-		extractInterpolationSeq();
+		extractInterpolationSeq(pInterSeq);
 
 		// Try global push - also check for a fixpoint along the way
 		if (globalPush() == true)
@@ -144,32 +145,29 @@ bool ClsItpSeqMc::testInterpolationSeq(Aig_Man_t* pInterSeq, int nFrame)
     return (res == FALSE);
 }
 
-void ClsItpSeqMc::extractInterpolationSeq()
+void ClsItpSeqMc::extractInterpolationSeq(Aig_Man_t* pInterSeq)
 {
-  
-    Aig_Man_t* pMan = m_McUtil.getInterpolationSeq();
-
     LOG("itp", 
         std::cerr << "Interpolation sequence:\n"
-        << *pMan << "\n";);
+        << *pInterSeq << "\n";);
     
         
 	// "Skipping" frame 0 since we do not need to do anything with the initial
 	// states in terms of clauses.
-	unsigned nSize = Aig_ManCoNum(pMan);
+	unsigned nSize = Aig_ManCoNum(pInterSeq);
 	for (unsigned i = 1; i <= nSize; i++)
 	{
-	    if (Aig_ManCo(pMan, i-1) == Aig_ManConst1(pMan))
+	    if (Aig_ManCo(pInterSeq, i-1) == Aig_ManConst1(pInterSeq))
 	        continue;
 
 	    // Test the validity of the interpolation-seq
 	    // by checking I_{i-1} & TR => I_i'
 	    std::cout << "Checking " << i << endl;
-	    bool r = testInterpolationSeq(pMan, i-1);
+	    bool r = testInterpolationSeq(pInterSeq, i-1);
 	    assert(r);
 	    //Aig_Man_t* pDup = Aig_ManDupSimple(pMan);
 	    // Get the interpolant as a set of clauses.
-	    transformInterpolantToCNF(i, pMan);
+	    transformInterpolantToCNF(i, pInterSeq);
 	    //Aig_ManStop(pDup);
 
         if (m_GlobalPdr.push ()) {
@@ -179,7 +177,7 @@ void ClsItpSeqMc::extractInterpolationSeq()
         m_GlobalPdr.statusLn (cerr);
 	}
 
-	Aig_ManStop(pMan);
+	Aig_ManStop(pInterSeq);
 
 	// Now justify the clauses.
         //justifyClauses(i, cnfInterpolant)        
@@ -375,17 +373,36 @@ Aig_Man_t* ClsItpSeqMc::createOr(Aig_Man_t* pMan1, Aig_Obj_t* p1, Aig_Man_t* pMa
 }
 
 #if SOLVE_TMP
-ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame)
+#define NON_INC 1
+ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame, Aig_Man_t** pInterpolationSeq)
 {
-    AVY_ASSERT(nFrame >= 1);
-    AVY_ASSERT(m_FrameInterpolatingSolvers.size() == nFrame-1);
     cout << "Solving frame: " << nFrame << endl;
 
+#if NON_INC
+    BMCSolver* pSolver = NULL;
+    if (m_FrameInterpolatingSolvers.size() == 0)
+    {
+        for (int k=0; k < nFrame; k++)
+        {
+            pSolver = new BMCSolver(m_McUtil.getCircuit());
+            pSolver->setInterpolationFrame(1);
+            if (m_FrameInterpolatingSolvers.size() == 0)
+                pSolver->setInit();
+            m_FrameInterpolatingSolvers.push_back(pSolver);
+        }
+    }
+#else
+    AVY_ASSERT(nFrame >= 1);
+    AVY_ASSERT(m_FrameInterpolatingSolvers.size() == nFrame-1);
     BMCSolver* pSolver = new BMCSolver(m_McUtil.getCircuit());
     pSolver->setInterpolationFrame(1);
     if (nFrame == 1)
+    {
         pSolver->setInit();
+    }
+
     m_FrameInterpolatingSolvers.push_back(pSolver);
+#endif
 
     eResult res = UNDEF;
     Aig_Man_t* pInterpolantMan = NULL;
@@ -397,27 +414,53 @@ ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame)
     {
         AVY_ASSERT(nCurrentFrame >= 1);
         pSolver = *itSolver;
-
+#if NON_INC
+        for (int k=1; k < nCurrentFrame-1; k++)
+        {
+            pSolver->addTransitionsFromTo(k, k+1);
+        }
+#endif
         if (nCurrentFrame < nFrame)
         {
+            Aig_Man_t* pTempMan = pSolver->createArbitraryCombMan(pInterpolantMan, 0);
             // Define the init state
             pSolver->setInitMan(pInterpolantMan);
-            pSolver->markInitCnfVars();
-            pSolver->markClausesForAPart(0);
+            pSolver->setInit();
+
+            int actual = (nFrame - nCurrentFrame);
+            Vec_Ptr_t* pCubes = Vec_PtrAlloc(10);
+            m_GlobalPdr.getCoverCubes(actual, pCubes);
+            pSolver->addClausesToFrame(pCubes, 0);
         }
 
         pSolver->addTransitionsFromTo(nCurrentFrame-1, nCurrentFrame);
-
+        //pSolver->markInitCnfVars();
+        pSolver->markClausesForAPart(0);
+        //pSolver->markClausesForAPart(1);
         pSolver->setBad(nCurrentFrame);
+
+        for (int k = 0; k < nCurrentFrame-1; k++)
+        {
+            int actual = (nFrame - nCurrentFrame) + 1 + k;
+            Vec_Ptr_t* pCubes = Vec_PtrAlloc(10);
+            m_GlobalPdr.getCoverCubes(actual, pCubes);
+            pSolver->addClausesToFrame(pCubes, k+1);
+        }
         res = pSolver->solveSat();
         if (res != FALSE)
             break;
         pInterpolantMan = pSolver->getInterpolant();
+        LOG("itp",
+                std::cerr << "Interpolant:\n"
+                << *pInterpolantMan << "\n";);
+        Aig_ManCleanData(pInterpolantMan);
         Vec_PtrPush(vInterpolants, pInterpolantMan);
         nCurrentFrame--;
     }
 
-    Aig_Man_t* pInterpolationSeq = Aig_ManDupArray(vInterpolants);
+    *pInterpolationSeq = Aig_ManSimplifyComb(Aig_ManDupArray(vInterpolants));
+    Aig_ManPrintStats(*pInterpolationSeq);
+
     int i;
     Vec_PtrForEachEntry(Aig_Man_t*, vInterpolants, pInterpolantMan, i)
     {
@@ -425,6 +468,15 @@ ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame)
     }
     Vec_PtrFree(vInterpolants);
 
+#if NON_INC
+    for(vector<BMCSolver*>::iterator itSolver = m_FrameInterpolatingSolvers.begin();
+        itSolver != m_FrameInterpolatingSolvers.end();
+        itSolver++)
+    {
+        delete *itSolver;
+    }
+    m_FrameInterpolatingSolvers.clear();
+#endif
     if (res == TRUE)
         return FALSIFIED;
     else if (res == FALSE)

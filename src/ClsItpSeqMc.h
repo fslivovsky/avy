@@ -55,13 +55,13 @@ public:
 	bool prove();
 
 private:
-	eMcResult solveTimeFrame(unsigned nFrame);
+	eMcResult solveTimeFrame(unsigned nFrame, Aig_Man_t** pInterpolationSeq);
 
 	// ************************************************************************
 	// Given an unsatisfiable BMC formula, extract an interpolation sequence
 	// and trasform each of the interpolants into CNF.
 	// ************************************************************************
-	void extractInterpolationSeq();
+	void extractInterpolationSeq(Aig_Man_t* pInterSeq);
 
 
 	// ************************************************************************
