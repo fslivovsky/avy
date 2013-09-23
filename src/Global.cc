@@ -9,6 +9,7 @@ namespace avy
     out << "AVY PARAMETERS\n"
         << "\tfName = " << p.fName << "\n"
         << "\tipt = " << p.itp << "\n"
+        << "\tavy = " << p.avy << "\n"
         << "END";
     return out;
   }

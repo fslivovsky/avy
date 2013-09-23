@@ -17,6 +17,9 @@ namespace avy
        0 McMillan, 1 McMillan' */
     unsigned itp;
 
+    /** Use new avy code */
+    bool avy;
+    
     /** verbosity level */
     unsigned verbosity;
   };
