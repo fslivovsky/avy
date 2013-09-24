@@ -30,6 +30,7 @@ BMCSolver::BMCSolver(Aig_Man_t* pAig) :
     , m_nLevelRemoval(-1)
     , m_vGVars(NULL)
     , m_nVars(0)
+    , m_bMcMPrime(false)
 {
     m_ClausesByFrame.resize(1);
     m_pSat = sat_solver2_new();
@@ -51,7 +52,7 @@ BMCSolver::BMCSolver(Aig_Man_t* pAig) :
     prepareGlobalVars(1);
     // start the interpolation manager
     if (m_pSat->pInt2 == NULL)
-        m_pSat->pInt2 = Int2_ManStart( m_pSat, Vec_IntArray(m_vGVars), Vec_IntSize(m_vGVars) );
+        m_pSat->pInt2 = Int2_ManStart( m_pSat, Vec_IntArray(m_vGVars), Vec_IntSize(m_vGVars), (m_bMcMPrime) ? 1 : 0 );
 
     m_nLastFrame = 1;
 
@@ -87,14 +88,12 @@ void BMCSolver::addTransitionsFromTo(unsigned nFrom, unsigned nTo)
 
     for ( ; m_nLastFrame < nTo; m_nLastFrame++)
     {
-        m_CurrentVarsByFrame[m_nLastFrame].clear();
-        if (addCNFToSAT(m_pOneTRCnf, m_nLastFrame) == false)
-            assert(false);
+        //m_CurrentVarsByFrame[m_nLastFrame].clear();
 
         Aig_Obj_t *pObj;
-        int i, Lits[3];
+        int i, Lits[2];
         //Lits[2] = toLitCond(nGlueVar, 1);
-        int nOffset = (m_bAddGlueRemovalLiteral && (m_nLevelRemoval == -1 || m_nLevelRemoval == m_nLastFrame)) ? 3 : 2;
+        int nOffset = 2;//(m_bAddGlueRemovalLiteral && (m_nLevelRemoval == -1 || m_nLevelRemoval == m_nLastFrame)) ? 3 : 2;
         /*if (nFrom == 0)
         {
             Aig_ManForEachCi(m_pInit, pObj, i )
@@ -132,6 +131,9 @@ void BMCSolver::addTransitionsFromTo(unsigned nFrom, unsigned nTo)
                 m_NextVarsByFrame[m_nLastFrame].push_back(m_pOneTRCnf->pVarNums[pLi->Id]);
             }
         //}
+
+        if (addCNFToSAT(m_pOneTRCnf, m_nLastFrame) == false)
+            assert(false);
 
         //markCnfVars(m_pOneTR, m_pOneTRCnf);
 
@@ -184,7 +186,7 @@ eResult BMCSolver::solveSat()
     int v, i;
     Vec_IntForEachEntry(m_vGVars, v, i)
     {
-        var_set_partA(m_pSat, v, 0);
+        var_set_partA(m_pSat, v, (m_bMcMPrime) ? 1 : 0);
     }
 
     Aig_Obj_t * pObj;
@@ -214,6 +216,10 @@ eResult BMCSolver::solveSat()
         m_bTrivial = true;
         return FALSE;
     }*/
+    /*static int xxx=1;
+    ostringstream os;
+    os << "cnf" << xxx++ << ".dimacs";
+    Sat_Solver2WriteDimacs(m_pSat, (char*)os.str().c_str(), &Lit, &Lit + 1, 0);*/
     RetValue = sat_solver2_solve( m_pSat, &Lit, &Lit + 1, (ABC_INT64_T)10000000, (ABC_INT64_T)0, (ABC_INT64_T)0, (ABC_INT64_T)0 );
     //RetValue = sat_solver2_solve( m_pSat, NULL,  NULL, (ABC_INT64_T)10000000, (ABC_INT64_T)0, (ABC_INT64_T)0, (ABC_INT64_T)0 );
 
@@ -420,7 +426,6 @@ Aig_Man_t* BMCSolver::createArbitraryCombMan(Aig_Man_t* pMan, int nOut)
 
 bool BMCSolver::setInit()
 {
-    bool bRes = addCNFToSAT(m_pInitCnf, 0);
     int i, Lits[2];
     Aig_Obj_t* pObj;
     Aig_ManForEachCi(m_pInit, pObj, i )
@@ -435,6 +440,9 @@ bool BMCSolver::setInit()
         Lits[1] = toLitCond(nVar, 0 );
         addClauseToSat(Lits, Lits+2, 0);
     }
+
+    bool bRes = addCNFToSAT(m_pInitCnf, 0);
+    assert(bRes);
 
     Cnf_DataLift(m_pOneTRCnf, m_pInitCnf->nVars);
     Cnf_DataLift(m_pInitCnf, m_pInitCnf->nVars);
@@ -451,16 +459,16 @@ bool BMCSolver::setBad(int nFrame, bool bHasPIs)
     assert(nFrame > 0);
 
     Aig_Obj_t* pObj;
-    int i, Lits[3];
+    int i, Lits[2];
     //Lits[2] = toLitCond(nGlueVar, 1);
-    int nOffset = (m_bAddGlueRemovalLiteral && (m_nLevelRemoval == -1 || m_nLevelRemoval == m_nLastFrame)) ? 3 : 2;
+    int nOffset = 2;//(m_bAddGlueRemovalLiteral && (m_nLevelRemoval == -1 || m_nLevelRemoval == m_nLastFrame)) ? 3 : 2;
     Saig_ManForEachLi(m_pOneTR, pObj, i)
     {
         assert ( i <= Aig_ManRegNum(m_pOneTR));
         Aig_Obj_t* pObj2 = Aig_ManCi(m_pBad, (bHasPIs) ? m_pOneTR->nTruePis+i : i );
 
-        int nVar  = m_NextVarsByFrame[nFrame-1][i];
-        int nVar2 = m_pBadCnf->pVarNums[pObj2->Id]; // This is a global var
+        int nVar  = m_NextVarsByFrame[nFrame-1][i]; // This is a global var
+        int nVar2 = m_pBadCnf->pVarNums[pObj2->Id];
 
         //m_GlobalVars[m_nLastFrame].push_back(nVar2);
 
@@ -473,11 +481,11 @@ bool BMCSolver::setBad(int nFrame, bool bHasPIs)
         addClauseToSat(Lits, Lits+nOffset, nFrame);
 
         // TODO: XXXXX TEMP??
-        if (m_CurrentVarsByFrame.size() == m_nLastFrame)
+        /*if (m_CurrentVarsByFrame.size() == m_nLastFrame)
         {
             m_CurrentVarsByFrame.resize(m_nLastFrame+1);
             m_CurrentVarsByFrame[m_nLastFrame].push_back(nVar);
-        }
+        }*/
     }
 
     bool bRes = addCNFToSAT(m_pBadCnf, nFrame);

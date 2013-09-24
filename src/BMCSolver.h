@@ -101,6 +101,15 @@ public:
         sat_solver2_setnvars( m_pSat, m_pInitCnf->nVars + nFrame*m_pOneTRCnf->nVars + m_pBadCnf->nVars );
         m_nLastFrame = m_iFramePrev = 0;
         m_GlobalVars.clear();
+
+        Cnf_DataLift(m_pInitCnf, -m_nVars);
+        Cnf_DataLift(m_pBadCnf, -m_nVars);
+        Cnf_DataLift(m_pOneTRCnf, -m_nVars);
+
+        if (addCNFToSAT(m_pOneTRCnf, 0) == false)
+            assert(false);
+
+        m_nVars = m_pOneTRCnf->nVars;
 	}
 
 	Aig_Man_t* createArbitraryCombMan(Aig_Man_t* pMan, int nOut);
@@ -299,6 +308,7 @@ private:
     unsigned m_nVars;
     vector<vector<int> > m_CurrentVarsByFrame;
     vector<vector<int> > m_NextVarsByFrame;
+    bool m_bMcMPrime;
 };
 
 #endif // ABC_MC_INTERFACE_H
