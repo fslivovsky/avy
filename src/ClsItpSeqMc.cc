@@ -373,7 +373,7 @@ Aig_Man_t* ClsItpSeqMc::createOr(Aig_Man_t* pMan1, Aig_Obj_t* p1, Aig_Man_t* pMa
 }
 
 #if SOLVE_TMP
-#define NON_INC 1
+#define NON_INC 0
 ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame, Aig_Man_t** pInterpolationSeq)
 {
     cout << "Solving frame: " << nFrame << endl;
@@ -422,7 +422,6 @@ ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame, Aig_Man_t** 
 #endif
         if (nCurrentFrame < nFrame)
         {
-            Aig_Man_t* pTempMan = pSolver->createArbitraryCombMan(pInterpolantMan, 0);
             // Define the init state
             pSolver->setInitMan(pInterpolantMan);
             pSolver->setInit();
@@ -449,7 +448,9 @@ ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame, Aig_Man_t** 
         res = pSolver->solveSat();
         if (res != FALSE)
             break;
-        pInterpolantMan = pSolver->getInterpolant();
+        Aig_Man_t* pTemp = pSolver->getInterpolant();
+        pInterpolantMan = Aig_ManSimplifyComb(pTemp);
+        Aig_ManStop(pTemp);
         LOG("itp",
                 std::cerr << "Interpolant:\n"
                 << *pInterpolantMan << "\n";);
@@ -457,6 +458,8 @@ ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame, Aig_Man_t** 
         Vec_PtrPush(vInterpolants, pInterpolantMan);
         nCurrentFrame--;
     }
+    if (res == TRUE)
+        return FALSIFIED;
 
     *pInterpolationSeq = Aig_ManSimplifyComb(Aig_ManDupArray(vInterpolants));
     Aig_ManPrintStats(*pInterpolationSeq);
@@ -477,9 +480,8 @@ ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame, Aig_Man_t** 
     }
     m_FrameInterpolatingSolvers.clear();
 #endif
-    if (res == TRUE)
-        return FALSIFIED;
-    else if (res == FALSE)
+
+    if (res == FALSE)
         return BOUNDED;
 
     return UNKNOWN;

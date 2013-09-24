@@ -87,6 +87,7 @@ void BMCSolver::addTransitionsFromTo(unsigned nFrom, unsigned nTo)
 
     for ( ; m_nLastFrame < nTo; m_nLastFrame++)
     {
+        m_CurrentVarsByFrame[m_nLastFrame].clear();
         if (addCNFToSAT(m_pOneTRCnf, m_nLastFrame) == false)
             assert(false);
 
@@ -221,8 +222,8 @@ eResult BMCSolver::solveSat()
         //sat_solver2_rollback(m_pSat);
         // add final unit clause
 
-        //Lit = lit_neg( Lit );
-        //addClauseToSat(&Lit, &Lit + 1, m_nLastFrame);
+        Lit = lit_neg( Lit );
+        addClauseToSat(&Lit, &Lit + 1, m_nLastFrame);
         // add learned units
         /*for ( k = 0; k < veci_size(&m_pSat->unit_lits); k++ )
         {
@@ -507,7 +508,9 @@ void BMCSolver::addClausesToFrame(Vec_Ptr_t* pCubes, unsigned nFrame)
             if (pCube->Lits[j] == -1) continue;
             int nIdx = lit_var (pCube->Lits [j]);
             assert(m_CurrentVarsByFrame[nFrame][nIdx] > 0);
-            int lit = toLitCond(m_CurrentVarsByFrame[nFrame][nIdx], 1 ^ lit_sign (pCube->Lits [j]));
+            //int nVar = (nFrame == 0) ? m_CurrentVarsByFrame[nFrame][nIdx] : m_NextVarsByFrame[nFrame-1][nIdx];
+            int nVar = m_CurrentVarsByFrame[nFrame][nIdx];
+            int lit = toLitCond(nVar, 1 ^ lit_sign (pCube->Lits [j]));
 
             pClause[nCounter++] = lit;
         }
