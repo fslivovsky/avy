@@ -87,7 +87,8 @@ namespace avy
             else
               {
                 AigManPtr itp = aigPtr (m_Solver.getInterpolant (m_vShared));
-                logs () << "Interpolant is: \n" << *itp << "\n";
+                (logs () << "Interpolant is: \n").flush ();
+                Aig_ManPrintStats (&*itp);
               }
           }
         else 

@@ -130,7 +130,7 @@ namespace avy
         int liVar = m_cnfTr->pVarNums [pLi->Id] + nTrOffset;
         int loVar = m_cnfTr->pVarNums [pLo->Id] + nFreshVars;
         
-        Vec_IntPush (vShared, loVar);
+        Vec_IntPush (vShared, liVar);
 
         // -- add equality constraints
         Lits [0] = toLitCond (liVar, 0);
@@ -163,7 +163,7 @@ namespace avy
         pCi = Aig_ManCi (&*m_Bad, Saig_ManPiNum (&*m_Tr) + i);
         int ciVar = m_cnfBad->pVarNums [pCi->Id] + nFreshVars;
 
-        Vec_IntPush (vShared, ciVar);
+        Vec_IntPush (vShared, liVar);
 
         // -- add equality constraints
         Lits [0] = toLitCond (liVar, 0);
