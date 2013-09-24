@@ -84,7 +84,8 @@ namespace avy
       m_Trivial = !sat_solver_addclause (m_pSat, begin, end); 
       LOG("sat", logs () << "NEW CLS: ";
           for (lit *it = begin; it != end; ++it)
-            logs () << *it << " ";
+            logs () << (lit_sign (*it) ? "-" : "") << lit_var (*it) << " ";
+
           logs () << "\n";);
       return !m_Trivial;
     }

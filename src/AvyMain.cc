@@ -35,7 +35,8 @@ static Aig_Man_t *loadAig (std::string fname)
 
 namespace avy
 {
-  AvyMain::AvyMain (std::string fname) : m_fName (fname), m_Vc (0), m_Solver(2, 2)
+  AvyMain::AvyMain (std::string fname) : 
+    m_fName (fname), m_Vc (0), m_Solver(2, 2), m_vShared (0)
   {
     VERBOSE (2, vout () << "Starting ABC\n");
     Abc_Start ();
@@ -97,6 +98,11 @@ namespace avy
   tribool AvyMain::doBmc (unsigned nFrame)
   {
     m_Solver.reset (nFrame + 2, m_Vc->varSize (0, nFrame, true));
+    m_vShared.clear ();
+
+    for (unsigned i = 0; i < nFrame+1; i++) 
+      m_vShared.push_back (Vec_IntAlloc (0));
+    
     
     unsigned nOffset = 0;
     unsigned nLastOffset = 0;
@@ -107,14 +113,31 @@ namespace avy
         nOffset = m_Vc->addTrCnf (m_Solver, i, nOffset);
         m_Solver.markPartition (i);
 
-        if (i < nFrame) nOffset = m_Vc->addTrGlue (m_Solver, i, nLastOffset, nOffset);
+        if (i < nFrame) 
+          nOffset = m_Vc->addTrGlue (m_Solver, i, nLastOffset, nOffset, m_vShared [i]);
         m_Solver.dumpCnf ("frame" + lexical_cast<string>(nFrame) + ".cnf");
       }
 
-    nOffset = m_Vc->addBadGlue (m_Solver, nLastOffset, nOffset);
+    nOffset = m_Vc->addBadGlue (m_Solver, nLastOffset, nOffset, m_vShared [nFrame]);
     nOffset = m_Vc->addBadCnf (m_Solver, nOffset);
     m_Solver.markPartition (nFrame + 1);
     m_Solver.dumpCnf ("frame" + lexical_cast<string>(nFrame+1) + ".cnf");
+
+
+    LOG("dump_shared",
+        logs () << "Shared size: " << m_vShared.size () << "\n";
+        for (unsigned i = 0; i < m_vShared.size (); ++i)
+          {
+            int j;
+            Vec_Int_t *vVec = m_vShared [i];
+            int nVar;
+            logs () << i << ": ";
+            Vec_IntForEachEntry (vVec, nVar, j)
+              logs () << nVar << " ";
+            logs () << "\n";
+          });
+    
+    
 
     LitVector assumps;
     return m_Solver.solve (assumps);
