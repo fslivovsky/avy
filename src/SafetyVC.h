@@ -56,15 +56,6 @@ namespace avy
     /// initialize given a circuit
     void init (abc::Aig_Man_t *pCircuit);
 
-    /// Add Cnf for the glue between frame nFrame and nFrame+1
-    /// \param nOldOffset is the offset at which Tr of nFrame was added
-    /// \param nNewOffset is the offset from which new Cnf vars can be allocated
-    /// \return new offset for Cnf vars. Should be nNewOffset if glue does not consume vars
-    template<typename S>
-    unsigned addGlueCnf (S &solver, unsigned nFrame, 
-                         unsigned nOldOffset, unsigned nNewOffset);
-
-
   public:
     /// create a VC given from a circuit. Init is implicit.
     SafetyVC(abc::Aig_Man_t *pCircuit) { init (pCircuit); }
@@ -76,16 +67,30 @@ namespace avy
     /// number of Cnf variables for Bad
     unsigned badVarSize () { return m_cnfBad->nVars; }
 
+    unsigned trGlueSize (unsigned nFrame) { return 0; }
+    unsigned badGlueSize () { return 0; }
+
     /// number of Cnf variables for frames nStart up to, but not including nStop
     unsigned varSize (unsigned nStart, unsigned nStop, bool fWithBad)
     {
       unsigned nVars = 0;
-      for (unsigned i = nStart; i  < nStop; ++i) nVars += trVarSize (i);
-      if (fWithBad) nVars += badVarSize ();
+      for (unsigned i = nStart; i  < nStop; ++i) 
+        nVars += trGlueSize (i) + trVarSize (i);
+      if (fWithBad) nVars += badGlueSize () + badVarSize ();
       return nVars;
     }
     
+    /// Add Cnf for the glue between frame nFrame and nFrame+1
+    /// \param nTrOffset is the offset at which Tr of nFrame was added
+    /// \param nFreshVars is the offset from which new Cnf vars can be allocated
+    /// \return new offset for Cnf vars. Should be nNewOffset if glue 
+    /// does not consume vars
+    template<typename S>
+    unsigned addTrGlue (S &solver, unsigned nFrame, 
+                        unsigned nTrOffset, unsigned nFreshVars);
     
+    template<typename S>
+    unsigned addBadGlue (S &solver, unsigned nTrOffset, unsigned nFreshVars);
     
     /** Add Cnf of one Tr to the solver
      *
@@ -106,10 +111,12 @@ namespace avy
     unsigned addBadCnf (S &solver, unsigned nOffset);
   };
 
-  template <typename S> unsigned SafetyVC::addGlueCnf (S &solver, unsigned nFrame, 
-                                                       unsigned nOldOffset, 
-                                                       unsigned nNewOffset)
+
+  template <typename S> unsigned SafetyVC::addTrGlue (S &solver, unsigned nFrame, 
+                                                      unsigned nTrOffset, 
+                                                      unsigned nFreshVars)
   {
+    logs () << "addTrGlue: old: " << nTrOffset << " new: " << nFreshVars << "\n";
     int i;
     Aig_Obj_t *pLo, *pLi;
     lit Lits[2];
@@ -117,11 +124,8 @@ namespace avy
     Saig_ManForEachLo (&*m_Tr, pLo, i)
       {
         pLi = Saig_ManLi (&*m_Tr, i);
-        int liVar = m_cnfTr->pVarNums [pLi->Id];
-        int loVar = m_cnfTr->pVarNums [pLo->Id];
-
-        liVar += nOldOffset;
-        loVar += nNewOffset;
+        int liVar = m_cnfTr->pVarNums [pLi->Id] + nTrOffset;
+        int loVar = m_cnfTr->pVarNums [pLo->Id] + nFreshVars;
         
         // -- add equality constraints
         Lits [0] = toLitCond (liVar, 0);
@@ -134,15 +138,51 @@ namespace avy
         
       }
 
-    return nNewOffset;
+    return nFreshVars;
   }
 
+  /** glue bad state*/
+  template<typename S>
+  unsigned SafetyVC::addBadGlue (S &solver, unsigned nTrOffset, unsigned nFreshVars)
+  {
+    logs () << "addBadGlue: old: " << nTrOffset << " new: " << nFreshVars << "\n";
+    int i;
+    Aig_Obj_t *pCi, *pLi;
+    lit Lits[2];
+    
+    Saig_ManForEachLi (&*m_Tr, pLi, i)
+      {
+
+        int liVar = m_cnfTr->pVarNums [pLi->Id] + nTrOffset;
+        
+        pCi = Aig_ManCi (&*m_Bad, Saig_ManPiNum (&*m_Tr) + i);
+        int ciVar = m_cnfBad->pVarNums [pCi->Id] + nFreshVars;
+        
+        // -- add equality constraints
+        Lits [0] = toLitCond (liVar, 0);
+        Lits [1] = toLitCond (ciVar, 1);
+        solver.addClause (Lits, Lits+2);
+        
+        Lits [0] = lit_neg (Lits [0]);
+        Lits [1] = lit_neg (Lits [1]);
+        solver.addClause (Lits, Lits+2);
+        
+      }
+
+    return nFreshVars;
+  }
+  
+
+
+  //  addGlueCnf (solver, nFrame, nOffset, nOffset + trVarSize (nFrame));
   template <typename S>
   unsigned SafetyVC::addTrCnf (S &solver, unsigned nFrame, unsigned nOffset)
   {
     // add clauses for Init
     if (nFrame == 0)
       {
+        logs () << "addTrCnf:Init\n";
+        
         Aig_Obj_t *pObj;
         int i;
         lit Lits[1];
@@ -155,6 +195,7 @@ namespace avy
       }
 
     {
+      logs () << "addTrCnf\n";
       ScoppedCnfLift scLift (m_cnfTr, nOffset);
 
       // -- add clauses
@@ -162,19 +203,26 @@ namespace avy
         AVY_VERIFY (solver.addClause (m_cnfTr->pClauses [i], m_cnfTr->pClauses[i+1]));
     }
 
-    return addGlueCnf (solver, nFrame, nOffset, nOffset + trVarSize (nFrame));
+    return nOffset + trVarSize (nFrame);
   }
 
   
   template <typename S>
   unsigned SafetyVC::addBadCnf (S &solver, unsigned nOffset)
   {
+    logs () << "addBadCnf: off: " << nOffset << "\n";
+    
     ScoppedCnfLift scLift (m_cnfBad, nOffset);
     // -- add clauses
     for (int i = 0; i < m_cnfBad->nClauses; ++i)
       AVY_VERIFY (solver.addClause (m_cnfBad->pClauses [i], 
                                     m_cnfBad->pClauses[i+1]));
-    
+
+    Aig_Obj_t *pPo = Aig_ManCo (&*m_Bad, 0);
+    int poVar = m_cnfBad->pVarNums [pPo->Id];
+    lit Lit = toLit (poVar);
+    solver.addClause (&Lit, &Lit + 1);
+
     return nOffset + badVarSize ();
   }
 }

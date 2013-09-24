@@ -99,13 +99,19 @@ namespace avy
     m_Solver.reset (nFrame + 2, m_Vc->varSize (0, nFrame, true));
     
     unsigned nOffset = 0;
+    unsigned nLastOffset = 0;
     
     for (unsigned i = 0; i <= nFrame; ++i)
       {
+        nLastOffset = nOffset;
         nOffset = m_Vc->addTrCnf (m_Solver, i, nOffset);
         m_Solver.markPartition (i);
+
+        if (i < nFrame) nOffset = m_Vc->addTrGlue (m_Solver, i, nLastOffset, nOffset);
         m_Solver.dumpCnf ("frame" + lexical_cast<string>(nFrame) + ".cnf");
       }
+
+    nOffset = m_Vc->addBadGlue (m_Solver, nLastOffset, nOffset);
     nOffset = m_Vc->addBadCnf (m_Solver, nOffset);
     m_Solver.markPartition (nFrame + 1);
     m_Solver.dumpCnf ("frame" + lexical_cast<string>(nFrame+1) + ".cnf");
