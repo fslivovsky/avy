@@ -2,6 +2,7 @@
 #include "boost/lexical_cast.hpp"
 #include "avy/Util/Global.h"
 #include "SafetyVC.h"
+#include "AigPrint.h"
 
 #include "base/main/main.h"
 #include "aig/ioa/ioa.h"
@@ -81,7 +82,13 @@ namespace avy
         else if (!res)
           {
             VERBOSE(0, vout () << "UNSAT from BMC at frame: " << nFrame << "\n";);
-            
+            if (m_Solver.isTrivial ()) 
+              logs () << "Trivialy UNSAT\n";
+            else
+              {
+                AigManPtr itp = aigPtr (m_Solver.getInterpolant (m_vShared));
+                logs () << "Interpolant is: \n" << *itp << "\n";
+              }
           }
         else 
           {
@@ -90,8 +97,6 @@ namespace avy
             return 2;
           }
       }
-    
-    
     return 0;
   }
 
