@@ -13,6 +13,7 @@
 #include "boost/program_options.hpp"
 namespace po = boost::program_options;
 
+#include "AvyMain.h"
 #include "avy/Util/Global.h"
 
 using namespace std;
@@ -28,7 +29,9 @@ std::string parseCmdLine (int argc, char** argv)
     ("itp", po::value<unsigned> (&gParams.itp)->default_value(0), 
      "Interpolation system: 0 - McM, 1 - Mcm-prime")
     ("verbose,v", po::value<unsigned> (&gParams.verbosity)->default_value(0),
-     "Verbosity level: 0 means silent");
+     "Verbosity level: 0 means silent")
+    ("avy", po::value<bool> (&gParams.avy)->default_value(false));
+  
 
   po::options_description hidden("Hidden options");
   hidden.add_options()
@@ -88,8 +91,16 @@ int main(int argc, char* argv[])
 {
   std::string fileName = parseCmdLine (argc, argv);
 
-  ClsItpSeqMc cism(fileName);
-  cism.prove();
+  if (gParams.avy)
+    {
+      AvyMain avy (fileName);
+      return avy.run ();
+    }
+  else
+    {
+      ClsItpSeqMc cism(fileName);
+      cism.prove();
+    }
 }
 
 

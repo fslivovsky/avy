@@ -7,8 +7,10 @@ namespace avy
 
   namespace 
   {
-    void Aig_PrintVerilog ( std::ostream &out, Aig_Obj_t * pObj, 
-                                 Vec_Vec_t * vLevels, int Level )
+    void Aig_PrintVerilog ( std::ostream &out, 
+                            Aig_Man_t * pMan, 
+                            Aig_Obj_t * pObj, 
+                            Vec_Vec_t * vLevels, int Level )
     {
       Vec_Ptr_t * vSuper;
       Aig_Obj_t * pFanin, * pFanin0, * pFanin1, * pFaninC;
@@ -26,7 +28,13 @@ namespace avy
       if ( Aig_ObjIsCi(pObj) )
         {
           if (fCompl) out << "~";
-          out << "v" << pObj->Id;
+          if (Saig_ObjIsPi (pMan, pObj))
+            out << "v" << pObj->Id;
+          else 
+            {
+              AVY_ASSERT (Saig_ObjIsLo (pMan, pObj));
+              out << "lo" << Saig_ObjRegId (pMan, pObj);
+            }
           return;
         }
       // EXOR case
@@ -38,7 +46,7 @@ namespace avy
           if (Level > 0) out << "(";
           Vec_PtrForEachEntry( Aig_Obj_t *, vSuper, pFanin, i )
             {
-              Aig_PrintVerilog (out, Aig_NotCond(pFanin, (fCompl && i==0)), 
+              Aig_PrintVerilog (out, pMan, Aig_NotCond(pFanin, (fCompl && i==0)), 
                                 vLevels, Level+1 );
               if ( i < Vec_PtrSize(vSuper) - 1 )
                 out << " ^ ";
@@ -52,20 +60,23 @@ namespace avy
           if ( Aig_ObjRecognizeExor( pObj, &pFanin0, &pFanin1 ) )
             {
               if (Level > 0) out << "(";
-              Aig_PrintVerilog (out, Aig_NotCond(pFanin0, fCompl), vLevels, Level+1 );
+              Aig_PrintVerilog (out, pMan, 
+                                Aig_NotCond(pFanin0, fCompl), vLevels, Level+1 );
               out << " ^ ";
-              Aig_PrintVerilog( out, pFanin1, vLevels, Level+1 );
+              Aig_PrintVerilog( out, pMan, pFanin1, vLevels, Level+1 );
               if (Level > 0) out << ")";
             }
           else 
             {
               pFaninC = Aig_ObjRecognizeMux( pObj, &pFanin1, &pFanin0 );
               if (Level > 0) out << "(";
-              Aig_PrintVerilog( out, pFaninC, vLevels, Level+1 );
+              Aig_PrintVerilog( out, pMan, pFaninC, vLevels, Level+1 );
               out << " ? ";
-              Aig_PrintVerilog( out, Aig_NotCond(pFanin1, fCompl), vLevels, Level+1 );
+              Aig_PrintVerilog( out, pMan, 
+                                Aig_NotCond(pFanin1, fCompl), vLevels, Level+1 );
               out << " : ";
-              Aig_PrintVerilog( out, Aig_NotCond(pFanin0, fCompl), vLevels, Level+1 );
+              Aig_PrintVerilog( out, pMan, 
+                                Aig_NotCond(pFanin0, fCompl), vLevels, Level+1 );
               if (Level > 0) out << ")";
             }
           return;
@@ -77,7 +88,8 @@ namespace avy
       if (Level > 0) out << "(";
       Vec_PtrForEachEntry( Aig_Obj_t *, vSuper, pFanin, i )
         {
-          Aig_PrintVerilog( out, Aig_NotCond(pFanin, fCompl), vLevels, Level+1 );
+          Aig_PrintVerilog( out, pMan, 
+                            Aig_NotCond(pFanin, fCompl), vLevels, Level+1 );
           if ( i < Vec_PtrSize(vSuper) - 1 )
             out << (fCompl ? " | " : " & ");
         }
@@ -87,12 +99,12 @@ namespace avy
   }
   
 
-  std::ostream &PrintAig (std::ostream &out, abc::Aig_Obj_t *pObj)
+  std::ostream &PrintAig (std::ostream &out, Aig_Man_t *pMan, abc::Aig_Obj_t *pObj)
   {
     AVY_ASSERT (!Aig_ObjIsCo (pObj));
     
     Vec_Vec_t *vVec = Vec_VecAlloc (10);
-    Aig_PrintVerilog (out, pObj, vVec, 0);
+    Aig_PrintVerilog (out, pMan, pObj, vVec, 0);
     return out;
   }
 
@@ -102,12 +114,19 @@ namespace avy
     int i;
     
     out << "AIG BEGIN\n";
-    Aig_ManForEachCo (pMan, pObj, i)
+    Saig_ManForEachPo (pMan, pObj, i)
       {
-        out << "o" << i << " := ";
-        PrintAig (out, Aig_ObjChild0 (pObj));
+        out << "po" << i << " := ";
+        PrintAig (out, pMan, Aig_ObjChild0 (pObj));
         out << "\n";
       }
+    Saig_ManForEachLi (pMan, pObj, i)
+      {
+        out << "li" << i << " := ";
+        PrintAig (out, pMan, Aig_ObjChild0 (pObj));
+        out << "\n";
+      }
+
     out << "AIG END\n";
     return out;
   }

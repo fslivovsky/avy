@@ -192,7 +192,7 @@ void ClsItpSeqMc::transformInterpolantToCNF(
 
   LOG("cnf",
       std::cout << "Interpolant for frame: " << nFrame << "\n";
-      std::cout << *(Aig_ObjChild0(pInterpolant));
+      PrintAig (std::cout, pMan, Aig_ObjChild0(pInterpolant));
       std::cout << "\n\n";);
 
   Aig_Man_t* pManPrev = Aig_ManStartFrom(pMan);
@@ -213,12 +213,12 @@ void ClsItpSeqMc::transformInterpolantToCNF(
   Aig_ManStop(pManPrev);
   Aig_ManStop(pDupMan);
 
-  LOG("cnf",
-      std::cout << "Cover for frame: " << nFrame-1 << "\n";
-      std::cout << *pPrev  << "\n\n";);
+  // LOG("cnf",
+  //     std::cout << "Cover for frame: " << nFrame-1 << "\n";
+  //     std::cout << *pPrev  << "\n\n";);
   
   LOG("cnf",
-      std::cout << "Property: \n" << *Aig_ObjChild0(Aig_ManCo(pManOr, 0)) << "\n\n";);
+      std::cout << "Property: \n" << *pManOr << "\n\n";);
   
   Aig_Man_t *pNewMgr = Aig_ManReplacePo(m_McUtil.getCircuit(), pManOr, true);
   Aig_Man_t *pTmp = Aig_ManGiaDup (pNewMgr);

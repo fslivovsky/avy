@@ -17,6 +17,9 @@ namespace avy
        0 McMillan, 1 McMillan' */
     unsigned itp;
 
+    /** Use new avy code */
+    bool avy;
+    
     /** verbosity level */
     unsigned verbosity;
   };
@@ -39,7 +42,7 @@ namespace avy
 }
 
 #define VERBOSE(LVL,CODE)                               \
-  do { if (::avy::gParams.verbosity <= LVL) { CODE; }   \
+  do { if (LVL <= ::avy::gParams.verbosity) { CODE; }   \
   } while (0)
 
 #endif /* _GLOBAL_H_ */
