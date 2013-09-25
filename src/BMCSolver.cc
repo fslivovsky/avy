@@ -90,6 +90,9 @@ void BMCSolver::addTransitionsFromTo(unsigned nFrom, unsigned nTo)
     {
         //m_CurrentVarsByFrame[m_nLastFrame].clear();
 
+        if (addCNFToSAT(m_pOneTRCnf, m_nLastFrame) == false)
+            assert(false);
+
         Aig_Obj_t *pObj;
         int i, Lits[2];
         //Lits[2] = toLitCond(nGlueVar, 1);
@@ -131,9 +134,6 @@ void BMCSolver::addTransitionsFromTo(unsigned nFrom, unsigned nTo)
                 m_NextVarsByFrame[m_nLastFrame].push_back(m_pOneTRCnf->pVarNums[pLi->Id]);
             }
         //}
-
-        if (addCNFToSAT(m_pOneTRCnf, m_nLastFrame) == false)
-            assert(false);
 
         //markCnfVars(m_pOneTR, m_pOneTRCnf);
 

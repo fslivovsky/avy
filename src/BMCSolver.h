@@ -93,12 +93,18 @@ public:
 	    ABC_FREE(vGlobal);*/
 	}
 
-	void reinitializeSAT(int nFrame)
+	void reinitializeSAT()
 	{
+	    restoreOrigInit();
 	    m_bTrivial = false;
-	    if (m_pSat != NULL) sat_solver2_delete(m_pSat);
+	    if (m_pSat != NULL)
+	    {
+	        //Int2_ManStop(m_pSat->pInt2);
+	        sat_solver2_delete(m_pSat);
+	    }
 	    m_pSat = sat_solver2_new();
-        sat_solver2_setnvars( m_pSat, m_pInitCnf->nVars + nFrame*m_pOneTRCnf->nVars + m_pBadCnf->nVars );
+	    m_pSat->pInt2 = Int2_ManStart( m_pSat, Vec_IntArray(m_vGVars), Vec_IntSize(m_vGVars), (m_bMcMPrime) ? 1 : 0 );
+        sat_solver2_setnvars( m_pSat, m_pInitCnf->nVars + m_pOneTRCnf->nVars + m_pBadCnf->nVars );
         m_nLastFrame = m_iFramePrev = 0;
         m_GlobalVars.clear();
 
@@ -106,10 +112,32 @@ public:
         Cnf_DataLift(m_pBadCnf, -m_nVars);
         Cnf_DataLift(m_pOneTRCnf, -m_nVars);
 
+        m_ClausesByFrame.clear();
+        m_NextVarsByFrame.clear();
+        m_CurrentVarsByFrame.clear();
+        m_ClausesByFrame.resize(1);
+        m_NextVarsByFrame.resize(1);
+        m_CurrentVarsByFrame.resize(1);
         if (addCNFToSAT(m_pOneTRCnf, 0) == false)
             assert(false);
 
         m_nVars = m_pOneTRCnf->nVars;
+
+        Aig_Obj_t *pLi, *pLo;
+        int i;
+        Saig_ManForEachLiLo(m_pOneTR, pLi, pLo, i)
+        {
+            int nVar = m_pOneTRCnf->pVarNums[pLo->Id];
+            m_CurrentVarsByFrame[0].push_back(nVar);
+            nVar = m_pOneTRCnf->pVarNums[pLi->Id];
+            m_NextVarsByFrame[0].push_back(nVar);
+        }
+
+        Cnf_DataLift(m_pInitCnf, m_nVars);
+       Cnf_DataLift(m_pBadCnf, m_nVars);
+       Cnf_DataLift(m_pOneTRCnf, m_nVars);
+
+        m_nLastFrame = 1;
 	}
 
 	Aig_Man_t* createArbitraryCombMan(Aig_Man_t* pMan, int nOut);
@@ -151,8 +179,8 @@ public:
 
 	void restoreOrigInit()
 	{
-	    assert(m_pInitStore != NULL);
-	    Aig_ManStop(m_pInit);
+	    if (m_pInitStore == NULL) return;
+	    //Aig_ManStop(m_pInit);
 	    Cnf_DataFree(m_pInitCnf);
 	    m_pInit = m_pInitStore;
 	    m_pInitCnf = m_pInitCnfStore;

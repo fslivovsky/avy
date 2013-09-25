@@ -66,7 +66,7 @@ bool ClsItpSeqMc::prove()
 }
 
 #if !SOLVE_TMP
-ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame)
+ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame, Aig_Man_t** pInterpolationSeq)
 {
     cout << "Solving frame: " << nFrame << endl;
     m_McUtil.reinitializeSAT(nFrame);
@@ -99,7 +99,10 @@ ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame)
     if (res == TRUE)
         return FALSIFIED;
     else if (res == FALSE)
+    {
+        *pInterpolationSeq = m_McUtil.getInterpolationSeq();
         return BOUNDED;
+    }
 
     return UNKNOWN;
 }
@@ -112,12 +115,14 @@ bool ClsItpSeqMc::testInterpolationSeq(Aig_Man_t* pInterSeq, int nFrame)
     Aig_Obj_t* pDriver = Aig_ObjChild0(Aig_ManCo(pNewBad,0));
     pDriver = Aig_Not(pDriver);
     Aig_ManCo(pNewBad,0)->pFanin0 = pDriver;
-    m_McUtil.setBadMan(pNewBad);
+
     if (nFrame > 0)
     {
         Aig_Man_t* pNewInit = m_McUtil.createArbitraryCombMan(pInterSeq, nFrame-1);
         m_McUtil.setInitMan(pNewInit);
     }
+
+    m_McUtil.setBadMan(pNewBad);
 
     m_McUtil.reinitializeSAT(nFrame);
     m_McUtil.setInit();
@@ -157,7 +162,7 @@ void ClsItpSeqMc::extractInterpolationSeq(Aig_Man_t* pInterSeq)
 	unsigned nSize = Aig_ManCoNum(pInterSeq);
 	for (unsigned i = 1; i <= nSize; i++)
 	{
-	    if (Aig_ManCo(pInterSeq, i-1) == Aig_ManConst1(pInterSeq))
+	    if (Aig_ObjFanin0(Aig_ManCo(pInterSeq, i-1)) == Aig_ManConst1(pInterSeq))
 	        continue;
 
 	    // Test the validity of the interpolation-seq
@@ -373,24 +378,34 @@ Aig_Man_t* ClsItpSeqMc::createOr(Aig_Man_t* pMan1, Aig_Obj_t* p1, Aig_Man_t* pMa
 }
 
 #if SOLVE_TMP
-#define NON_INC 0
+#define NON_INC 1
 ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame, Aig_Man_t** pInterpolationSeq)
 {
     cout << "Solving frame: " << nFrame << endl;
 
 #if NON_INC
     BMCSolver* pSolver = NULL;
-    if (m_FrameInterpolatingSolvers.size() == 0)
+    //if (m_FrameInterpolatingSolvers.size() == 0)
     {
-        for (int k=0; k < nFrame; k++)
+        for (int k=0; k < nFrame-1; k++)
         {
-            pSolver = new BMCSolver(m_McUtil.getCircuit());
+            pSolver = m_FrameInterpolatingSolvers[k];// new BMCSolver(m_McUtil.getCircuit());
+            pSolver->reinitializeSAT();
             pSolver->setInterpolationFrame(1);
-            if (m_FrameInterpolatingSolvers.size() == 0)
+            if (k == 0)
                 pSolver->setInit();
-            m_FrameInterpolatingSolvers.push_back(pSolver);
         }
     }
+    AVY_ASSERT(nFrame >= 1);
+    AVY_ASSERT(m_FrameInterpolatingSolvers.size() == nFrame-1);
+    pSolver = new BMCSolver(m_McUtil.getCircuit());
+    pSolver->setInterpolationFrame(1);
+    if (nFrame == 1)
+    {
+        pSolver->setInit();
+    }
+
+    m_FrameInterpolatingSolvers.push_back(pSolver);
 #else
     AVY_ASSERT(nFrame >= 1);
     AVY_ASSERT(m_FrameInterpolatingSolvers.size() == nFrame-1);
@@ -414,12 +429,7 @@ ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame, Aig_Man_t** 
     {
         AVY_ASSERT(nCurrentFrame >= 1);
         pSolver = *itSolver;
-#if NON_INC
-        for (int k=1; k < nCurrentFrame-1; k++)
-        {
-            pSolver->addTransitionsFromTo(k, k+1);
-        }
-#endif
+
         if (nCurrentFrame < nFrame)
         {
             // Define the init state
@@ -432,11 +442,19 @@ ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame, Aig_Man_t** 
             pSolver->addClausesToFrame(pCubes, 0);
         }
 
+#if NON_INC
+        for (int k=1; k < nCurrentFrame-1; k++)
+        {
+            pSolver->addTransitionsFromTo(k, k+1);
+        }
+#endif
+
         pSolver->addTransitionsFromTo(nCurrentFrame-1, nCurrentFrame);
         //pSolver->markInitCnfVars();
         pSolver->markClausesForAPart(0);
         //pSolver->markClausesForAPart(1);
         pSolver->setBad(nCurrentFrame);
+
 
         for (int k = 0; k < nCurrentFrame-1; k++)
         {
@@ -446,8 +464,11 @@ ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame, Aig_Man_t** 
             pSolver->addClausesToFrame(pCubes, k+1);
         }
         res = pSolver->solveSat();
-        if (res != FALSE)
+        if (res != FALSE) {
+            if (nCurrentFrame < nFrame)
+                AVY_ASSERT(false);
             break;
+        }
         Aig_Man_t* pTemp = pSolver->getInterpolant();
         pInterpolantMan = Aig_ManSimplifyComb(pTemp);
         Aig_ManStop(pTemp);
@@ -471,7 +492,7 @@ ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame, Aig_Man_t** 
     }
     Vec_PtrFree(vInterpolants);
 
-#if NON_INC
+#if !NON_INC
     for(vector<BMCSolver*>::iterator itSolver = m_FrameInterpolatingSolvers.begin();
         itSolver != m_FrameInterpolatingSolvers.end();
         itSolver++)
