@@ -157,6 +157,7 @@ namespace avy
   
   bool AvyMain::validateItp (AigManPtr itp)
   {
+    outs () << "Validating ITP: ";
     CnfPtr cnfItp = cnfPtr (Cnf_Derive (&*itp, Aig_ManCoNum (&*itp)));
       
     unsigned coNum = Aig_ManCoNum (&*itp);
@@ -235,11 +236,14 @@ namespace avy
 
         if (satSolver.solve () != false) 
           {
-            errs () << "Failed validation at i: " << i << "\n";
+            errs () << "\nFailed validation at i: " << i << "\n";
             return false;
           }
+        else
+          outs () << "." << std::flush;
         
       }
+    outs () << "\n";
     return true;
   }
 }
