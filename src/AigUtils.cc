@@ -240,18 +240,6 @@ namespace avy
       pObj->pData = Aig_And( pNew, Aig_ObjChild0Copy(pObj), 
                              Aig_ObjChild1Copy(pObj) );
 
-    Aig_Obj_t *pLi, *pLo;
-    Saig_ManForEachLiLo( p, pLi, pLo, i )
-      {
-        Aig_Obj_t* pTmp = Aig_And(pNew, Aig_ObjChild0Copy(pLi), 
-                                  Aig_Not(pResetPi));
-        
-        Aig_Regular(pLi->pFanin0)->pData = pTmp;
-        // XXX This changes the input AIG. Seems like a bad thing to do!
-        // XXX Instead, if Aig_ObjFanin0C(pLi) then negate pTmp and drop regular.
-        pLi->pFanin0 = Aig_Regular(pLi->pFanin0);
-      }
-
     // -- re-create the single PO
     pObj = Aig_ManCo(p, 0 );
     Aig_ObjCreateCo(pNew, Aig_ObjChild0Copy(pObj) );
@@ -264,8 +252,14 @@ namespace avy
         Aig_ObjCreateCo( pNew, Aig_Not( Aig_ObjChild0Copy(pObj) ) );
       }
 
+    // -- registers
     Saig_ManForEachLi( p, pObj, i )
-      Aig_ObjCreateCo( pNew, Aig_ObjChild0Copy(pObj) );
+      {
+        Aig_Obj_t* pTmp = Aig_And(pNew, Aig_ObjChild0Copy(pObj), 
+                                  Aig_Not(pResetPi));
+        Aig_ObjCreateCo( pNew, pTmp );
+      }
+    
 
     Aig_ManCleanup( pNew );
     return pNew;
