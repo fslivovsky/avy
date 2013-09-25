@@ -88,6 +88,7 @@ namespace avy
               {
                 AigManPtr itp = aigPtr (m_Solver.getInterpolant (m_vShared));
                 (logs () << "Interpolant is: \n").flush ();
+                logs () << *itp << "\n";
                 Aig_ManPrintStats (&*itp);
 
                 AVY_ASSERT (validateItp (itp));
@@ -157,8 +158,7 @@ namespace avy
   bool AvyMain::validateItp (AigManPtr itp)
   {
     CnfPtr cnfItp = cnfPtr (Cnf_Derive (&*itp, Aig_ManCoNum (&*itp)));
-   
-    
+      
     unsigned coNum = Aig_ManCoNum (&*itp);
     for (unsigned i = 0; i <= coNum; ++i)
       {
@@ -176,10 +176,15 @@ namespace avy
               satSolver.addClause (cnfItp->pClauses [j], cnfItp->pClauses [j+1]);
             trOffset += cnfItp->nVars;
 
+            // -- assert Itp_{i-1}
+            lit Lit = toLit (cnfItp->pVarNums [Aig_ManCo (&*itp, i-1)->Id]);
+            satSolver.addClause (&Lit, &Lit + 1);
+
             // glue 
+            Aig_Obj_t *pCi;
+
             lit Lits[2];
             int j;
-            Aig_Obj_t *pCi;
             Aig_ManForEachCi (&*itp, pCi, j)
               {
                 Lits [0] = toLitCond (cnfItp->pVarNums [pCi->Id], 0);
@@ -192,7 +197,6 @@ namespace avy
             
           }
 
-        
         unsigned nPostOffset = m_Vc->addTrCnf (satSolver, i, trOffset);
         
         if (i  < coNum)
@@ -200,6 +204,10 @@ namespace avy
             ScoppedCnfLift scLift (cnfItp, nPostOffset);
             for (int j = 0; j < cnfItp->nClauses; ++j)
               satSolver.addClause (cnfItp->pClauses [j], cnfItp->pClauses [j+1]);
+
+            // -- assert !Itp_i
+            lit Lit = toLitCond (cnfItp->pVarNums [Aig_ManCo (&*itp, i)->Id], 1);
+            satSolver.addClause (&Lit, &Lit + 1);
 
             // -- glue
             int j;
@@ -220,7 +228,12 @@ namespace avy
             nPostOffset = m_Vc->addBadGlue (satSolver, trOffset, nPostOffset);
             nPostOffset = m_Vc->addBadCnf (satSolver, nPostOffset);
           }
-        if (satSolver.solve () != false) return false;
+        if (satSolver.solve () != false) 
+          {
+            errs () << "Failed validation at frame: " << i << "\n";
+            return false;
+          }
+        
       }
     return true;
   }
