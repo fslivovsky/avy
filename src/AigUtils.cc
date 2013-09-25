@@ -265,6 +265,66 @@ namespace avy
     return pNew;
   }
 
+  Aig_Man_t *Aig_AddStutterPi (Aig_Man_t *p)
+  {
+    // Only support single property for now.
+    AVY_ASSERT(p->nTruePos == 1 && "Assuming single PO");
+    
+    Aig_Man_t * pNew;
+    Aig_Obj_t * pObj;
+    int i;
+    AVY_ASSERT ( Aig_ManRegNum(p) > 0 );
+    // create the new manager
+    pNew = Aig_ManStart( Aig_ManObjNumMax(p) );
+    pNew->pName = Abc_UtilStrsav( p->pName );
+    pNew->pSpec = Abc_UtilStrsav( p->pSpec );
+    pNew->nTruePis = p->nTruePis + 1;
+    pNew->nTruePos = p->nTruePos;
+    pNew->nRegs    = p->nRegs;
+    pNew->nConstrs = Saig_ManConstrNum(p);
+
+    // create the PIs
+    Aig_ManCleanData( p );
+    Aig_ManConst1(p)->pData = Aig_ManConst1(pNew);
+    Aig_Obj_t* pStutterPi = Aig_ObjCreateCi (pNew);
+    Aig_ManForEachCi( p, pObj, i )
+      pObj->pData = Aig_ObjCreateCi( pNew );
+
+    // duplicate internal nodes
+    Aig_ManForEachNode( p, pObj, i )
+      pObj->pData = Aig_And( pNew, Aig_ObjChild0Copy(pObj), 
+                             Aig_ObjChild1Copy(pObj) );
+
+    // -- re-create the single PO
+    pObj = Aig_ManCo(p, 0 );
+    Aig_ObjCreateCo(pNew, Aig_ObjChild0Copy(pObj) );
+
+    // create constraint outputs
+    Saig_ManForEachPo( p, pObj, i )
+      {
+        if ( i < Saig_ManPoNum(p)-Saig_ManConstrNum(p) )
+          continue;
+        Aig_ObjCreateCo( pNew, Aig_Not( Aig_ObjChild0Copy(pObj) ) );
+      }
+
+    // -- registers
+    Aig_Obj_t *pLi;
+    Saig_ManForEachLi( p, pLi, i )
+      {
+        Aig_Obj_t* pTmp = Aig_Mux(pNew, 
+                                  pStutterPi,
+                                  Saig_ManLo (pNew, i),
+                                  Aig_ObjChild0Copy(pLi));
+
+        Aig_ObjCreateCo( pNew, pTmp );
+      }
+    
+
+    Aig_ManCleanup( pNew );
+    return pNew;
+  }
+
+
   Aig_Man_t *Aig_CreateAllZero (unsigned nPiNum)
   {
     int i;
