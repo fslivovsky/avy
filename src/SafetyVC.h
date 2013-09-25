@@ -61,6 +61,29 @@ namespace avy
     SafetyVC(abc::Aig_Man_t *pCircuit) { init (pCircuit); }
     
 
+    AigManPtr getTr () { return m_Tr; }
+    AigManPtr getBad () { return m_Bad; }
+
+    int getTrLiVar (int nLi, unsigned nFrame, unsigned nOffset)
+    {
+      Aig_Obj_t *pObj = Saig_ManLi (&*m_Tr, nLi);
+      return m_cnfTr->pVarNums [pObj->Id] + nOffset;
+    }
+    
+    int getTrLoVar (int nLo, unsigned nFrame, unsigned nOffset)
+    {
+      Aig_Obj_t *pObj = Saig_ManLo (&*m_Tr, nLo);
+      return m_cnfTr->pVarNums [pObj->Id] + nOffset;
+    }
+    
+    int getBadLoVar (int nLo, unsigned nOffset)
+    {
+      Aig_Obj_t *pObj = Aig_ManCi (&*m_Bad, Saig_ManPiNum (&*m_Tr) + nLo);
+      return m_cnfBad->pVarNums [pObj->Id] + nOffset;
+    }
+    
+    
+    
     /// number of Cnf variables needed for the Tr of nFrame
     unsigned trVarSize (unsigned nFrame) { return m_cnfTr->nVars; }
     
@@ -88,11 +111,11 @@ namespace avy
     template<typename S>
     unsigned addTrGlue (S &solver, unsigned nFrame, 
                         unsigned nTrOffset, unsigned nFreshVars,
-                        Vec_Int_t *vShared);
+                        Vec_Int_t *vShared = NULL);
     
     template<typename S>
     unsigned addBadGlue (S &solver, unsigned nTrOffset, unsigned nFreshVars, 
-                         Vec_Int_t *vShared);
+                         Vec_Int_t *vShared = NULL);
     
     /** Add Cnf of one Tr to the solver
      *
@@ -130,7 +153,7 @@ namespace avy
         int liVar = m_cnfTr->pVarNums [pLi->Id] + nTrOffset;
         int loVar = m_cnfTr->pVarNums [pLo->Id] + nFreshVars;
         
-        Vec_IntPush (vShared, liVar);
+        if (vShared) Vec_IntPush (vShared, liVar);
 
         // -- add equality constraints
         Lits [0] = toLitCond (liVar, 0);
@@ -162,8 +185,8 @@ namespace avy
         
         pCi = Aig_ManCi (&*m_Bad, Saig_ManPiNum (&*m_Tr) + i);
         int ciVar = m_cnfBad->pVarNums [pCi->Id] + nFreshVars;
-
-        Vec_IntPush (vShared, liVar);
+        
+        if (vShared) Vec_IntPush (vShared, liVar);
 
         // -- add equality constraints
         Lits [0] = toLitCond (liVar, 0);

@@ -89,6 +89,8 @@ namespace avy
                 AigManPtr itp = aigPtr (m_Solver.getInterpolant (m_vShared));
                 (logs () << "Interpolant is: \n").flush ();
                 Aig_ManPrintStats (&*itp);
+
+                AVY_ASSERT (validateItp (itp));
               }
           }
         else 
@@ -121,13 +123,15 @@ namespace avy
 
         if (i < nFrame) 
           nOffset = m_Vc->addTrGlue (m_Solver, i, nLastOffset, nOffset, m_vShared [i]);
-        m_Solver.dumpCnf ("frame" + lexical_cast<string>(nFrame) + ".cnf");
+        LOG("dump_cnf",
+            m_Solver.dumpCnf ("frame" + lexical_cast<string>(nFrame) + ".cnf"););
       }
 
     nOffset = m_Vc->addBadGlue (m_Solver, nLastOffset, nOffset, m_vShared [nFrame]);
     nOffset = m_Vc->addBadCnf (m_Solver, nOffset);
     m_Solver.markPartition (nFrame + 1);
-    m_Solver.dumpCnf ("frame" + lexical_cast<string>(nFrame+1) + ".cnf");
+    LOG("dump_cnf", 
+        m_Solver.dumpCnf ("frame" + lexical_cast<string>(nFrame+1) + ".cnf"););
 
 
     LOG("dump_shared",
@@ -150,5 +154,87 @@ namespace avy
   }
   
   
+  bool AvyMain::validateItp (AigManPtr itp)
+  {
+    CnfPtr cnfItp = cnfPtr (Cnf_Derive (&*itp, Aig_ManCoNum (&*itp)));
+   
+    
+    unsigned coNum = Aig_ManCoNum (&*itp);
+    for (unsigned i = 0; i <= coNum; ++i)
+      {
+        unsigned nVars = cnfItp->nVars + m_Vc->trVarSize (i);
+        if (0 < i && i < coNum ) nVars += cnfItp->nVars;
+        else if (i  == coNum) nVars += m_Vc->badVarSize ();
+        
+                  
+        ItpSatSolver satSolver (2, nVars);
+        unsigned trOffset = 0;
+        
+        if (i > 0)
+          {
+            for (int j = 0; j < cnfItp->nClauses; ++j)
+              satSolver.addClause (cnfItp->pClauses [j], cnfItp->pClauses [j+1]);
+            trOffset += cnfItp->nVars;
 
+            // glue 
+            lit Lits[2];
+            int j;
+            Aig_Obj_t *pCi;
+            Aig_ManForEachCi (&*itp, pCi, j)
+              {
+                Lits [0] = toLitCond (cnfItp->pVarNums [pCi->Id], 0);
+                Lits [1] = toLitCond (m_Vc->getTrLoVar (j, i, trOffset), 1);
+                satSolver.addClause (Lits, Lits + 2);
+                Lits [0] = lit_neg (Lits [0]);
+                Lits [1] = lit_neg (Lits [1]);
+                satSolver.addClause (Lits, Lits + 2);
+              }
+            
+          }
+
+        
+        unsigned nPostOffset = m_Vc->addTrCnf (satSolver, i, trOffset);
+        
+        if (i  < coNum)
+          {
+            ScoppedCnfLift scLift (cnfItp, nPostOffset);
+            for (int j = 0; j < cnfItp->nClauses; ++j)
+              satSolver.addClause (cnfItp->pClauses [j], cnfItp->pClauses [j+1]);
+
+            // -- glue
+            int j;
+            Aig_Obj_t *pObj;
+            Aig_ManForEachCi (&*itp, pObj, j)
+              {
+                lit Lits[2];
+                Lits [0] = toLitCond (cnfItp->pVarNums [pObj->Id], 0);
+                Lits [1] = toLitCond (m_Vc->getTrLiVar (j, i, trOffset), 1);
+                satSolver.addClause (Lits, Lits + 2);
+                Lits [0] = lit_neg (Lits [0]);
+                Lits [1] = lit_neg (Lits [1]);
+                satSolver.addClause (Lits, Lits + 2);
+              }
+          }
+        else
+          {
+            nPostOffset = m_Vc->addBadGlue (satSolver, trOffset, nPostOffset);
+            nPostOffset = m_Vc->addBadCnf (satSolver, nPostOffset);
+          }
+        if (satSolver.solve () != false) return false;
+      }
+    return true;
+  }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+

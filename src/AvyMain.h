@@ -36,6 +36,7 @@ namespace avy
     int run ();
 
     boost::tribool doBmc (unsigned nFrame);
+    bool validateItp (AigManPtr itp);
     
   
   };
