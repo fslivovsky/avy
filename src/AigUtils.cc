@@ -5,6 +5,12 @@
 #include "AigUtils.h"
 #include "avy/Util/AvyAssert.h"
 
+namespace abc
+{
+  Aig_Obj_t * Aig_Mux2( Aig_Man_t * p, Aig_Obj_t * pC, Aig_Obj_t * p1, Aig_Obj_t * p0 );
+}
+
+
 using namespace abc;
 namespace avy
 {

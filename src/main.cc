@@ -31,7 +31,9 @@ std::string parseCmdLine (int argc, char** argv)
      "Interpolation system: 0 - McM, 1 - Mcm-prime")
     ("verbose,v", po::value<unsigned> (&gParams.verbosity)->default_value(0),
      "Verbosity level: 0 means silent")
-    ("avy", po::value<bool> (&gParams.avy)->default_value(false));
+    ("avy", po::value<bool> (&gParams.avy)->default_value(false))
+    ("stutter,s", po::value<bool> (&gParams.stutter)->default_value (false),
+     "Stutter circuit instead of reseting to the initial state");
   
 
   po::options_description hidden("Hidden options");

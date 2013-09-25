@@ -45,8 +45,19 @@ namespace avy
     
     Aig_Man_t *pAig1 = loadAig (fname);
     
-    VERBOSE (2, vout () << "\tAdding reset signal\n");
-    Aig_Man_t *pAig2 = Aig_AddResetPi (pAig1);
+    Aig_Man_t *pAig2;
+
+    if (gParams.stutter)
+      {
+        VERBOSE (2, vout () << "\tAdding stutering signal\n");
+        pAig2 = Aig_AddStutterPi (pAig1);
+      }
+    else
+      {
+        VERBOSE (2, vout () << "\tAdding reset signal\n");
+        pAig2 = Aig_AddResetPi (pAig1);
+      }
+
     Aig_ManStop (pAig1);
     pAig1 = NULL;
     

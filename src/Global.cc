@@ -10,6 +10,7 @@ namespace avy
         << "\tfName = " << p.fName << "\n"
         << "\tipt = " << p.itp << "\n"
         << "\tavy = " << p.avy << "\n"
+        << "\tstutter = " << p.stutter << "\n"
         << "END";
     return out;
   }
