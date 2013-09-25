@@ -15,6 +15,7 @@ namespace po = boost::program_options;
 
 #include "AvyMain.h"
 #include "avy/Util/Global.h"
+#include "avy/Util/Stats.h"
 
 using namespace std;
 using namespace avy;
@@ -101,6 +102,8 @@ int main(int argc, char* argv[])
       ClsItpSeqMc cism(fileName);
       cism.prove();
     }
+
+  Stats::PrintBrunch (outs ());
 }
 
 
