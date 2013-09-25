@@ -9,7 +9,6 @@ namespace avy
   /// Compute an interpolant. User provides the list of shared variables
   /// Variables can only be shared between adjacent partitions.
   /// fMcM == true for McMillan, and false for McMillan'
-  // XXX Why is vSharedVars not Vec_Vec_t? It would make it easier to grow
   Aig_Man_t* ItpSatSolver::getInterpolant (std::vector<Vec_Int_t*> &vSharedVars, 
                                            bool fMcM)
   {
