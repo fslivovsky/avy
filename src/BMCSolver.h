@@ -331,12 +331,13 @@ private:
     bool m_bAddGlueRemovalLiteral;
     int m_nLevelRemoval;
 
-    int m_nInterpolationFrame;
-    Vec_Int_t * m_vGVars;
-    unsigned m_nVars;
-    vector<vector<int> > m_CurrentVarsByFrame;
-    vector<vector<int> > m_NextVarsByFrame;
-    bool m_bMcMPrime;
+    int                     m_nInterpolationFrame;
+    Vec_Int_t               *m_vGVars;
+    unsigned                m_nVars;
+    vector<vector<int> >    m_CurrentVarsByFrame;
+    vector<vector<int> >    m_NextVarsByFrame;
+    bool                    m_bMcMPrime;
+    vector<int>             m_GlueEnableVars;
 };
 
 #endif // ABC_MC_INTERFACE_H
