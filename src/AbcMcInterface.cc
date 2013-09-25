@@ -53,10 +53,16 @@ AbcMcInterface::AbcMcInterface(string strFileName) :
     // and reload. Otherwise, the ABC Network will not be in-sync with the underlying
     // AIG.
     std::cout << "\tRe-Encoding the circuit and dumping to __tmp.aig.\n";
-    Aig_Man_t *pTmpCircuit2 = Aig_AddResetPi (pTmpCircuit);
+    Gia_Man_t* pGia = Gia_ManFromAigSimple(pTmpCircuit);
+    Aig_ManStop(pTmpCircuit);
+    Gia_Man_t* pRe = Gia_ManDupSelf(pGia);
+    Gia_ManStop(pGia);
+    pTmpCircuit = Gia_ManToAigSimple(pRe);
+    Gia_ManStop(pRe);
+    //Aig_Man_t *pTmpCircuit2 = Aig_AddResetPi (pTmpCircuit);
     // -- XXX Should the circuit be stoped, or is it cleared by Abc?
     //Aig_ManStop (pTmpCircuit);
-    pTmpCircuit = pTmpCircuit2;
+    //pTmpCircuit = pTmpCircuit2;
 
     char sfx[] = "__tmp.aig";
     Ioa_WriteAiger(pTmpCircuit, sfx,1,0);
@@ -144,7 +150,7 @@ void AbcMcInterface::addTransitionsFromTo(int nFrom, int nTo)
             }
         }
 
-        AVY_VERIFY (addCNFToSAT(m_pOneTRCnf) != false);
+        assert(addCNFToSAT(m_pOneTRCnf) != false);
 
         Cnf_DataLift(m_pOneTRCnf, m_pOneTRCnf->nVars);
     }
