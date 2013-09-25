@@ -84,7 +84,8 @@ namespace avy
       m_Trivial = !sat_solver_addclause (m_pSat, begin, end); 
       LOG("sat", logs () << "NEW CLS: ";
           for (lit *it = begin; it != end; ++it)
-            logs () << *it << " ";
+            logs () << (lit_sign (*it) ? "-" : "") << lit_var (*it) << " ";
+
           logs () << "\n";);
       return !m_Trivial;
     }
@@ -137,7 +138,7 @@ namespace avy
     /// Compute an interpolant. User provides the list of shared variables
     /// Variables can only be shared between adjacent partitions.
     /// fMcM == true for McMillan, and false for McMillan'
-    Aig_Man_t* getInterpolant (Vec_Int_t** vSharedVars, bool fMcM=true);
+    Aig_Man_t* getInterpolant (std::vector<Vec_Int_t*> &vSharedVars, bool fMcM=true);
   };
   
 }
