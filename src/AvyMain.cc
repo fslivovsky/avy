@@ -88,7 +88,7 @@ namespace avy
               {
                 AigManPtr itp = aigPtr (m_Solver.getInterpolant (m_vShared));
                 (logs () << "Interpolant is: \n").flush ();
-                logs () << *itp << "\n";
+                LOG("itp_verbose", logs () << *itp << "\n";);
                 Aig_ManPrintStats (&*itp);
 
                 AVY_ASSERT (validateItp (itp));
@@ -162,9 +162,13 @@ namespace avy
     unsigned coNum = Aig_ManCoNum (&*itp);
     for (unsigned i = 0; i <= coNum; ++i)
       {
-        unsigned nVars = cnfItp->nVars + m_Vc->trVarSize (i);
+        // i=0 :        Tr(0) -> I_0
+        // 0<i<coNum :  I(i-1) & Tr(i) -> I(i)
+        // i==coNum  :  I(coNum-1) -> ~Bad
+        unsigned nVars = cnfItp->nVars;
         if (0 < i && i < coNum ) nVars += cnfItp->nVars;
-        else if (i  == coNum) nVars += m_Vc->badVarSize ();
+        if (i < coNum) nVars += m_Vc->trVarSize (i);
+        if (i  == coNum) nVars += m_Vc->badVarSize ();
         
                   
         ItpSatSolver satSolver (2, nVars);
@@ -188,7 +192,11 @@ namespace avy
             Aig_ManForEachCi (&*itp, pCi, j)
               {
                 Lits [0] = toLitCond (cnfItp->pVarNums [pCi->Id], 0);
-                Lits [1] = toLitCond (m_Vc->getTrLoVar (j, i, trOffset), 1);
+                if (i < coNum)
+                  Lits [1] = toLitCond (m_Vc->getTrLoVar (j, i, trOffset), 1);
+                else
+                  Lits [1] = toLitCond (m_Vc->getBadLoVar (j, trOffset), 1);
+                
                 satSolver.addClause (Lits, Lits + 2);
                 Lits [0] = lit_neg (Lits [0]);
                 Lits [1] = lit_neg (Lits [1]);
@@ -197,10 +205,9 @@ namespace avy
             
           }
 
-        unsigned nPostOffset = m_Vc->addTrCnf (satSolver, i, trOffset);
-        
         if (i  < coNum)
           {
+            unsigned nPostOffset = m_Vc->addTrCnf (satSolver, i, trOffset);
             ScoppedCnfLift scLift (cnfItp, nPostOffset);
             for (int j = 0; j < cnfItp->nClauses; ++j)
               satSolver.addClause (cnfItp->pClauses [j], cnfItp->pClauses [j+1]);
@@ -224,13 +231,11 @@ namespace avy
               }
           }
         else
-          {
-            nPostOffset = m_Vc->addBadGlue (satSolver, trOffset, nPostOffset);
-            nPostOffset = m_Vc->addBadCnf (satSolver, nPostOffset);
-          }
+          m_Vc->addBadCnf (satSolver, trOffset);
+
         if (satSolver.solve () != false) 
           {
-            errs () << "Failed validation at frame: " << i << "\n";
+            errs () << "Failed validation at i: " << i << "\n";
             return false;
           }
         
