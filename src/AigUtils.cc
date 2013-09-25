@@ -243,8 +243,7 @@ namespace avy
     Aig_Obj_t *pLi, *pLo;
     Saig_ManForEachLiLo( p, pLi, pLo, i )
       {
-        Aig_Obj_t* pTmp = Aig_And(pNew, Aig_ObjChild0Copy(pLi), 
-                                  Aig_Not(pResetPi));
+        Aig_Obj_t* pTmp = Aig_Mux(pNew, pResetPi, Aig_ObjChild0Copy(pLi), Aig_ManConst0(pNew));// Aig_And(pNew, Aig_ObjChild0Copy(pLi), Aig_Not(pResetPi));
         
         Aig_Regular(pLi->pFanin0)->pData = pTmp;
         // XXX This changes the input AIG. Seems like a bad thing to do!
