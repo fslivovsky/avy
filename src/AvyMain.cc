@@ -86,12 +86,12 @@ namespace avy
               logs () << "Trivialy UNSAT\n";
             else
               {
-                // AigManPtr itp = aigPtr (m_Solver.getInterpolant (m_vShared));
-                // (logs () << "Interpolant is: \n").flush ();
-                // logs () << *itp << "\n";
-                // Aig_ManPrintStats (&*itp);
+                AigManPtr itp = aigPtr (m_Solver.getInterpolant (m_vShared));
+                (logs () << "Interpolant is: \n").flush ();
+                logs () << *itp << "\n";
+                Aig_ManPrintStats (&*itp);
 
-                //AVY_ASSERT (validateItp (itp));
+                AVY_ASSERT (validateItp (itp));
               }
           }
         else 
