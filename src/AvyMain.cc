@@ -6,6 +6,7 @@
 
 #include "base/main/main.h"
 #include "aig/ioa/ioa.h"
+#include "avy/Util/Stats.h"
 
 using namespace boost;
 using namespace std;
@@ -73,6 +74,8 @@ namespace avy
     unsigned nMaxFrames = 100;
     for (unsigned nFrame = 0; nFrame < 100; ++nFrame)
       {
+        Stats::PrintBrunch (outs ());
+        Stats::count("Frame");
         tribool res = doBmc (nFrame);
         if (res)
           {
