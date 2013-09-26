@@ -6,6 +6,7 @@
 #include "sat/cnf/cnf.h"
 #include "aig/saig/saig.h"
 
+#include "Unroller.h"
 namespace avy
 {
   /// smart pointer for Cnf_Dat_t. 
@@ -83,15 +84,103 @@ namespace avy
     }
     
     
+    template <typename S>
+    void addTr (Unroller<S> &unroller)
+    {
+      unsigned nOff = unroller.freshBlock (m_cnfTr->nVars);
+      ScoppedCnfLift scLift (m_cnfTr, nOff);
+
+      AVY_ASSERT (Vec_IntSize (unroller.getInputs (unroller.frame ())) == 0 &&
+                  "Unexpected inputs");
+      AVY_ASSERT (Vec_IntSize (unroller.getOutputs (unroller.frame ())) == 0 &&
+                  "Unexpected outputs");
+
+      if (unroller.frame () == 0)
+        {
+          // add clauses for Init
+          Aig_Obj_t *pObj;
+          int i;
+          lit Lits[1];
+        
+          Saig_ManForEachLo (&*m_Tr, pObj, i)
+            {
+              Lits[0] = toLitCond (m_cnfTr->pVarNums [pObj->Id], 1);
+              unroller.addClause (Lits, Lits + 1);
+            }
+        }
+      else
+        {
+          Aig_Obj_t *pObj;
+          int i;
+          Saig_ManForEachLo (&*m_Tr, pObj, i)
+            unroller.addInput (m_cnfTr->pVarNums [pObj->Id]);
+
+          // glue new In to old Out
+          unroller.glueOutIn ();
+        }
+      
+      // -- add transition relation
+      unroller.addCnf (&*m_cnfTr);
+      
+
+      // -- register frame outputs
+      Aig_Obj_t *pObj;
+      int i;
+      Saig_ManForEachLi (&*m_Tr, pObj, i)
+        unroller.addOutput (m_cnfTr->pVarNums [pObj->Id]);
+    }
+    
+    template <typename S>
+    void addBad (Unroller<S> &unroller)
+    {
+      unsigned nOff = unroller.freshBlock (m_cnfBad->nVars);
+      ScoppedCnfLift scLift (m_cnfBad, nOff);
+
+      AVY_ASSERT (Vec_IntSize (unroller.getInputs (unroller.frame ())) == 0 &&
+                  "Unexpected inputs");
+      AVY_ASSERT (Vec_IntSize (unroller.getOutputs (unroller.frame ())) == 0 &&
+                  "Unexpected outputs");
+      
+      // -- register inputs
+      Aig_Obj_t *pCi;
+      int i;
+      Aig_ManForEachCi (&*m_Bad, pCi, i)
+        {
+          // -- skip Ci that corresponds to Pi of Tr
+          if (i < Saig_ManPiNum (&*m_Tr)) continue;
+          unroller.addInput (m_cnfBad->pVarNums [pCi->Id]);
+        }
+
+      // -- glue
+      unroller.glueOutIn ();
+
+      // -- add bad states
+      unroller.addCnf (&*m_cnfBad);
+
+      // -- assert bad output
+      lit Lit = toLit (m_cnfBad->pVarNums [Aig_ManCo (&*m_Bad, 0)->Id]);
+      unroller.addClause (&Lit, &Lit+1);
+    }
     
     /// number of Cnf variables needed for the Tr of nFrame
     unsigned trVarSize (unsigned nFrame) { return m_cnfTr->nVars; }
     
+
     /// number of Cnf variables for Bad
     unsigned badVarSize () { return m_cnfBad->nVars; }
 
     unsigned trGlueSize (unsigned nFrame) { return 0; }
     unsigned badGlueSize () { return 0; }
+
+
+
+
+
+
+
+
+
+
 
     /// number of Cnf variables for frames nStart up to, but not including nStop
     unsigned varSize (unsigned nStart, unsigned nStop, bool fWithBad)
@@ -247,6 +336,14 @@ namespace avy
 
     return nOffset + badVarSize ();
   }
+
+
+
+
+
+
+
+
 }
 
 

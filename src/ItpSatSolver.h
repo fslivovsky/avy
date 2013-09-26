@@ -78,6 +78,11 @@ namespace avy
       sat_solver_store_mark_clauses_a (m_pSat, nPart); 
     }
 
+
+    void reserve (unsigned nVars)
+    { sat_solver_setnvars (m_pSat, nVars); }
+    
+
     /// add a clause
     bool addClause (lit* begin, lit* end)
     {

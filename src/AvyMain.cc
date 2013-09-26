@@ -8,6 +8,8 @@
 #include "aig/ioa/ioa.h"
 #include "avy/Util/Stats.h"
 
+#include "Unroller.h"
+
 using namespace boost;
 using namespace std;
 using namespace abc;
@@ -38,7 +40,7 @@ static Aig_Man_t *loadAig (std::string fname)
 namespace avy
 {
   AvyMain::AvyMain (std::string fname) : 
-    m_fName (fname), m_Vc (0), m_Solver(2, 2), m_vShared (0)
+    m_fName (fname), m_Vc (0), m_Solver(2, 2), m_Unroller (m_Solver)
   {
     VERBOSE (2, vout () << "Starting ABC\n");
     Abc_Start ();
@@ -100,7 +102,8 @@ namespace avy
               logs () << "Trivialy UNSAT\n";
             else
               {
-                AigManPtr itp = aigPtr (m_Solver.getInterpolant (m_vShared));
+                AigManPtr itp = 
+                  aigPtr (m_Solver.getInterpolant (m_Unroller.getAllOutputs ()));
                 (logs () << "Interpolant is: \n").flush ();
                 LOG("itp_verbose", logs () << *itp << "\n";);
                 Aig_ManPrintStats (&*itp);
@@ -118,43 +121,32 @@ namespace avy
     return 0;
   }
 
+  
   tribool AvyMain::doBmc (unsigned nFrame)
   {
     m_Solver.reset (nFrame + 2, m_Vc->varSize (0, nFrame, true));
-    m_vShared.clear ();
+    m_Unroller.reset (&m_Solver);
+    
 
-    for (unsigned i = 0; i < nFrame+1; i++) 
-      m_vShared.push_back (Vec_IntAlloc (0));
-    
-    
-    unsigned nOffset = 0;
-    unsigned nLastOffset = 0;
-    
     for (unsigned i = 0; i <= nFrame; ++i)
       {
-        nLastOffset = nOffset;
-        nOffset = m_Vc->addTrCnf (m_Solver, i, nOffset);
+        m_Vc->addTr (m_Unroller);
         m_Solver.markPartition (i);
-
-        if (i < nFrame) 
-          nOffset = m_Vc->addTrGlue (m_Solver, i, nLastOffset, nOffset, m_vShared [i]);
-        LOG("dump_cnf",
-            m_Solver.dumpCnf ("frame" + lexical_cast<string>(nFrame) + ".cnf"););
+        m_Unroller.newFrame ();
       }
-
-    nOffset = m_Vc->addBadGlue (m_Solver, nLastOffset, nOffset, m_vShared [nFrame]);
-    nOffset = m_Vc->addBadCnf (m_Solver, nOffset);
+    m_Vc->addBad (m_Unroller);
     m_Solver.markPartition (nFrame + 1);
+
     LOG("dump_cnf", 
         m_Solver.dumpCnf ("frame" + lexical_cast<string>(nFrame+1) + ".cnf"););
 
-
     LOG("dump_shared",
-        logs () << "Shared size: " << m_vShared.size () << "\n";
-        for (unsigned i = 0; i < m_vShared.size (); ++i)
+        std::vector<abc::Vec_Int_t *> &vShared = m_Unroller.getAllOutputs ();
+        logs () << "Shared size: " << vShared.size () << "\n";
+        for (unsigned i = 0; i < vShared.size (); ++i)
           {
             int j;
-            Vec_Int_t *vVec = m_vShared [i];
+            Vec_Int_t *vVec = vShared [i];
             int nVar;
             logs () << i << ": ";
             Vec_IntForEachEntry (vVec, nVar, j)
@@ -162,12 +154,10 @@ namespace avy
             logs () << "\n";
           });
     
-    
-
-    LitVector assumps;
-    return m_Solver.solve (assumps);
+    // -- do not expect assumptions yet
+    AVY_ASSERT (m_Unroller.getAssumps ().empty ());
+    return m_Solver.solve (m_Unroller.getAssumps ());
   }
-  
   
   bool AvyMain::validateItp (AigManPtr itp)
   {
@@ -257,7 +247,7 @@ namespace avy
           outs () << "." << std::flush;
         
       }
-    outs () << "\n";
+    outs () << " Done\n" << std::flush;
     return true;
   }
 }
