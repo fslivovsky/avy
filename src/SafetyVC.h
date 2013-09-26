@@ -90,6 +90,11 @@ namespace avy
       unsigned nOff = unroller.freshBlock (m_cnfTr->nVars);
       ScoppedCnfLift (m_cnfTr, nOff);
 
+      AVY_ASSERT (Vec_IntSize (unroller.getInputs (unroller.frame ())) == 0 &&
+                  "Unexpected inputs");
+      AVY_ASSERT (Vec_IntSize (unroller.getOutputs (unroller.frame ())) == 0 &&
+                  "Unexpected outputs");
+
       if (nFrame == 0)
         {
           // add clauses for Init
@@ -114,8 +119,11 @@ namespace avy
           unroller.glueOutIn ();
         }
       
+      // -- add transition relation
       unroller.addCnf (*&m_cnfTr);
       
+
+      // -- register frame outputs
       Aig_Obj_t *pObj;
       int i;
       Saig_ManForEachLi (&*m_Tr, pObj, i)
@@ -127,22 +135,33 @@ namespace avy
     {
       unsigned nOff = unroller.freshBlock (m_cnfBad->nVars);
       ScoppedCnfLift scLift (m_cnfBad, nOff);
-      unroller.addCnf (&*m_cnfBad);
+
+      AVY_ASSERT (Vec_IntSize (unroller.getInputs (unroller.frame ())) == 0 &&
+                  "Unexpected inputs");
+      AVY_ASSERT (Vec_IntSize (unroller.getOutputs (unroller.frame ())) == 0 &&
+                  "Unexpected outputs");
       
+      // -- register inputs
       Aig_Obj_t *pCi;
       int i;
-      
       Aig_ManForEachCi (&*m_Bad, pCi, i)
         {
           // -- skip Ci that corresponds to Pi of Tr
           if (i < Saig_ManPiNum (&*m_Tr)) continue;
-          unroller.addOutput (m_cnfBad->pVarNums [pCi->Id]);
+          unroller.addInput (m_cnfBad->pVarNums [pCi->Id]);
         }
+
+      // -- glue
+      unroller.glueOutIn ();
+
+      // -- add bad states
+      unroller.addCnf (&*m_cnfBad);
     }
     
     /// number of Cnf variables needed for the Tr of nFrame
     unsigned trVarSize (unsigned nFrame) { return m_cnfTr->nVars; }
     
+
     /// number of Cnf variables for Bad
     unsigned badVarSize () { return m_cnfBad->nVars; }
 

@@ -106,6 +106,8 @@ namespace avy
     }
   
   
+    unsigned frame () { return m_nFrames - 1; }
+    
     void newFrame ()
     {
       m_nFrames++;
