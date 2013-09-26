@@ -24,23 +24,15 @@ namespace avy
     ItpSatSolver m_Solver;
     Unroller<ItpSatSolver> m_Unroller;
 
-    std::vector<Vec_Int_t *> m_vShared;
-    
   public:
     AvyMain(std::string fname);
     
-    virtual ~AvyMain()
-    { BOOST_FOREACH (Vec_Int_t *p, m_vShared) Vec_IntFree (p); }
-    
+    virtual ~AvyMain() {}
 
     int run ();
 
     boost::tribool doBmc (unsigned nFrame);
     bool validateItp (AigManPtr itp);
-
-    boost::tribool doBmcOld (unsigned nFrame);
-    
-  
   };
 }
 

@@ -15,7 +15,7 @@ namespace avy
     Stats::resume ("sat1.itp");
     AVY_ASSERT (!isTrivial ());
     AVY_ASSERT (m_pSat != NULL);
-    AVY_ASSERT (vSharedVars.size () == m_nParts - 1);
+    AVY_ASSERT (vSharedVars.size () >= m_nParts - 1);
     
     AVY_VERIFY (!solve ());
     
