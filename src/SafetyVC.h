@@ -6,6 +6,7 @@
 #include "sat/cnf/cnf.h"
 #include "aig/saig/saig.h"
 
+#include "Unroller.h"
 namespace avy
 {
   /// smart pointer for Cnf_Dat_t. 
@@ -83,6 +84,64 @@ namespace avy
     }
     
     
+    template <typename S>
+    void addTrFrame (Unroller<S> &unroller, unsigned nFrame)
+    {
+      unsigned nOff = unroller.freshBlock (m_cnfTr->nVars);
+      ScoppedCnfLift (m_cnfTr, nOff);
+
+      if (nFrame == 0)
+        {
+          // add clauses for Init
+          Aig_Obj_t *pObj;
+          int i;
+          lit Lits[1];
+        
+          Saig_ManForEachLo (&*m_Tr, pObj, i)
+            {
+              Lits[0] = toLitCond (m_cnfTr->pVarNums [pObj->Id], 1);
+              unroller.addClause (Lits, Lits + 1);
+            }
+        }
+      else
+        {
+          Aig_Obj_t *pObj;
+          int i;
+          Saig_ManForEachLo (&*m_Tr, pObj, i)
+            unroller.addInput (m_cnfTr->pVarNums [pObj->Id]);
+
+          // glue new In to old Out
+          unroller.glueOutIn ();
+        }
+      
+      for (int i = 0; i < m_cnfTr->nClauses; ++i)
+        unroller.addClause (m_cnfTr->pClauses [i], m_cnfTr->pClauses [i+1]);
+      
+      Aig_Obj_t *pObj;
+      int i;
+      Saig_ManForEachLi (&*m_Tr, pObj, i)
+        unroller.addOutput (m_cnfTr->pVarNums [pObj->Id]);
+    }
+    
+    template <typename S>
+    void addBad (Unroller<S> &unroller, unsigned nFrame)
+    {
+      unsigned nOff = unroller.freshBlock (m_cnfBad->nVars);
+      ScoppedCnfLift scLift (m_cnfBad, nOff);
+      for (int i = 0; i < m_cnfBad->nClauses; ++i)
+        unroller.addClause (m_cnfBad->pClauses [i],
+                            m_cnfBad->pClauses [i+1]);
+      
+      Aig_Obj_t *pCi;
+      int i;
+      
+      Aig_ManForEachCi (&*m_Bad, pCi, i)
+        {
+          // -- skip Ci that corresponds to Pi of Tr
+          if (i < Saig_ManPiNum (&*m_Tr)) continue;
+          unroller.addOutput (m_cnfBad->pVarNums [pCi->Id]);
+        }
+    }
     
     /// number of Cnf variables needed for the Tr of nFrame
     unsigned trVarSize (unsigned nFrame) { return m_cnfTr->nVars; }
@@ -247,6 +306,14 @@ namespace avy
 
     return nOffset + badVarSize ();
   }
+
+
+
+
+
+
+
+
 }
 
 

@@ -8,6 +8,7 @@
 #include "sat/bsat/satSolver.h"
 
 #include "boost/foreach.hpp"
+#include "boost/logic/tribool.hpp"
 
 namespace avy
 {
@@ -115,7 +116,8 @@ namespace avy
 
 
     /** Add clause to solver */
-    void addClause (abc::lit* beg, abc::lit* end) { m_Solver.addClause (beg, end); }
+    boost::tribool addClause (abc::lit* beg, abc::lit* end) 
+    { return m_Solver.addClause (beg, end); }
   
 
     /** Add glue clauses between current Inputs and previous frame outputs */
