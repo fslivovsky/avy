@@ -85,7 +85,7 @@ namespace avy
     
     
     template <typename S>
-    void addTrFrame (Unroller<S> &unroller, unsigned nFrame)
+    void addTr (Unroller<S> &unroller)
     {
       unsigned nOff = unroller.freshBlock (m_cnfTr->nVars);
       ScoppedCnfLift (m_cnfTr, nOff);
@@ -95,7 +95,7 @@ namespace avy
       AVY_ASSERT (Vec_IntSize (unroller.getOutputs (unroller.frame ())) == 0 &&
                   "Unexpected outputs");
 
-      if (nFrame == 0)
+      if (unroller.frame () == 0)
         {
           // add clauses for Init
           Aig_Obj_t *pObj;
@@ -120,7 +120,7 @@ namespace avy
         }
       
       // -- add transition relation
-      unroller.addCnf (*&m_cnfTr);
+      unroller.addCnf (&*m_cnfTr);
       
 
       // -- register frame outputs
@@ -131,7 +131,7 @@ namespace avy
     }
     
     template <typename S>
-    void addBad (Unroller<S> &unroller, unsigned nFrame)
+    void addBad (Unroller<S> &unroller)
     {
       unsigned nOff = unroller.freshBlock (m_cnfBad->nVars);
       ScoppedCnfLift scLift (m_cnfBad, nOff);

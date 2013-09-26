@@ -16,7 +16,7 @@ namespace avy
   template <typename SatSolver>
   class Unroller
   {
-    SatSolver &m_Solver;
+    SatSolver *m_pSolver;
     unsigned m_nVars;
     unsigned m_nFrames;
 
@@ -38,14 +38,13 @@ namespace avy
   
   public:
     Unroller(SatSolver &s) : 
-      m_Solver (s), m_nVars(0), m_nFrames(0) 
+      m_pSolver (&s), m_nVars(0), m_nFrames(0) 
     { newFrame (); }
 
     ~Unroller () { reset (NULL); }
 
     /** Reset everything */
-    template <typename S>
-    void reset (S *solver)
+    void reset (SatSolver *solver)
     {
       BOOST_FOREACH (Vec_Int_t *vVec, m_vInputs)
         Vec_IntFree (vVec);
@@ -63,7 +62,7 @@ namespace avy
       
       if (solver)
         {
-          m_Solver = *solver;
+          m_pSolver = solver;
           newFrame ();
         }
     }
@@ -73,7 +72,7 @@ namespace avy
     unsigned freshVar () 
     { 
       unsigned v = m_nVars++; 
-      m_Solver.reserve (m_nVars);
+      m_pSolver->reserve (m_nVars);
       return v;
     }
   
@@ -82,7 +81,7 @@ namespace avy
     {
       unsigned v = m_nVars;
       m_nVars += b;
-      m_Solver.reserve (m_nVars);
+      m_pSolver->reserve (m_nVars);
       return v;
     }
 
@@ -132,17 +131,19 @@ namespace avy
     { return abc::Vec_IntEntry (m_vOutputs.at (nFrame), nNum); }
 
     abc::Vec_Int_t *getOutputs (unsigned nFrame) { return m_vOutputs.at (nFrame); }
+    std::vector<abc::Vec_Int_t*> &getAllOutputs () { return m_vOutputs; }
+    
 
 
     /** Add clause to solver */
     boost::tribool addClause (abc::lit* beg, abc::lit* end) 
-    { return m_Solver.addClause (beg, end); }
+    { return m_pSolver->addClause (beg, end); }
   
     boost::tribool addCnf (Cnf_Dat_t* pCnf)
     {
       boost::tribool res = true;
       for (int i = 0; i < pCnf->nClauses; ++i)
-        res &= addClause (pCnf->pClauses [i], pCnf->pClauses [i+1]);
+        res = res && addClause (pCnf->pClauses [i], pCnf->pClauses [i+1]);
       return res;
     }
     
