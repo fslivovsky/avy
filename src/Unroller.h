@@ -151,7 +151,6 @@ namespace avy
     /** Add glue clauses between current Inputs and previous frame outputs */
     void glueOutIn ()
     {
-
       AVY_ASSERT (m_nFrames > 1);
       AVY_ASSERT (Vec_IntSize (m_vOutputs.at (frame () - 1)) == 
                   Vec_IntSize (m_vInputs.at (frame ())));

@@ -163,81 +163,53 @@ namespace avy
   {
     outs () << "Validating ITP: ";
     CnfPtr cnfItp = cnfPtr (Cnf_Derive (&*itp, Aig_ManCoNum (&*itp)));
-      
+
     unsigned coNum = Aig_ManCoNum (&*itp);
     for (unsigned i = 0; i <= coNum; ++i)
       {
-        // i=0 :        Tr(0) -> I_0
-        // 0<i<coNum :  I(i-1) & Tr(i) -> I(i)
-        // i==coNum  :  I(coNum-1) -> ~Bad
-        unsigned nVars = cnfItp->nVars;
-        if (0 < i && i < coNum ) nVars += cnfItp->nVars;
-        if (i < coNum) nVars += m_Vc->trVarSize (i);
-        if (i  == coNum) nVars += m_Vc->badVarSize ();
-        
-                  
-        ItpSatSolver satSolver (2, nVars);
-        unsigned trOffset = 0;
+        ItpSatSolver satSolver (2, 5000);
+        Unroller<ItpSatSolver> unroller (satSolver);
         
         if (i > 0)
           {
-            for (int j = 0; j < cnfItp->nClauses; ++j)
-              satSolver.addClause (cnfItp->pClauses [j], cnfItp->pClauses [j+1]);
-            trOffset += cnfItp->nVars;
-
+            unroller.freshBlock (cnfItp->nVars);
+            unroller.addCnf (&*cnfItp);
+            
             // -- assert Itp_{i-1}
             lit Lit = toLit (cnfItp->pVarNums [Aig_ManCo (&*itp, i-1)->Id]);
             satSolver.addClause (&Lit, &Lit + 1);
-
-            // glue 
+            
+            // -- register outputs
             Aig_Obj_t *pCi;
-
-            lit Lits[2];
             int j;
             Aig_ManForEachCi (&*itp, pCi, j)
-              {
-                Lits [0] = toLitCond (cnfItp->pVarNums [pCi->Id], 0);
-                if (i < coNum)
-                  Lits [1] = toLitCond (m_Vc->getTrLoVar (j, i, trOffset), 1);
-                else
-                  Lits [1] = toLitCond (m_Vc->getBadLoVar (j, trOffset), 1);
-                
-                satSolver.addClause (Lits, Lits + 2);
-                Lits [0] = lit_neg (Lits [0]);
-                Lits [1] = lit_neg (Lits [1]);
-                satSolver.addClause (Lits, Lits + 2);
-              }
+              unroller.addOutput (cnfItp->pVarNums [pCi->Id]);
             
+            unroller.newFrame ();
           }
 
-        if (i  < coNum)
+        if (i < coNum)
           {
-            unsigned nPostOffset = m_Vc->addTrCnf (satSolver, i, trOffset);
-            ScoppedCnfLift scLift (cnfItp, nPostOffset);
-            for (int j = 0; j < cnfItp->nClauses; ++j)
-              satSolver.addClause (cnfItp->pClauses [j], cnfItp->pClauses [j+1]);
-
+            m_Vc->addTr (unroller);
+            unroller.newFrame ();
+            
+            unsigned nOffset = unroller.freshBlock (cnfItp->nVars);
+            ScoppedCnfLift scLift (cnfItp, nOffset);
+            unroller.addCnf (&*cnfItp);
+            Aig_Obj_t *pCi;
+            int j;
+            Aig_ManForEachCi (&*itp, pCi, j)
+              unroller.addInput (cnfItp->pVarNums [pCi->Id]);
+            unroller.glueOutIn ();
+            
             // -- assert !Itp_i
             lit Lit = toLitCond (cnfItp->pVarNums [Aig_ManCo (&*itp, i)->Id], 1);
-            satSolver.addClause (&Lit, &Lit + 1);
-
-            // -- glue
-            int j;
-            Aig_Obj_t *pObj;
-            Aig_ManForEachCi (&*itp, pObj, j)
-              {
-                lit Lits[2];
-                Lits [0] = toLitCond (cnfItp->pVarNums [pObj->Id], 0);
-                Lits [1] = toLitCond (m_Vc->getTrLiVar (j, i, trOffset), 1);
-                satSolver.addClause (Lits, Lits + 2);
-                Lits [0] = lit_neg (Lits [0]);
-                Lits [1] = lit_neg (Lits [1]);
-                satSolver.addClause (Lits, Lits + 2);
-              }
+            unroller.addClause (&Lit, &Lit + 1);
           }
         else
-          m_Vc->addBadCnf (satSolver, trOffset);
+          m_Vc->addBad (unroller);
 
+        
         if (satSolver.solve () != false) 
           {
             errs () << "\nFailed validation at i: " << i << "\n";
@@ -247,8 +219,9 @@ namespace avy
           outs () << "." << std::flush;
         
       }
+    
     outs () << " Done\n" << std::flush;
-    return true;
+    return true;    
   }
 }
 
