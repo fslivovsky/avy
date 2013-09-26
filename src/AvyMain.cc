@@ -210,7 +210,7 @@ namespace avy
           m_Vc->addBad (unroller);
 
         
-        if (satSolver.solve () != false) 
+        if (satSolver.solve (unroller.getAssumps ()) != false) 
           {
             errs () << "\nFailed validation at i: " << i << "\n";
             return false;
