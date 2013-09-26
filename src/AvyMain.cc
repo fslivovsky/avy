@@ -40,7 +40,8 @@ static Aig_Man_t *loadAig (std::string fname)
 namespace avy
 {
   AvyMain::AvyMain (std::string fname) : 
-    m_fName (fname), m_Vc (0), m_Solver(2, 2), m_Unroller (m_Solver)
+    m_fName (fname), m_Vc (0), m_Solver(2, 2), 
+    m_Unroller (m_Solver), m_pPdr(0)
   {
     VERBOSE (2, vout () << "Starting ABC\n");
     Abc_Start ();
@@ -75,6 +76,8 @@ namespace avy
 
     // -- keep abc running, just in case
     //Abc_Stop ()
+
+    m_pPdr = new Pdr (&*m_Aig);
     
     
   }  
@@ -109,6 +112,13 @@ namespace avy
                 Aig_ManPrintStats (&*itp);
 
                 AVY_ASSERT (validateItp (itp));
+
+                bool res = doPdrTrace (itp);
+                if (res) 
+                  {
+                    VERBOSE (0, vout () << "SAFE\n");
+                    return 0;
+                  }
               }
           }
         else 
@@ -118,10 +128,68 @@ namespace avy
             return 2;
           }
       }
-    return 0;
+    return 3;
   }
 
-  
+  /// convert interpolant into PDR trace
+  tribool AvyMain::doPdrTrace (AigManPtr itp)
+  {
+    VERBOSE (1, vout () << "Building PDR trace\n");
+    unsigned itpSz = Aig_ManCoNum (&*itp);
+    
+    for (unsigned i = 0; i < itpSz; ++i)
+      { 
+        // -- skip if true
+        if (Aig_ObjFanin0 (Aig_ManCo (&*itp, i)) == Aig_ManConst1 (&*itp)) continue;
+
+        AigManPtr prevMan = aigPtr (Aig_ManStartFrom (&*itp));
+        Aig_Obj_t *pPrev;
+        pPrev = i == 0 ? Aig_ManConst0 (&*prevMan) : m_pPdr->getCover (i, &*prevMan);
+        Aig_ObjCreateCo (&*prevMan, pPrev);
+        pPrev = NULL;
+
+        AigManPtr dupMan = aigPtr (Aig_ManDupSinglePo (&*itp, i, false));
+        AigManPtr orMan = aigPtr (Aig_ManCreateMiter (&*dupMan, &*prevMan, 2));
+        
+        dupMan.reset ();
+        prevMan.reset ();
+
+        AigManPtr newTr = aigPtr (Aig_ManReplacePo (&*m_Aig, &*orMan, true));
+        newTr = aigPtr (Aig_ManGiaDup (&*newTr));
+
+        Pdr pdr (&*newTr);
+        
+        Vec_Ptr_t *pCubes = NULL;
+        pdr.setLimit (i == 0 ? 2 : 3);
+        if (i >= 1)
+          {
+            pCubes = Vec_PtrAlloc (16);
+            m_pPdr->getCoverCubes (i, pCubes);
+            pdr.addCoverCubes (1, pCubes);
+            
+            Vec_PtrClear (pCubes);
+            m_pPdr->getCoverCubes (i+1, pCubes);
+            pdr.addCoverCubes (2, pCubes);
+            Vec_PtrFree (pCubes);
+            pCubes = NULL;            
+          }
+        pdr.solveSafe ();
+        
+        pCubes = Vec_PtrAlloc (16);
+        pdr.getCoverCubes (i == 0 ? 1 : 2, pCubes);
+        m_pPdr->addCoverCubes (i+1, pCubes);
+        Vec_PtrFree (pCubes);
+        pCubes = NULL;
+
+        if (m_pPdr->push ()) return true;
+        
+        VERBOSE(1, m_pPdr->statusLn (vout ()););
+      }
+    
+    return boost::indeterminate;
+  }
+
+    
   tribool AvyMain::doBmc (unsigned nFrame)
   {
     m_Solver.reset (nFrame + 2, m_Vc->varSize (0, nFrame, true));

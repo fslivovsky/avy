@@ -4,14 +4,17 @@
 #include "AigUtils.h"
 #include "SafetyVC.h"
 #include "ItpSatSolver.h"
+#include "Pdr.h"
 #include "Unroller.h"
 #include <string>
 #include "boost/logic/tribool.hpp"
 #include "boost/foreach.hpp"
 
+#include "boost/noncopyable.hpp"
+
 namespace avy
 {
-  class AvyMain
+  class AvyMain : boost::noncopyable
   {
     std::string m_fName;
     
@@ -24,14 +27,19 @@ namespace avy
     ItpSatSolver m_Solver;
     Unroller<ItpSatSolver> m_Unroller;
 
+    Pdr *m_pPdr;
+
   public:
     AvyMain(std::string fname);
     
-    virtual ~AvyMain() {}
+    virtual ~AvyMain() { if (m_pPdr) delete m_pPdr; }
 
     int run ();
 
+    /// do BMC check up to depth nFrame
     boost::tribool doBmc (unsigned nFrame);
+    /// convert interpolant into PDR trace
+    boost::tribool doPdrTrace (AigManPtr itp);
     bool validateItp (AigManPtr itp);
   };
 }
