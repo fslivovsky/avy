@@ -114,8 +114,7 @@ namespace avy
           unroller.glueOutIn ();
         }
       
-      for (int i = 0; i < m_cnfTr->nClauses; ++i)
-        unroller.addClause (m_cnfTr->pClauses [i], m_cnfTr->pClauses [i+1]);
+      unroller.addCnf (*&m_cnfTr);
       
       Aig_Obj_t *pObj;
       int i;
@@ -128,9 +127,7 @@ namespace avy
     {
       unsigned nOff = unroller.freshBlock (m_cnfBad->nVars);
       ScoppedCnfLift scLift (m_cnfBad, nOff);
-      for (int i = 0; i < m_cnfBad->nClauses; ++i)
-        unroller.addClause (m_cnfBad->pClauses [i],
-                            m_cnfBad->pClauses [i+1]);
+      unroller.addCnf (&*m_cnfBad);
       
       Aig_Obj_t *pCi;
       int i;
@@ -151,6 +148,16 @@ namespace avy
 
     unsigned trGlueSize (unsigned nFrame) { return 0; }
     unsigned badGlueSize () { return 0; }
+
+
+
+
+
+
+
+
+
+
 
     /// number of Cnf variables for frames nStart up to, but not including nStop
     unsigned varSize (unsigned nStart, unsigned nStop, bool fWithBad)

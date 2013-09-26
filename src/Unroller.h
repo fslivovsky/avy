@@ -6,6 +6,7 @@
 #include <vector>
 #include "misc/vec/vec.h"
 #include "sat/bsat/satSolver.h"
+#include "sat/cnf/cnf.h"
 
 #include "boost/foreach.hpp"
 #include "boost/logic/tribool.hpp"
@@ -135,6 +136,14 @@ namespace avy
     boost::tribool addClause (abc::lit* beg, abc::lit* end) 
     { return m_Solver.addClause (beg, end); }
   
+    boost::tribool addCnf (Cnf_Dat_t* pCnf)
+    {
+      boost::tribool res = true;
+      for (int i = 0; i < pCnf->nClauses; ++i)
+        res &= addClause (pCnf->pClauses [i], pCnf->pClauses [i+1]);
+      return res;
+    }
+    
 
     /** Add glue clauses between current Inputs and previous frame outputs */
     void glueOutIn ()
