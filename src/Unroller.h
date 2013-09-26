@@ -117,7 +117,7 @@ namespace avy
     }
     
     void addInput (int in) 
-    { abc::Vec_IntPush (m_vInputs.at (m_nFrames-1), in); }
+    { abc::Vec_IntPush (m_vInputs.at (frame ()), in); }
 
     int getInput (unsigned nFrame, int nNum)
     { return abc::Vec_IntEntry (m_vInputs.at (nFrame), nNum); }
@@ -125,7 +125,7 @@ namespace avy
     abc::Vec_Int_t *getInputs (unsigned nFrame) { return m_vInputs.at (nFrame); }  
 
     void addOutput (int out)
-    { abc::Vec_IntPush (m_vOutputs.at (m_nFrames-1), out); }
+    { abc::Vec_IntPush (m_vOutputs.at (frame ()), out); }
 
     int getOutput (unsigned nFrame, int nNum)
     { return abc::Vec_IntEntry (m_vOutputs.at (nFrame), nNum); }
@@ -153,15 +153,15 @@ namespace avy
     {
 
       AVY_ASSERT (m_nFrames > 1);
-      AVY_ASSERT (Vec_IntSize (m_vOutputs.at (m_nFrames - 2)) == 
-                  Vec_IntSize (m_vInputs.at (m_nFrames - 1)));
+      AVY_ASSERT (Vec_IntSize (m_vOutputs.at (frame () - 1)) == 
+                  Vec_IntSize (m_vInputs.at (frame ())));
     
       lit Lit[2];
       int out, i;
     
-      Vec_Int_t *ins = m_vInputs.at (m_nFrames - 1);
+      Vec_Int_t *ins = m_vInputs.at (frame ());
     
-      Vec_IntForEachEntry (m_vOutputs.at (m_nFrames - 2), out, i)
+      Vec_IntForEachEntry (m_vOutputs.at (frame () - 1), out, i)
         {
           Lit[0] = toLit (out);
           Lit[1] = toLitCond (Vec_IntEntry (ins, i), 1);

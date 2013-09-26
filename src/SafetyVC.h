@@ -88,7 +88,7 @@ namespace avy
     void addTr (Unroller<S> &unroller)
     {
       unsigned nOff = unroller.freshBlock (m_cnfTr->nVars);
-      ScoppedCnfLift (m_cnfTr, nOff);
+      ScoppedCnfLift scLift (m_cnfTr, nOff);
 
       AVY_ASSERT (Vec_IntSize (unroller.getInputs (unroller.frame ())) == 0 &&
                   "Unexpected inputs");
@@ -156,6 +156,10 @@ namespace avy
 
       // -- add bad states
       unroller.addCnf (&*m_cnfBad);
+
+      // -- assert bad output
+      lit Lit = toLit (m_cnfBad->pVarNums [Aig_ManCo (&*m_Bad, 0)->Id]);
+      unroller.addClause (&Lit, &Lit+1);
     }
     
     /// number of Cnf variables needed for the Tr of nFrame

@@ -127,13 +127,14 @@ namespace avy
     m_Unroller.reset (&m_Solver);
     
 
-    for (unsigned i = 0; i < nFrame; ++i)
+    for (unsigned i = 0; i <= nFrame; ++i)
       {
         m_Vc->addTr (m_Unroller);
         m_Solver.markPartition (i);
+        m_Unroller.newFrame ();
       }
     m_Vc->addBad (m_Unroller);
-    m_Solver.markPartition (nFrame);
+    m_Solver.markPartition (nFrame + 1);
 
     LOG("dump_cnf", 
         m_Solver.dumpCnf ("frame" + lexical_cast<string>(nFrame+1) + ".cnf"););
