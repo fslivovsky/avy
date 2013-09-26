@@ -156,6 +156,7 @@ namespace avy
     
     // -- do not expect assumptions yet
     AVY_ASSERT (m_Unroller.getAssumps ().empty ());
+    logs () << "Assumptions: " << m_Unroller.getAssumps ().size () << "\n";
     return m_Solver.solve (m_Unroller.getAssumps ());
   }
   
