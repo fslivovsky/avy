@@ -52,13 +52,19 @@ namespace avy
 
   
     /** allocate a variable */
-    unsigned freshVar () { return m_nVars++; }
+    unsigned freshVar () 
+    { 
+      unsigned v = m_nVars++; 
+      m_Solver.reserve (m_nVars);
+      return v;
+    }
   
     /** allocate a block of variables */
     unsigned freshBlock (unsigned b) 
     {
       unsigned v = m_nVars;
       m_nVars += b;
+      m_Solver.reserve (m_nVars);
       return v;
     }
 
