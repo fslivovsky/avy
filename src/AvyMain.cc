@@ -8,6 +8,8 @@
 #include "aig/ioa/ioa.h"
 #include "avy/Util/Stats.h"
 
+#include "Unroller.h"
+
 using namespace boost;
 using namespace std;
 using namespace abc;
