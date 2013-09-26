@@ -40,7 +40,11 @@ namespace avy
       m_Solver (s), m_nVars(0), m_nFrames(0) 
     { newFrame (); }
 
-    ~Unroller ()
+    ~Unroller () { reset (NULL); }
+
+    /** Reset everything */
+    template <typename S>
+    void reset (S *solver)
     {
       BOOST_FOREACH (Vec_Int_t *vVec, m_vInputs)
         Vec_IntFree (vVec);
@@ -49,8 +53,20 @@ namespace avy
       BOOST_FOREACH (Vec_Int_t *vVec, m_vOutputs)
         Vec_IntFree (vVec);
       m_vOutputs.clear ();
-    }
 
+      m_Assumps.clear ();
+      m_FrameAssump.clear ();
+      
+      m_nVars = 0;
+      m_nFrames = 0;
+      
+      if (solver)
+        {
+          m_Solver = *solver;
+          newFrame ();
+        }
+    }
+    
   
     /** allocate a variable */
     unsigned freshVar () 
