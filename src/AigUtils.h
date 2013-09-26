@@ -66,6 +66,13 @@ namespace avy
   abc::Aig_Man_t *Aig_AddResetPi (abc::Aig_Man_t *p);
 
   /**
+   * Insert a stuttering Pi called r.
+   * When r is true, the registers do not change
+   */
+  abc::Aig_Man_t *Aig_AddStutterPi (abc::Aig_Man_t *p);
+
+
+  /**
    * Create an AIG with PO = AND (!PI_0, ..., !PI_N)
    */
   abc::Aig_Man_t *Aig_CreateAllZero (unsigned nPiNum);

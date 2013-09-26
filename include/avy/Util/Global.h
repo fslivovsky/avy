@@ -22,6 +22,9 @@ namespace avy
     
     /** verbosity level */
     unsigned verbosity;
+
+    /** stutter */
+    bool stutter;
   };
   
   std::ostream &operator<< (std::ostream& out, const AvyParams& p);

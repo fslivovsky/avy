@@ -2,9 +2,13 @@
 #include "boost/lexical_cast.hpp"
 #include "avy/Util/Global.h"
 #include "SafetyVC.h"
+#include "AigPrint.h"
 
 #include "base/main/main.h"
 #include "aig/ioa/ioa.h"
+#include "avy/Util/Stats.h"
+
+#include "Unroller.h"
 
 using namespace boost;
 using namespace std;
@@ -35,15 +39,27 @@ static Aig_Man_t *loadAig (std::string fname)
 
 namespace avy
 {
-  AvyMain::AvyMain (std::string fname) : m_fName (fname), m_Vc (0), m_Solver(2, 2)
+  AvyMain::AvyMain (std::string fname) : 
+    m_fName (fname), m_Vc (0), m_Solver(2, 2), m_Unroller (m_Solver)
   {
     VERBOSE (2, vout () << "Starting ABC\n");
     Abc_Start ();
     
     Aig_Man_t *pAig1 = loadAig (fname);
     
-    VERBOSE (2, vout () << "\tAdding reset signal\n");
-    Aig_Man_t *pAig2 = Aig_AddResetPi (pAig1);
+    Aig_Man_t *pAig2;
+
+    if (gParams.stutter)
+      {
+        VERBOSE (2, vout () << "\tAdding stutering signal\n");
+        pAig2 = Aig_AddStutterPi (pAig1);
+      }
+    else
+      {
+        VERBOSE (2, vout () << "\tAdding reset signal\n");
+        pAig2 = Aig_AddResetPi (pAig1);
+      }
+
     Aig_ManStop (pAig1);
     pAig1 = NULL;
     
@@ -71,6 +87,8 @@ namespace avy
     unsigned nMaxFrames = 100;
     for (unsigned nFrame = 0; nFrame < 100; ++nFrame)
       {
+        Stats::PrintBrunch (outs ());
+        Stats::count("Frame");
         tribool res = doBmc (nFrame);
         if (res)
           {
@@ -80,7 +98,18 @@ namespace avy
         else if (!res)
           {
             VERBOSE(0, vout () << "UNSAT from BMC at frame: " << nFrame << "\n";);
-            
+            if (m_Solver.isTrivial ()) 
+              logs () << "Trivialy UNSAT\n";
+            else
+              {
+                AigManPtr itp = 
+                  aigPtr (m_Solver.getInterpolant (m_Unroller.getAllOutputs ()));
+                (logs () << "Interpolant is: \n").flush ();
+                LOG("itp_verbose", logs () << *itp << "\n";);
+                Aig_ManPrintStats (&*itp);
+
+                AVY_ASSERT (validateItp (itp));
+              }
           }
         else 
           {
@@ -89,37 +118,149 @@ namespace avy
             return 2;
           }
       }
-    
-    
     return 0;
   }
 
+  
   tribool AvyMain::doBmc (unsigned nFrame)
   {
     m_Solver.reset (nFrame + 2, m_Vc->varSize (0, nFrame, true));
+    m_Unroller.reset (&m_Solver);
     
-    unsigned nOffset = 0;
-    unsigned nLastOffset = 0;
-    
+
     for (unsigned i = 0; i <= nFrame; ++i)
       {
-        nLastOffset = nOffset;
-        nOffset = m_Vc->addTrCnf (m_Solver, i, nOffset);
+        m_Vc->addTr (m_Unroller);
         m_Solver.markPartition (i);
-
-        if (i < nFrame) nOffset = m_Vc->addTrGlue (m_Solver, i, nLastOffset, nOffset);
-        m_Solver.dumpCnf ("frame" + lexical_cast<string>(nFrame) + ".cnf");
+        m_Unroller.newFrame ();
       }
-
-    nOffset = m_Vc->addBadGlue (m_Solver, nLastOffset, nOffset);
-    nOffset = m_Vc->addBadCnf (m_Solver, nOffset);
+    m_Vc->addBad (m_Unroller);
     m_Solver.markPartition (nFrame + 1);
-    m_Solver.dumpCnf ("frame" + lexical_cast<string>(nFrame+1) + ".cnf");
 
-    LitVector assumps;
-    return m_Solver.solve (assumps);
+    LOG("dump_cnf", 
+        m_Solver.dumpCnf ("frame" + lexical_cast<string>(nFrame+1) + ".cnf"););
+
+    LOG("dump_shared",
+        std::vector<abc::Vec_Int_t *> &vShared = m_Unroller.getAllOutputs ();
+        logs () << "Shared size: " << vShared.size () << "\n";
+        for (unsigned i = 0; i < vShared.size (); ++i)
+          {
+            int j;
+            Vec_Int_t *vVec = vShared [i];
+            int nVar;
+            logs () << i << ": ";
+            Vec_IntForEachEntry (vVec, nVar, j)
+              logs () << nVar << " ";
+            logs () << "\n";
+          });
+    
+    // -- do not expect assumptions yet
+    AVY_ASSERT (m_Unroller.getAssumps ().empty ());
+    return m_Solver.solve (m_Unroller.getAssumps ());
   }
   
-  
+  bool AvyMain::validateItp (AigManPtr itp)
+  {
+    outs () << "Validating ITP: ";
+    CnfPtr cnfItp = cnfPtr (Cnf_Derive (&*itp, Aig_ManCoNum (&*itp)));
+      
+    unsigned coNum = Aig_ManCoNum (&*itp);
+    for (unsigned i = 0; i <= coNum; ++i)
+      {
+        // i=0 :        Tr(0) -> I_0
+        // 0<i<coNum :  I(i-1) & Tr(i) -> I(i)
+        // i==coNum  :  I(coNum-1) -> ~Bad
+        unsigned nVars = cnfItp->nVars;
+        if (0 < i && i < coNum ) nVars += cnfItp->nVars;
+        if (i < coNum) nVars += m_Vc->trVarSize (i);
+        if (i  == coNum) nVars += m_Vc->badVarSize ();
+        
+                  
+        ItpSatSolver satSolver (2, nVars);
+        unsigned trOffset = 0;
+        
+        if (i > 0)
+          {
+            for (int j = 0; j < cnfItp->nClauses; ++j)
+              satSolver.addClause (cnfItp->pClauses [j], cnfItp->pClauses [j+1]);
+            trOffset += cnfItp->nVars;
 
+            // -- assert Itp_{i-1}
+            lit Lit = toLit (cnfItp->pVarNums [Aig_ManCo (&*itp, i-1)->Id]);
+            satSolver.addClause (&Lit, &Lit + 1);
+
+            // glue 
+            Aig_Obj_t *pCi;
+
+            lit Lits[2];
+            int j;
+            Aig_ManForEachCi (&*itp, pCi, j)
+              {
+                Lits [0] = toLitCond (cnfItp->pVarNums [pCi->Id], 0);
+                if (i < coNum)
+                  Lits [1] = toLitCond (m_Vc->getTrLoVar (j, i, trOffset), 1);
+                else
+                  Lits [1] = toLitCond (m_Vc->getBadLoVar (j, trOffset), 1);
+                
+                satSolver.addClause (Lits, Lits + 2);
+                Lits [0] = lit_neg (Lits [0]);
+                Lits [1] = lit_neg (Lits [1]);
+                satSolver.addClause (Lits, Lits + 2);
+              }
+            
+          }
+
+        if (i  < coNum)
+          {
+            unsigned nPostOffset = m_Vc->addTrCnf (satSolver, i, trOffset);
+            ScoppedCnfLift scLift (cnfItp, nPostOffset);
+            for (int j = 0; j < cnfItp->nClauses; ++j)
+              satSolver.addClause (cnfItp->pClauses [j], cnfItp->pClauses [j+1]);
+
+            // -- assert !Itp_i
+            lit Lit = toLitCond (cnfItp->pVarNums [Aig_ManCo (&*itp, i)->Id], 1);
+            satSolver.addClause (&Lit, &Lit + 1);
+
+            // -- glue
+            int j;
+            Aig_Obj_t *pObj;
+            Aig_ManForEachCi (&*itp, pObj, j)
+              {
+                lit Lits[2];
+                Lits [0] = toLitCond (cnfItp->pVarNums [pObj->Id], 0);
+                Lits [1] = toLitCond (m_Vc->getTrLiVar (j, i, trOffset), 1);
+                satSolver.addClause (Lits, Lits + 2);
+                Lits [0] = lit_neg (Lits [0]);
+                Lits [1] = lit_neg (Lits [1]);
+                satSolver.addClause (Lits, Lits + 2);
+              }
+          }
+        else
+          m_Vc->addBadCnf (satSolver, trOffset);
+
+        if (satSolver.solve () != false) 
+          {
+            errs () << "\nFailed validation at i: " << i << "\n";
+            return false;
+          }
+        else
+          outs () << "." << std::flush;
+        
+      }
+    outs () << " Done\n" << std::flush;
+    return true;
+  }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+

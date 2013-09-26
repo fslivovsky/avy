@@ -4,8 +4,10 @@
 #include "AigUtils.h"
 #include "SafetyVC.h"
 #include "ItpSatSolver.h"
+#include "Unroller.h"
 #include <string>
 #include "boost/logic/tribool.hpp"
+#include "boost/foreach.hpp"
 
 namespace avy
 {
@@ -20,23 +22,25 @@ namespace avy
     
     /** refernece to the current Sat solver */
     ItpSatSolver m_Solver;
-    
+    Unroller<ItpSatSolver> m_Unroller;
+
   public:
     AvyMain(std::string fname);
     
-    virtual ~AvyMain()
-    {
-      
-    }
-    
+    virtual ~AvyMain() {}
 
     int run ();
 
     boost::tribool doBmc (unsigned nFrame);
-    
-  
+    bool validateItp (AigManPtr itp);
   };
 }
 
 
 #endif /* _AVYMAIN_H_ */
+
+
+
+
+
+

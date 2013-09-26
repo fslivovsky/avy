@@ -52,7 +52,7 @@ BMCSolver::BMCSolver(Aig_Man_t* pAig) :
     prepareGlobalVars(1);
     // start the interpolation manager
     if (m_pSat->pInt2 == NULL)
-        m_pSat->pInt2 = Int2_ManStart( m_pSat, Vec_IntArray(m_vGVars), Vec_IntSize(m_vGVars), (m_bMcMPrime) ? 1 : 0 );
+      m_pSat->pInt2 = Int2_ManStart( m_pSat, Vec_IntArray(m_vGVars), Vec_IntSize(m_vGVars));
 
     m_nLastFrame = 1;
 
