@@ -184,6 +184,8 @@ void ClsItpSeqMc::extractInterpolationSeq(Aig_Man_t* pInterSeq)
 
         if (m_GlobalPdr.push ()) {
             cerr << "SAFE\n";
+            cerr << "validating\n";
+            m_GlobalPdr.validateInvariant ();
             break;
         }
         m_GlobalPdr.statusLn (cerr);
