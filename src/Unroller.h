@@ -188,7 +188,7 @@ namespace avy
     
 
     /** Add glue clauses between current Inputs and previous frame outputs */
-    void glueOutIn ()
+    void glueOutIn_off ()
     {
       AVY_ASSERT (m_nFrames > 1);
       AVY_ASSERT (Vec_IntSize (m_vOutputs.at (frame () - 1)) == 
@@ -229,7 +229,7 @@ namespace avy
     }
     
 
-    void glueOutIn_one_per_wire ()
+    void glueOutIn ()
     {
       AVY_ASSERT (m_nFrames > 1);
       AVY_ASSERT (Vec_IntSize (m_vOutputs.at (frame () - 1)) == 
@@ -250,7 +250,7 @@ namespace avy
               lit aLit = toLit (a);
           
               boost::tribool aVal = eval (aLit);
-              if (!aVal) return;
+              if (!aVal) continue;
               else if (aVal) ; // nothing
               else
                 {
