@@ -318,7 +318,7 @@ namespace avy
     std::reverse (core.begin (), core.end ());
     
     Stats::resume ("unsat_core");
-    for (int i = 0; i < core.size (); ++i)
+    for (int i = 0; gParams.min_core && i < core.size (); ++i)
       {
         lit tmp = core [i];
         core[i] = core.back ();
@@ -332,8 +332,9 @@ namespace avy
       }
     Stats::stop ("unsat_core");
 
-    VERBOSE(2, logs () << "Original core: " << coreSz 
-            << " reduced " << core.size () << "\n");
+    VERBOSE(2, if (gParams.min_core)
+                 logs () << "Original core: " << coreSz 
+                         << " reduced " << core.size () << "\n");
     
 
     m_Core.reset ();

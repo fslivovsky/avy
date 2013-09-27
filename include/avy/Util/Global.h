@@ -31,6 +31,13 @@ namespace avy
     
     /** reset global pdr cover before updating it */
     bool reset_cover;
+
+    /** minimize unsat core */
+    bool min_core;
+
+    /** interface abstraction */
+    bool abstraction;
+    
   };
   
   std::ostream &operator<< (std::ostream& out, const AvyParams& p);
