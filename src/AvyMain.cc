@@ -192,7 +192,7 @@ namespace avy
     
   tribool AvyMain::doBmc (unsigned nFrame)
   {
-    m_Solver.reset (nFrame + 2, m_Vc->varSize (0, nFrame, true));
+    m_Solver.reset (nFrame + 2, 5000);
     m_Unroller.reset (&m_Solver);
     
 
