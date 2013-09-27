@@ -4,6 +4,7 @@
 #include "avy/Util/AvyDebug.h"
 #include "avy/Util/AvyAssert.h"
 #include "avy/Util/Global.h"
+#include "avy/Util/Stats.h"
 
 
 namespace abc
@@ -362,6 +363,7 @@ namespace avy
   
   int Pdr::pushClauses ()
   {
+    AVY_MEASURE_FN;
     Pdr_Man_t *p = m_pPdr;
     Pdr_Set_t * pTemp, * pCubeK, * pCubeK1;
     Vec_Ptr_t * vArrayK, * vArrayK1;

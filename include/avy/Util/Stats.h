@@ -149,8 +149,17 @@ namespace avy
     static void PrintBrunch (std::ostream &OS);
   };
 
+
+  class ScoppedStats 
+  {
+    std::string m_name;
+  public:
+    ScoppedStats (const std::string &name) : m_name(name) { Stats::resume (m_name); }
+    ~ScoppedStats () { Stats::stop (m_name); }
+  };
 }
 
+#define AVY_MEASURE_FN ScoppedStats __stats__(__FUNCTION__)
   
 
 #endif
