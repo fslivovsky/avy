@@ -4,6 +4,7 @@
 #include "AigUtils.h"
 #include "SafetyVC.h"
 #include "ItpSatSolver.h"
+#include "ItpSatSolver2.h"
 #include "Pdr.h"
 #include "Unroller.h"
 #include <string>
