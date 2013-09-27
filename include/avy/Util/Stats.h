@@ -154,12 +154,23 @@ namespace avy
   {
     std::string m_name;
   public:
-    ScoppedStats (const std::string &name) : m_name(name) { Stats::resume (m_name); }
+    ScoppedStats (const std::string &name, bool reset = false) : m_name(name) 
+    { 
+      if (reset) 
+        { 
+          m_name += ".last";
+          Stats::start (m_name);
+        }
+      else
+        Stats::resume (m_name); 
+    }
     ~ScoppedStats () { Stats::stop (m_name); }
   };
 }
 
 #define AVY_MEASURE_FN ScoppedStats __stats__(__FUNCTION__)
+#define AVY_MEASURE_FN_LAST ScoppedStats __stats_last__(__FUNCTION__, true)
+
   
 
 #endif
