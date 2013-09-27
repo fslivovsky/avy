@@ -13,7 +13,7 @@
 #include "boost/logic/tribool.hpp"
 #include "avy/Util/AvyAssert.h"
 #include "AigUtils.h"
-#include "avy/util/stats.h"
+#include "avy/Util/Stats.h"
 
 using namespace std;
 using namespace avy;

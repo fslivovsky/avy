@@ -13,7 +13,7 @@
 #include "base/main/main.h"
 #include "aig/ioa/ioa.h"
 #include "AigPrint.h"
-#include "avy/util/stats.h"
+#include "avy/Util/Stats.h"
 using namespace abc;
 
 #define DEBUG 0
