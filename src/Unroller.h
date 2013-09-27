@@ -177,6 +177,12 @@ namespace avy
     }
     
 
+    boost::tribool getValue (lit a)
+    {
+      if (!m_pEnabledAssumps) return boost::indeterminate;
+      if (a >= m_pEnabledAssumps->size ()) return boost::indeterminate;
+      return m_pEnabledAssumps->test (a);
+    }
     
 
     /** Add glue clauses between current Inputs and previous frame outputs */
@@ -198,18 +204,15 @@ namespace avy
           int a = freshVar ();
           lit aLit = toLit (a);
           
-          // -- if known assumption, either add the clause or skip it
-          // -- based on the value
-          if (m_pEnabledAssumps && aLit < m_pEnabledAssumps->size ())
-            {
-              if (!m_pEnabledAssumps->test (aLit)) return;
-            }
-          else // unknown assumption, proceed as usual
+          boost::tribool aVal = getValue (aLit);
+          if (aVal == boost::indeterminate)
             {
               addAssump (aLit);
               Lit[2] = lit_neg (aLit);
               litSz = 3;
             }
+          else if (!aVal) return; // disabled assumption
+          // ow, assumption enabled proceed as usual
         }
       
       Vec_IntForEachEntry (m_vOutputs.at (frame () - 1), out, i)
