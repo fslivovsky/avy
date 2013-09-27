@@ -23,8 +23,14 @@ namespace avy
     /** verbosity level */
     unsigned verbosity;
 
-    /** stutter */
+    /** stutter instead of reseting to initial state*/
     bool stutter;
+
+    /** shallow push at every iteration */
+    bool shallow_push;
+    
+    /** reset global pdr cover before updating it */
+    bool reset_cover;
   };
   
   std::ostream &operator<< (std::ostream& out, const AvyParams& p);
