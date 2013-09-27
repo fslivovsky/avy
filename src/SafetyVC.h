@@ -76,13 +76,11 @@ namespace avy
     
     void resetPreCond () { m_preCond.clear (); }
     void resetPostCond () { m_postCond.clear (); }
-    
-    /**
-       Add a (optinally negated) clause to the pre-condition at a given frame
-     */
+
     template<typename Iterator>
-    void addPreCondClause (Iterator bgn, Iterator end, unsigned nFrame, 
-                           bool fCompl = false)
+    void addCondClause (std::vector<Clauses> &clausesByFrame,
+                        Iterator bgn, Iterator end, unsigned nFrame, 
+                        bool fCompl = false)
     {
       AVY_ASSERT (nFrame > 0);
       
@@ -97,14 +95,13 @@ namespace avy
           logs () << "\n";
           );
 
-      m_preCond.resize (nFrame + 1);
-      Clauses &clauses = m_preCond[nFrame];
+      clausesByFrame.resize (nFrame + 1);
+      Clauses &clauses = clausesByFrame [nFrame];
       clauses.resize (clauses.size () + 1);
       for (Iterator it = bgn; it != end; ++it)
         {
           if (*it == -1) continue;
-          Aig_Obj_t* pLo = Saig_ManLo(&*m_Tr, lit_var (*it));
-          lit Lit = toLit (m_cnfTr->pVarNums [pLo->Id]);
+          lit Lit = *it;
           if (fCompl) Lit = lit_neg (Lit);
           clauses.back ().push_back (Lit);
         }      
@@ -121,6 +118,18 @@ namespace avy
 
     }
 
+    
+    /**
+       Add a (optinally negated) clause to the pre-condition at a given frame
+     */
+    template<typename Iterator>
+    void addPreCondClause (Iterator bgn, Iterator end, unsigned nFrame, 
+                           bool fCompl = false)
+    {
+      AVY_ASSERT (nFrame > 0);
+      addCondClause (m_preCond, bgn, end, nFrame, fCompl);
+    }
+
     /** 
      * Add a (optionally negated) clause to the post-condition at a given frame
      */
@@ -128,32 +137,12 @@ namespace avy
     void addPostCondClause (Iterator bgn, Iterator end, unsigned nFrame, 
                             bool fCompl = false)
     {
-      m_postCond.resize (nFrame + 1);
-      Clauses &clauses = m_postCond [nFrame];
-      clauses.resize (clauses.size () + 1);
-      for (Iterator it = bgn; it != end; ++it)
-        {
-          if (*it == -1) continue;
-          Aig_Obj_t* pLi = Saig_ManLi(&*m_Tr, lit_var (*it));
-          lit Lit = toLit (m_cnfTr->pVarNums [pLi->Id]);
-          if (fCompl) Lit = lit_neg (Lit);
-          clauses.back ().push_back (Lit);
-        }
-
-      LOG("learnt", 
-          logs () << "CLS at " << nFrame << ": ";
-          BOOST_FOREACH (lit Lit, clauses.back ())
-          {
-            if (lit_sign (Lit)) logs () << "-";
-            logs () << lit_var (Lit) << " ";
-          }
-          logs () << "\n";
-          );     
+      addCondClause (m_postCond, bgn, end, nFrame, fCompl);
     }
     
-
     template<typename S>
-    boost::tribool addClauses (Unroller<S> &unroller, Clauses &clauses, int nOffset)
+    boost::tribool addClauses (Unroller<S> &unroller, Clauses &clauses, 
+                               abc::Vec_Int_t* vMap)
     {
       boost::tribool res = true;
       Clause tmp;
@@ -161,7 +150,11 @@ namespace avy
         {
           tmp.clear ();
           BOOST_FOREACH (lit Lit, cls)
-            tmp.push_back (Lit + 2*nOffset);
+            {
+              // map literal based on vMap
+              int reg = lit_var (Lit);
+              tmp.push_back (toLitCond (Vec_IntEntry (vMap, reg), lit_sign (Lit)));
+            }
           res = res && unroller.addClause (&tmp[0], &tmp[0] + tmp.size ());
         }
       return res;
@@ -174,18 +167,12 @@ namespace avy
       unsigned nOff = unroller.freshBlock (m_cnfTr->nVars);
       ScoppedCnfLift scLift (m_cnfTr, nOff);
 
-      AVY_ASSERT (Vec_IntSize (unroller.getInputs (unroller.frame ())) == 0 &&
+      unsigned nFrame = unroller.frame ();
+
+      AVY_ASSERT (Vec_IntSize (unroller.getInputs (nFrame)) == 0 &&
                   "Unexpected inputs");
-      AVY_ASSERT (Vec_IntSize (unroller.getOutputs (unroller.frame ())) == 0 &&
-                  "Unexpected outputs");
-
-
-      /** pre-condition and post-condition clauses */
-      if (unroller.frame () < m_preCond.size ())
-        addClauses (unroller, m_preCond [unroller.frame ()], nOff);
-      if (unroller.frame () < m_postCond.size ())
-        addClauses (unroller, m_postCond [unroller.frame ()], nOff);
-        
+      AVY_ASSERT (Vec_IntSize (unroller.getOutputs (nFrame)) == 0 &&
+                  "Unexpected outputs");        
 
       if (unroller.frame () == 0)
         {
@@ -209,6 +196,11 @@ namespace avy
 
           // glue new In to old Out
           unroller.glueOutIn ();
+
+          /** pre-condition clauses */
+          if (nFrame < m_preCond.size ())
+            addClauses (unroller, m_preCond [nFrame], unroller.getInputs (nFrame));
+
         }
       
       // -- add transition relation
@@ -220,6 +212,11 @@ namespace avy
       int i;
       Saig_ManForEachLi (&*m_Tr, pObj, i)
         unroller.addOutput (m_cnfTr->pVarNums [pObj->Id]);
+
+      /** post-condition clauses */
+      if (unroller.frame () < m_postCond.size ())
+        addClauses (unroller, m_postCond [nFrame], unroller.getOutputs (nFrame));
+
     }
     
     template <typename S>
@@ -228,9 +225,11 @@ namespace avy
       unsigned nOff = unroller.freshBlock (m_cnfBad->nVars);
       ScoppedCnfLift scLift (m_cnfBad, nOff);
 
-      AVY_ASSERT (Vec_IntSize (unroller.getInputs (unroller.frame ())) == 0 &&
+      unsigned nFrame = unroller.frame ();
+
+      AVY_ASSERT (Vec_IntSize (unroller.getInputs (nFrame)) == 0 &&
                   "Unexpected inputs");
-      AVY_ASSERT (Vec_IntSize (unroller.getOutputs (unroller.frame ())) == 0 &&
+      AVY_ASSERT (Vec_IntSize (unroller.getOutputs (nFrame)) == 0 &&
                   "Unexpected outputs");
       
       // -- register inputs
@@ -245,6 +244,11 @@ namespace avy
 
       // -- glue
       unroller.glueOutIn ();
+
+      /** pre-condition clauses */
+      if (nFrame < m_preCond.size ())
+        addClauses (unroller, m_preCond [nFrame], unroller.getInputs (nFrame));
+
 
       // -- add bad states
       unroller.addCnf (&*m_cnfBad);
