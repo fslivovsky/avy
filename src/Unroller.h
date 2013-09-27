@@ -148,10 +148,45 @@ namespace avy
     }
     
 
-    /** Add glue clauses between current Inputs and previous frame outputs */
-    void glueOutIn ()
-    {
+    
 
+    /** Add glue clauses between current Inputs and previous frame outputs */
+    void glueOutIn (bool fWithAssump = false)
+    {
+      AVY_ASSERT (m_nFrames > 1);
+      AVY_ASSERT (Vec_IntSize (m_vOutputs.at (frame () - 1)) == 
+                  Vec_IntSize (m_vInputs.at (frame ())));
+
+      lit Lit[3];
+      unsigned litSz = 2;
+      
+      int out, i;
+    
+      Vec_Int_t *ins = m_vInputs.at (frame ());
+      
+      if (fWithAssump)
+        {
+          int a = freshVar ();
+          addAssump (a);
+          Lit[2] = toLitCond (a, 1);
+          litSz = 3;
+        }
+      
+      Vec_IntForEachEntry (m_vOutputs.at (frame () - 1), out, i)
+        {
+          Lit[0] = toLit (out);
+          Lit[1] = toLitCond (Vec_IntEntry (ins, i), 1);
+          addClause (Lit, Lit+litSz);
+          Lit[0] = lit_neg (Lit[0]);
+          Lit[1] = lit_neg (Lit[1]);
+          addClause (Lit, Lit+litSz);
+        }
+    }
+    
+
+    /** Add glue clauses between current Inputs and previous frame outputs */
+    void OriginalglueOutIn ()
+    {
       AVY_ASSERT (m_nFrames > 1);
       AVY_ASSERT (Vec_IntSize (m_vOutputs.at (frame () - 1)) == 
                   Vec_IntSize (m_vInputs.at (frame ())));

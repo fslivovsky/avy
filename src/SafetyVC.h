@@ -7,6 +7,9 @@
 #include "aig/saig/saig.h"
 
 #include "Unroller.h"
+#include "boost/foreach.hpp"
+
+#include <vector>
 namespace avy
 {
   /// smart pointer for Cnf_Dat_t. 
@@ -54,6 +57,11 @@ namespace avy
     /// Cnf of Bad sates
     CnfPtr m_cnfBad;
 
+    typedef std::vector<lit> Clause;
+    typedef std::vector<Clause> Clauses;
+    std::vector<Clauses> m_preCond;
+    std::vector<Clauses> m_postCond;
+
     /// initialize given a circuit
     void init (abc::Aig_Man_t *pCircuit);
 
@@ -65,25 +73,101 @@ namespace avy
     AigManPtr getTr () { return m_Tr; }
     AigManPtr getBad () { return m_Bad; }
 
-    int getTrLiVar (int nLi, unsigned nFrame, unsigned nOffset)
+    
+    void resetPreCond () { m_preCond.clear (); }
+    void resetPostCond () { m_postCond.clear (); }
+    
+    /**
+       Add a (optinally negated) clause to the pre-condition at a given frame
+     */
+    template<typename Iterator>
+    void addPreCondClause (Iterator bgn, Iterator end, unsigned nFrame, 
+                           bool fCompl = false)
     {
-      Aig_Obj_t *pObj = Saig_ManLi (&*m_Tr, nLi);
-      return m_cnfTr->pVarNums [pObj->Id] + nOffset;
+      AVY_ASSERT (nFrame > 0);
+      
+      LOG("learnt", 
+          logs () << "CLS at " << nFrame << ": ";
+          BOOST_FOREACH (lit Lit, std::make_pair (bgn, end))
+          {
+            if (Lit == -1) continue;
+            if (lit_sign (Lit)) logs () << "-";
+            logs () << lit_var (Lit) << " ";
+          }
+          logs () << "\n";
+          );
+
+      m_preCond.resize (nFrame + 1);
+      Clauses &clauses = m_preCond[nFrame];
+      clauses.resize (clauses.size () + 1);
+      for (Iterator it = bgn; it != end; ++it)
+        {
+          if (*it == -1) continue;
+          Aig_Obj_t* pLo = Saig_ManLo(&*m_Tr, lit_var (*it));
+          lit Lit = toLit (m_cnfTr->pVarNums [pLo->Id]);
+          if (fCompl) Lit = lit_neg (Lit);
+          clauses.back ().push_back (Lit);
+        }      
+
+      LOG("learnt2", 
+          logs () << "CLS at " << nFrame << ": ";
+          BOOST_FOREACH (lit Lit, clauses.back ())
+          {
+            if (lit_sign (Lit)) logs () << "-";
+            logs () << lit_var (Lit) << " ";
+          }
+          logs () << "\n";
+          );
+
+    }
+
+    /** 
+     * Add a (optionally negated) clause to the post-condition at a given frame
+     */
+    template<typename Iterator>
+    void addPostCondClause (Iterator bgn, Iterator end, unsigned nFrame, 
+                            bool fCompl = false)
+    {
+      m_postCond.resize (nFrame + 1);
+      Clauses &clauses = m_postCond [nFrame];
+      clauses.resize (clauses.size () + 1);
+      for (Iterator it = bgn; it != end; ++it)
+        {
+          if (*it == -1) continue;
+          Aig_Obj_t* pLi = Saig_ManLi(&*m_Tr, lit_var (*it));
+          lit Lit = toLit (m_cnfTr->pVarNums [pLi->Id]);
+          if (fCompl) Lit = lit_neg (Lit);
+          clauses.back ().push_back (Lit);
+        }
+
+      LOG("learnt", 
+          logs () << "CLS at " << nFrame << ": ";
+          BOOST_FOREACH (lit Lit, clauses.back ())
+          {
+            if (lit_sign (Lit)) logs () << "-";
+            logs () << lit_var (Lit) << " ";
+          }
+          logs () << "\n";
+          );     
     }
     
-    int getTrLoVar (int nLo, unsigned nFrame, unsigned nOffset)
+
+    template<typename S>
+    boost::tribool addClauses (Unroller<S> &unroller, Clauses &clauses, int nOffset)
     {
-      Aig_Obj_t *pObj = Saig_ManLo (&*m_Tr, nLo);
-      return m_cnfTr->pVarNums [pObj->Id] + nOffset;
+      boost::tribool res = true;
+      Clause tmp;
+      BOOST_FOREACH (Clause &cls, clauses)
+        {
+          tmp.clear ();
+          BOOST_FOREACH (lit Lit, cls)
+            tmp.push_back (Lit + 2*nOffset);
+          res = res && unroller.addClause (&tmp[0], &tmp[0] + tmp.size ());
+        }
+      return res;
     }
     
-    int getBadLoVar (int nLo, unsigned nOffset)
-    {
-      Aig_Obj_t *pObj = Aig_ManCi (&*m_Bad, Saig_ManPiNum (&*m_Tr) + nLo);
-      return m_cnfBad->pVarNums [pObj->Id] + nOffset;
-    }
-    
-    
+
     template <typename S>
     void addTr (Unroller<S> &unroller)
     {
@@ -94,6 +178,14 @@ namespace avy
                   "Unexpected inputs");
       AVY_ASSERT (Vec_IntSize (unroller.getOutputs (unroller.frame ())) == 0 &&
                   "Unexpected outputs");
+
+
+      /** pre-condition and post-condition clauses */
+      if (unroller.frame () < m_preCond.size ())
+        addClauses (unroller, m_preCond [unroller.frame ()], nOff);
+      if (unroller.frame () < m_postCond.size ())
+        addClauses (unroller, m_postCond [unroller.frame ()], nOff);
+        
 
       if (unroller.frame () == 0)
         {
@@ -162,188 +254,7 @@ namespace avy
       unroller.addClause (&Lit, &Lit+1);
     }
     
-    /// number of Cnf variables needed for the Tr of nFrame
-    unsigned trVarSize (unsigned nFrame) { return m_cnfTr->nVars; }
-    
-
-    /// number of Cnf variables for Bad
-    unsigned badVarSize () { return m_cnfBad->nVars; }
-
-    unsigned trGlueSize (unsigned nFrame) { return 0; }
-    unsigned badGlueSize () { return 0; }
-
-
-
-
-
-
-
-
-
-
-
-    /// number of Cnf variables for frames nStart up to, but not including nStop
-    unsigned varSize (unsigned nStart, unsigned nStop, bool fWithBad)
-    {
-      unsigned nVars = 0;
-      for (unsigned i = nStart; i  < nStop; ++i) 
-        nVars += trGlueSize (i) + trVarSize (i);
-      if (fWithBad) nVars += badGlueSize () + badVarSize ();
-      return nVars;
-    }
-    
-    /// Add Cnf for the glue between frame nFrame and nFrame+1
-    /// \param nTrOffset is the offset at which Tr of nFrame was added
-    /// \param nFreshVars is the offset from which new Cnf vars can be allocated
-    /// \return new offset for Cnf vars. Should be nNewOffset if glue 
-    /// does not consume vars
-    template<typename S>
-    unsigned addTrGlue (S &solver, unsigned nFrame, 
-                        unsigned nTrOffset, unsigned nFreshVars,
-                        Vec_Int_t *vShared = NULL);
-    
-    template<typename S>
-    unsigned addBadGlue (S &solver, unsigned nTrOffset, unsigned nFreshVars, 
-                         Vec_Int_t *vShared = NULL);
-    
-    /** Add Cnf of one Tr to the solver
-     *
-     * Cnf for Frame0 is Init&Tr
-     * Cnf for all other frames is Tr
-     *
-     * Suggested usage
-     * unsigned nOffset = 0; for (i = 0 to N) nOffset += addTrCnf (i); nOffset += addBadCnf (nOffset)
-     *
-     * \param solver  Sat solver
-     * \param nFrame frame to add. 0 means initial
-     * \param nOffset offset to allocate CNF variables from
-     * \param vShared outs variables shared between nFrame and nFrame+1
-     * \return next free Cnf variable
-     */
-    template <typename S>
-    unsigned addTrCnf (S &solver, unsigned nFrame, unsigned nOffset);
-    template <typename S>
-    unsigned addBadCnf (S &solver, unsigned nOffset);
   };
-
-
-  template <typename S> unsigned SafetyVC::addTrGlue (S &solver, unsigned nFrame, 
-                                                      unsigned nTrOffset, 
-                                                      unsigned nFreshVars,
-                                                      Vec_Int_t *vShared)
-  {
-    int i;
-    Aig_Obj_t *pLo, *pLi;
-    lit Lits[2];
-    
-    Saig_ManForEachLo (&*m_Tr, pLo, i)
-      {
-        pLi = Saig_ManLi (&*m_Tr, i);
-        int liVar = m_cnfTr->pVarNums [pLi->Id] + nTrOffset;
-        int loVar = m_cnfTr->pVarNums [pLo->Id] + nFreshVars;
-        
-        if (vShared) Vec_IntPush (vShared, liVar);
-
-        // -- add equality constraints
-        Lits [0] = toLitCond (liVar, 0);
-        Lits [1] = toLitCond (loVar, 1);
-        solver.addClause (Lits, Lits+2);
-        
-        Lits [0] = lit_neg (Lits [0]);
-        Lits [1] = lit_neg (Lits [1]);
-        solver.addClause (Lits, Lits+2);
-        
-      }
-
-    return nFreshVars;
-  }
-
-  /** glue bad state*/
-  template<typename S>
-  unsigned SafetyVC::addBadGlue (S &solver, unsigned nTrOffset, unsigned nFreshVars,
-                                 Vec_Int_t *vShared)
-  {
-    int i;
-    Aig_Obj_t *pCi, *pLi;
-    lit Lits[2];
-    
-    Saig_ManForEachLi (&*m_Tr, pLi, i)
-      {
-
-        int liVar = m_cnfTr->pVarNums [pLi->Id] + nTrOffset;
-        
-        pCi = Aig_ManCi (&*m_Bad, Saig_ManPiNum (&*m_Tr) + i);
-        int ciVar = m_cnfBad->pVarNums [pCi->Id] + nFreshVars;
-        
-        if (vShared) Vec_IntPush (vShared, liVar);
-
-        // -- add equality constraints
-        Lits [0] = toLitCond (liVar, 0);
-        Lits [1] = toLitCond (ciVar, 1);
-        solver.addClause (Lits, Lits+2);
-        
-        Lits [0] = lit_neg (Lits [0]);
-        Lits [1] = lit_neg (Lits [1]);
-        solver.addClause (Lits, Lits+2);
-        
-      }
-
-    return nFreshVars;
-  }
-  
-  template <typename S>
-  unsigned SafetyVC::addTrCnf (S &solver, unsigned nFrame, unsigned nOffset)
-  {
-    // add clauses for Init
-    if (nFrame == 0)
-      {
-        Aig_Obj_t *pObj;
-        int i;
-        lit Lits[1];
-        
-        Saig_ManForEachLo (&*m_Tr, pObj, i)
-          {
-            Lits[0] = toLitCond (m_cnfTr->pVarNums [pObj->Id] + nOffset, 1);
-            solver.addClause (Lits, Lits + 1);
-          }
-      }
-
-    {
-      ScoppedCnfLift scLift (m_cnfTr, nOffset);
-
-      // -- add clauses
-      for (int i = 0; i < m_cnfTr->nClauses; ++i)
-        AVY_VERIFY (solver.addClause (m_cnfTr->pClauses [i], m_cnfTr->pClauses[i+1]));
-    }
-
-    return nOffset + trVarSize (nFrame);
-  }
-
-  
-  template <typename S>
-  unsigned SafetyVC::addBadCnf (S &solver, unsigned nOffset)
-  {
-    ScoppedCnfLift scLift (m_cnfBad, nOffset);
-    // -- add clauses
-    for (int i = 0; i < m_cnfBad->nClauses; ++i)
-      AVY_VERIFY (solver.addClause (m_cnfBad->pClauses [i], 
-                                    m_cnfBad->pClauses[i+1]));
-
-    Aig_Obj_t *pPo = Aig_ManCo (&*m_Bad, 0);
-    int poVar = m_cnfBad->pVarNums [pPo->Id];
-    lit Lit = toLit (poVar);
-    solver.addClause (&Lit, &Lit + 1);
-
-    return nOffset + badVarSize ();
-  }
-
-
-
-
-
-
-
-
 }
 
 
