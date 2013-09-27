@@ -120,6 +120,8 @@ namespace avy
                 if (doPdrTrace (itp)) 
                   {
                     VERBOSE (0, vout () << "SAFE\n");
+                    VERBOSE(1, m_pPdr->statusLn (vout ()););
+                    m_pPdr->validateInvariant ();
                     return 0;
                   }
 

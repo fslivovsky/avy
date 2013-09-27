@@ -82,7 +82,10 @@ namespace avy
     int solveSafe () { return solve (true); }
     tribool push (int kMin=1) { return tbool (pushClauses (kMin)); }
     
-        
+
+    void validateInvariant () { Pdr_ManVerifyInvariant (m_pPdr); }
+      
+
     Aig_Obj_t *getInit (Aig_Man_t *pAig = 0);
 
     friend std::ostream &operator<< (std::ostream& out, Pdr &pdr);
