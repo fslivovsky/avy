@@ -64,7 +64,8 @@ public:
 
 	bool addCNFToSAT(Cnf_Dat_t *pCnf, unsigned nFrame);
 
-	eResult solveSat();
+	eResult solveSat(int assumeStart=0);
+	eResult solveSatAndGetSeq(Aig_Man_t** pSeq);
 
 	Aig_Man_t* getInterpolant();
 

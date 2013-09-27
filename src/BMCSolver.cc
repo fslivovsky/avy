@@ -12,7 +12,8 @@
 #include "BMCSolver.h"
 #include "base/main/main.h"
 #include "aig/ioa/ioa.h"
-
+#include "AigPrint.h"
+#include "avy/util/stats.h"
 using namespace abc;
 
 #define DEBUG 0
@@ -48,12 +49,6 @@ BMCSolver::BMCSolver(Aig_Man_t* pAig) :
 
     m_nVars = m_pOneTRCnf->nVars;
 
-    m_vGVars = Vec_IntAlloc(Aig_ManRegNum(m_pAig));
-    prepareGlobalVars(1);
-    // start the interpolation manager
-    if (m_pSat->pInt2 == NULL)
-      m_pSat->pInt2 = Int2_ManStart( m_pSat, Vec_IntArray(m_vGVars), Vec_IntSize(m_vGVars));
-
     m_nLastFrame = 1;
 
     m_CurrentVarsByFrame.resize(1);
@@ -67,6 +62,13 @@ BMCSolver::BMCSolver(Aig_Man_t* pAig) :
         nVar = m_pOneTRCnf->pVarNums[pLi->Id];
         m_NextVarsByFrame[0].push_back(nVar);
     }
+
+    m_vGVars = Vec_IntAlloc(Aig_ManRegNum(m_pAig));
+    prepareGlobalVars(1);
+
+    // start the interpolation manager
+    if (m_pSat->pInt2 == NULL)
+      m_pSat->pInt2 = Int2_ManStart( m_pSat, Vec_IntArray(m_vGVars), Vec_IntSize(m_vGVars));
 
     Cnf_DataLift(m_pInitCnf, m_pOneTRCnf->nVars);
     Cnf_DataLift(m_pBadCnf, m_pOneTRCnf->nVars);
@@ -85,6 +87,7 @@ void BMCSolver::addTransitionsFromTo(unsigned nFrom, unsigned nTo)
 
     m_CurrentVarsByFrame.resize(nFrom + 1);
     m_NextVarsByFrame.resize(nFrom + 1);
+    m_GlueEnableVars.resize(nFrom, -1);
 
     for ( ; m_nLastFrame < nTo; m_nLastFrame++)
     {
@@ -94,61 +97,39 @@ void BMCSolver::addTransitionsFromTo(unsigned nFrom, unsigned nTo)
             assert(false);
 
         Aig_Obj_t *pObj;
-        int i, Lits[2];
-        //Lits[2] = toLitCond(nGlueVar, 1);
-        int nOffset = 2;//(m_bAddGlueRemovalLiteral && (m_nLevelRemoval == -1 || m_nLevelRemoval == m_nLastFrame)) ? 3 : 2;
-        /*if (nFrom == 0)
+        int i, Lits[3];
+        int nGlueVar = m_nVars + m_pOneTRCnf->nVars;
+        m_GlueEnableVars[m_nLastFrame-1] = nGlueVar;
+        Lits[2] = toLitCond(nGlueVar, 1);
+        int nOffset = 3;//(m_bAddGlueRemovalLiteral && (m_nLevelRemoval == -1 || m_nLevelRemoval == m_nLastFrame)) ? 3 : 2;
+
+        Saig_ManForEachLo( m_pOneTR, pObj, i )
         {
-            Aig_ManForEachCi(m_pInit, pObj, i )
-            {
-                Aig_Obj_t *pObj2 = Saig_ManLo(m_pOneTR, i );
+            int nVar = m_pOneTRCnf->pVarNums[pObj->Id]; // This is the global var.
+            int nVar2 = m_NextVarsByFrame[m_nLastFrame-1][i];
 
-                int nVar = m_pOneTRCnf->pVarNums[pObj2->Id];
+            Lits[0] = toLitCond(nVar , 0 );
+            Lits[1] = toLitCond(nVar2, 1 );
+            addClauseToSat(Lits, Lits+nOffset, m_nLastFrame);
 
-                Lits[0] = toLitCond(m_pInitCnf->pVarNums[pObj->Id], 0 );
-                Lits[1] = toLitCond(nVar, 1 );
-                addClauseToSat(Lits, Lits+nOffset, m_nLastFrame);
+            Lits[0] = toLitCond(nVar , 1 );
+            Lits[1] = toLitCond(nVar2, 0 );
+            addClauseToSat(Lits, Lits+nOffset, m_nLastFrame);
 
-                Lits[0] = toLitCond(m_pInitCnf->pVarNums[pObj->Id], 1 );
-                Lits[1] = toLitCond(nVar, 0 );
-                addClauseToSat(Lits, Lits+nOffset, m_nLastFrame);
-            }
+            m_CurrentVarsByFrame[m_nLastFrame].push_back(nVar);
+            Aig_Obj_t* pLi = Saig_ManLi(m_pOneTR, i);
+            m_NextVarsByFrame[m_nLastFrame].push_back(m_pOneTRCnf->pVarNums[pLi->Id]);
         }
-        else*/
-        //{
-            Saig_ManForEachLo( m_pOneTR, pObj, i )
-            {
-                int nVar = m_pOneTRCnf->pVarNums[pObj->Id]; // This is the global var.
-                int nVar2 = m_NextVarsByFrame[m_nLastFrame-1][i];
-
-                Lits[0] = toLitCond(nVar , 0 );
-                Lits[1] = toLitCond(nVar2, 1 );
-                addClauseToSat(Lits, Lits+nOffset, m_nLastFrame);
-
-                Lits[0] = toLitCond(nVar , 1 );
-                Lits[1] = toLitCond(nVar2, 0 );
-                addClauseToSat(Lits, Lits+nOffset, m_nLastFrame);
-
-                m_CurrentVarsByFrame[m_nLastFrame].push_back(nVar);
-                Aig_Obj_t* pLi = Saig_ManLi(m_pOneTR, i);
-                m_NextVarsByFrame[m_nLastFrame].push_back(m_pOneTRCnf->pVarNums[pLi->Id]);
-            }
-        //}
-
-        //markCnfVars(m_pOneTR, m_pOneTRCnf);
-
-        //Cnf_DataLift(m_pOneTRCnf, m_pOneTRCnf->nVars + m_pBadCnf->nVars);
-        //nGlueVar += m_pOneTRCnf->nVars + m_pBadCnf->nVars;
     }
 #if DEBUG
     sat_solver2_store_write(m_pSat, "init_tr.cnf");
 #endif
 
-    Cnf_DataLift(m_pInitCnf, m_pOneTRCnf->nVars);
-    Cnf_DataLift(m_pBadCnf, m_pOneTRCnf->nVars);
-    Cnf_DataLift(m_pOneTRCnf, m_pOneTRCnf->nVars);
+    Cnf_DataLift(m_pInitCnf, m_pOneTRCnf->nVars + 1);
+    Cnf_DataLift(m_pBadCnf, m_pOneTRCnf->nVars + 1);
+    Cnf_DataLift(m_pOneTRCnf, m_pOneTRCnf->nVars + 1);
 
-    m_nVars += m_pOneTRCnf->nVars;
+    m_nVars += m_pOneTRCnf->nVars + 1;
 }
 
 // ************************************************************************
@@ -158,12 +139,17 @@ void BMCSolver::prepareGlobalVars(int nFrame)
 {
     Vec_IntClear(m_vGVars);
 
-    Aig_Obj_t *pObj;
-    int i;
-    Saig_ManForEachLi(m_pOneTR, pObj, i)
+    vector<int>& vars = m_NextVarsByFrame[nFrame-1];
+    for (int i=0; i < vars.size(); i++)
     {
-        int nVar = m_pOneTRCnf->pVarNums[pObj->Id];
+        int nVar = vars[i];
         Vec_IntPush(m_vGVars, nVar);
+    }
+
+    int v,i;
+    Vec_IntForEachEntry(m_vGVars, v, i)
+    {
+        var_set_partA(m_pSat, v, (m_bMcMPrime) ? 1 : 0);
     }
 }
 
@@ -181,7 +167,7 @@ bool BMCSolver::addCNFToSAT(Cnf_Dat_t *pCnf, unsigned nFrame)
     return true;
 }
 
-eResult BMCSolver::solveSat()
+eResult BMCSolver::solveSat(int assumeStart)
 {
     int v, i;
     Vec_IntForEachEntry(m_vGVars, v, i)
@@ -192,11 +178,11 @@ eResult BMCSolver::solveSat()
     Aig_Obj_t * pObj;
     int k, VarNum, Lit, RetValue;
 
-    /*if ( m_pSat->qtail != m_pSat->qhead )
+    if ( m_pSat->qtail != m_pSat->qhead )
     {
         RetValue = sat_solver2_simplify(m_pSat);
         assert( RetValue != 0 );
-    }*/
+    }
 
     //if ( m_nConfMaxAll && m_pSat->stats.conflicts > m_nConfMaxAll )
     //    return l_Undef;
@@ -211,16 +197,30 @@ eResult BMCSolver::solveSat()
     VarNum = m_pBadCnf->pVarNums[pObj->Id] - m_pBadCnf->nVars;
     Lit = toLitCond( VarNum, Aig_IsComplement(pObj) ) ;
 
-    /*if (addClauseToSat(&Lit, &Lit +1, m_nLastFrame) == false)
+    if (addClauseToSat(&Lit, &Lit +1, m_nLastFrame) == false)
     {
         m_bTrivial = true;
         return FALSE;
-    }*/
+    }
+
+    int assumes[m_GlueEnableVars.size()];
+    int nActualSize = 0;
+    for (int yy=assumeStart; yy < m_GlueEnableVars.size(); yy++)
+    {
+        assumes[yy-assumeStart] = toLit(m_GlueEnableVars[yy]);
+        nActualSize++;
+    }
     /*static int xxx=1;
     ostringstream os;
     os << "cnf" << xxx++ << ".dimacs";
     Sat_Solver2WriteDimacs(m_pSat, (char*)os.str().c_str(), &Lit, &Lit + 1, 0);*/
-    RetValue = sat_solver2_solve( m_pSat, &Lit, &Lit + 1, (ABC_INT64_T)10000000, (ABC_INT64_T)0, (ABC_INT64_T)0, (ABC_INT64_T)0 );
+    Stats::resume ("sat_solver");
+    if (nActualSize > 0)
+        RetValue = sat_solver2_solve( m_pSat, assumes, assumes + nActualSize, (ABC_INT64_T)10000000, (ABC_INT64_T)0, (ABC_INT64_T)0, (ABC_INT64_T)0 );
+    else
+        RetValue = sat_solver2_solve( m_pSat, NULL,  NULL, (ABC_INT64_T)10000000, (ABC_INT64_T)0, (ABC_INT64_T)0, (ABC_INT64_T)0 );
+    Stats::stop ("sat_solver");
+    //RetValue = sat_solver2_solve( m_pSat, &Lit, &Lit + 1, (ABC_INT64_T)10000000, (ABC_INT64_T)0, (ABC_INT64_T)0, (ABC_INT64_T)0 );
     //RetValue = sat_solver2_solve( m_pSat, NULL,  NULL, (ABC_INT64_T)10000000, (ABC_INT64_T)0, (ABC_INT64_T)0, (ABC_INT64_T)0 );
 
     if ( RetValue == l_False ) // unsat
@@ -228,8 +228,8 @@ eResult BMCSolver::solveSat()
         //sat_solver2_rollback(m_pSat);
         // add final unit clause
 
-        Lit = lit_neg( Lit );
-        addClauseToSat(&Lit, &Lit + 1, m_nLastFrame);
+        //Lit = lit_neg( Lit );
+        //addClauseToSat(&Lit, &Lit + 1, m_nLastFrame);
         // add learned units
         /*for ( k = 0; k < veci_size(&m_pSat->unit_lits); k++ )
         {
@@ -509,9 +509,9 @@ void BMCSolver::addClausesToFrame(Vec_Ptr_t* pCubes, unsigned nFrame)
 
     Vec_PtrForEachEntry(Pdr_Set_t*, pCubes, pCube, i)
     {
-        lit* pClause = ABC_ALLOC(lit, pCube->nTotal);
+        lit* pClause = ABC_ALLOC(lit, pCube->nLits);
         int nCounter=0;
-        for (int j=0; j < pCube->nTotal; j++)
+        for (int j=0; j < pCube->nLits; j++)
         {
             if (pCube->Lits[j] == -1) continue;
             int nIdx = lit_var (pCube->Lits [j]);
@@ -527,5 +527,174 @@ void BMCSolver::addClausesToFrame(Vec_Ptr_t* pCubes, unsigned nFrame)
         assert(bRes);
         ABC_FREE(pClause);
     }
+}
+
+eResult BMCSolver::solveSatAndGetSeq(Aig_Man_t** pSeq)
+{
+    int v, i;
+    Vec_IntForEachEntry(m_vGVars, v, i)
+    {
+        var_set_partA(m_pSat, v, (m_bMcMPrime) ? 1 : 0);
+    }
+
+    Aig_Obj_t * pObj;
+    int k, VarNum, Lit, RetValue;
+
+    /*if ( m_pSat->qtail != m_pSat->qhead )
+    {
+        RetValue = sat_solver2_simplify(m_pSat);
+        assert( RetValue != 0 );
+    }*/
+
+    //if ( m_nConfMaxAll && m_pSat->stats.conflicts > m_nConfMaxAll )
+    //    return l_Undef;
+    pObj = Aig_ManCo(m_pBad, 0);
+# if DEBUG
+    std::ostringstream os;
+    os << "yakir_" << m_nLastFrame << ".cnf";
+    const char* name = os.str().c_str();
+    sat_solver2_store_write(m_pSat, (char*)name);
+#endif
+    //sat_solver2_bookmark(m_pSat);
+    VarNum = m_pBadCnf->pVarNums[pObj->Id] - m_pBadCnf->nVars;
+    Lit = toLitCond( VarNum, Aig_IsComplement(pObj) ) ;
+
+    if (addClauseToSat(&Lit, &Lit +1, m_nLastFrame) == false)
+    {
+        m_bTrivial = true;
+        return FALSE;
+    }
+
+    Vec_Ptr_t* vInterpolants = Vec_PtrAlloc(m_nLastFrame);
+    int nSize =  m_GlueEnableVars.size();
+    int assumes[nSize];
+    for (int nGlueFrame = nSize; nGlueFrame >= 0; nGlueFrame--)
+    {
+        int nActualSize = 0;
+
+        for (int yy=nGlueFrame; yy < nSize; yy++)
+        {
+            assumes[yy-nGlueFrame] = toLit(m_GlueEnableVars[yy]);
+            nActualSize++;
+        }
+
+        markClausesForAPart(nGlueFrame);
+        prepareGlobalVars(nGlueFrame+1);
+        m_pSat->pInt2 = Int2_ManStart( m_pSat, Vec_IntArray(m_vGVars), Vec_IntSize(m_vGVars));
+
+        if (nActualSize > 0)
+            RetValue = sat_solver2_solve( m_pSat, assumes, assumes + nActualSize, (ABC_INT64_T)10000000, (ABC_INT64_T)0, (ABC_INT64_T)0, (ABC_INT64_T)0 );
+        else
+            RetValue = sat_solver2_solve( m_pSat, NULL,  NULL, (ABC_INT64_T)10000000, (ABC_INT64_T)0, (ABC_INT64_T)0, (ABC_INT64_T)0 );
+
+        if ( RetValue == l_False ) // unsat
+        {
+            Aig_Man_t* pInterpolantMan = NULL;
+            for (int yy = 0; yy < nGlueFrame; yy++)
+            {
+                Lit = toLitCond(m_GlueEnableVars[yy], 1);
+                addClauseToSat(&Lit, &Lit + 1, m_nLastFrame);
+                pInterpolantMan = Aig_ManStart(Aig_ManCiNum(m_pAig) + 2);
+                Aig_Obj_t* pObj;
+                int xx;
+                Saig_ManForEachLi(m_pAig, pObj, xx)
+                {
+                    Aig_ObjCreateCi(pInterpolantMan);
+                }
+                Aig_ObjCreateCo(pInterpolantMan, Aig_ManConst1(pInterpolantMan));
+                Vec_PtrPush(vInterpolants, pInterpolantMan);
+            }
+
+
+            for (int yy = nGlueFrame+1; yy <= m_nLastFrame; yy++)
+            {
+                Aig_Man_t* pTemp = getInterpolant();
+                pInterpolantMan = Aig_ManSimplifyComb(pTemp);
+                Aig_ManStop(pTemp);
+                LOG("itp",
+                        std::cerr << "Interpolant:\n"
+                        << *pInterpolantMan << "\n";);
+                Aig_ManCleanData(pInterpolantMan);
+                Vec_PtrPush(vInterpolants, pInterpolantMan);
+
+                if (Vec_PtrSize(vInterpolants) == m_nLastFrame) break;
+
+                Cnf_Dat_t* pCNFItp = Cnf_Derive(pInterpolantMan, 0);
+                Cnf_DataLift(pCNFItp, m_nVars);
+                m_nVars += pCNFItp->nVars;
+                int ci;
+                Aig_Obj_t* pCI;
+                int Lits[2];
+                Aig_ManForEachCi(pInterpolantMan, pCI, ci)
+                {
+                    int nVar = pCNFItp->pVarNums[pObj->Id]; // This is the global var.
+                    int nVar2 = m_CurrentVarsByFrame[yy][i];
+
+                    Lits[0] = toLitCond(nVar , 0 );
+                    Lits[1] = toLitCond(nVar2, 1 );
+                    addClauseToSat(Lits, Lits+2, yy);
+
+                    Lits[0] = toLitCond(nVar , 1 );
+                    Lits[1] = toLitCond(nVar2, 0 );
+                    addClauseToSat(Lits, Lits+2, yy);
+                }
+                addCNFToSAT(pCNFItp, yy);
+                markClausesForAPart(yy);
+                prepareGlobalVars(yy+1);
+                m_pSat->pInt2 = Int2_ManStart( m_pSat, Vec_IntArray(m_vGVars), Vec_IntSize(m_vGVars));
+                nActualSize = 0;
+
+                for (int j=yy; j < m_GlueEnableVars.size(); j++)
+                {
+                    assumes[j-yy] = toLit(m_GlueEnableVars[j]);
+                    nActualSize++;
+                }
+
+
+                if (nActualSize > 0)
+                    RetValue = sat_solver2_solve( m_pSat, assumes, assumes + nActualSize, (ABC_INT64_T)10000000, (ABC_INT64_T)0, (ABC_INT64_T)0, (ABC_INT64_T)0 );
+                else
+                    RetValue = sat_solver2_solve( m_pSat, NULL,  NULL, (ABC_INT64_T)10000000, (ABC_INT64_T)0, (ABC_INT64_T)0, (ABC_INT64_T)0 );
+
+                assert(RetValue == l_False);
+                /*pTemp = getInterpolant();
+                pInterpolantMan = Aig_ManSimplifyComb(pTemp);
+                Aig_ManStop(pTemp);
+                LOG("itp",
+                        std::cerr << "Interpolant:\n"
+                        << *pInterpolantMan << "\n";);
+                Aig_ManCleanData(pInterpolantMan);
+                Vec_PtrPush(vInterpolants, pInterpolantMan);*/
+            }
+            //sat_solver2_rollback(m_pSat);
+            // add final unit clause
+
+            //Lit = lit_neg( Lit );
+            //addClauseToSat(&Lit, &Lit + 1, m_nLastFrame);
+            // add learned units
+
+            return FALSE;
+        }
+    }
+
+    if ( RetValue == l_Undef )
+    {
+        // undecided
+        std::cout << "UNDEF!!\n";
+        return UNDEF;
+    }
+
+    if (RetValue == l_True)
+    {
+        std::cout << "SAT!!\n";
+    }
+
+    *pSeq = Aig_ManSimplifyComb(Aig_ManDupArray(vInterpolants));
+    Vec_PtrFree(vInterpolants);
+
+    // generate counter-example
+    //m_pAig->pSeqModel = ??
+
+    return TRUE;
 }
 

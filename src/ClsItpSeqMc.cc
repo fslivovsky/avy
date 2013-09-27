@@ -13,6 +13,7 @@
 #include "boost/logic/tribool.hpp"
 #include "avy/Util/AvyAssert.h"
 #include "AigUtils.h"
+#include "avy/util/stats.h"
 
 using namespace std;
 using namespace avy;
@@ -28,6 +29,8 @@ ClsItpSeqMc::ClsItpSeqMc(string strAigFileName) :
 
 bool ClsItpSeqMc::prove()
 {
+
+    Stats::resume ("mc");
 	// Temporary.
 	unsigned nMaxFrame = 100;
 
@@ -57,11 +60,15 @@ bool ClsItpSeqMc::prove()
 		// Try global push - also check for a fixpoint along the way
 		if (globalPush() == true)
 		{
+		    m_GlobalPdr.validateInvariant();
 			// A fixpoint is reached
+		    Stats::stop ("mc");
 			return true;
+
 		}
 	}
 
+	Stats::stop ("mc");
 	return false;
 }
 
@@ -432,6 +439,7 @@ ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame, Aig_Man_t** 
 
         if (nCurrentFrame < nFrame)
         {
+            Stats::resume ("itpseq.itp");
             // Define the init state
             pSolver->setInitMan(pInterpolantMan);
             pSolver->setInit();
@@ -463,7 +471,43 @@ ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame, Aig_Man_t** 
             m_GlobalPdr.getCoverCubes(actual, pCubes);
             pSolver->addClausesToFrame(pCubes, k+1);
         }
+        if (nCurrentFrame == nFrame && nFrame > 1)
+        {
+            //pSolver->solveSatAndGetSeq(pInterpolationSeq);
+            //break;
+            bool bCont = false;
+            for (int yy=nFrame-1; yy >= 1; yy--)
+            {
+                if (pSolver->solveSat(yy) == FALSE)
+                {
+                    Aig_Man_t* pAig = pSolver->getCircuit();
+                    while (yy > 0)
+                    {
+                        nCurrentFrame--;
+                        if (yy > 1) itSolver++;
+                        yy--;
+                        pInterpolantMan = Aig_ManStart(Aig_ManCiNum(pAig) + 2);
+                        Aig_Obj_t* pObj;
+                        int xx;
+                        Saig_ManForEachLi(pAig, pObj, xx)
+                        {
+                            Aig_ObjCreateCi(pInterpolantMan);
+                        }
+                        Aig_ObjCreateCo(pInterpolantMan, Aig_ManConst1(pInterpolantMan));
+                        Vec_PtrPush(vInterpolants, pInterpolantMan);
+                    }
+
+                    bCont = true;
+                    break;
+                }
+            }
+            if (bCont) continue;
+        }
+        if (nCurrentFrame == nFrame)
+            Stats::resume ("bmc.itp");
         res = pSolver->solveSat();
+        if (nCurrentFrame == nFrame)
+            Stats::stop ("bmc.itp");
         if (res != FALSE) {
             if (nCurrentFrame < nFrame)
                 AVY_ASSERT(false);
@@ -482,7 +526,8 @@ ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame, Aig_Man_t** 
     if (res == TRUE)
         return FALSIFIED;
 
-    *pInterpolationSeq = Aig_ManSimplifyComb(Aig_ManDupArray(vInterpolants));
+    if (Vec_PtrSize(vInterpolants) > 0)
+        *pInterpolationSeq = Aig_ManSimplifyComb(Aig_ManDupArray(vInterpolants));
     Aig_ManPrintStats(*pInterpolationSeq);
 
     int i;
@@ -492,6 +537,7 @@ ClsItpSeqMc::eMcResult ClsItpSeqMc::solveTimeFrame(unsigned nFrame, Aig_Man_t** 
     }
     Vec_PtrFree(vInterpolants);
 
+    Stats::stop ("itpseq.itp");
 #if !NON_INC
     for(vector<BMCSolver*>::iterator itSolver = m_FrameInterpolatingSolvers.begin();
         itSolver != m_FrameInterpolatingSolvers.end();
