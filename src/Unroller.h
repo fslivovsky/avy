@@ -29,6 +29,7 @@ namespace avy
     /// All assumptions
     std::vector<int> m_Assumps;
 
+    
     /**
      * Start of frame assumptions in m_Assumps
      * m_Assumps[i] is the start of assumptions of frame i in m_Assumps
@@ -38,17 +39,35 @@ namespace avy
     boost::dynamic_bitset<> *m_pEnabledAssumps;
 
     bool m_fWithAssump;
+    /// Literal for Bad output
+    lit m_BadLit;
   
   
   public:
     Unroller(SatSolver &s, bool fWithAssump = false) : 
       m_pSolver (&s), m_nVars(0), m_nFrames(0),
-      m_pEnabledAssumps(0), m_fWithAssump (fWithAssump)
+      m_pEnabledAssumps(0), m_fWithAssump (fWithAssump), 
+      m_BadLit (-1)
     { newFrame (); }
 
     ~Unroller () { reset (NULL); }
 
+
+    void setBadLit (lit bad) { m_BadLit = bad; }
+    lit getBadLit () 
+    {
+      AVY_ASSERT (m_BadLit >= 0);
+      return m_BadLit;
+    }
     
+    bool pushBadUnit ()
+    {
+      lit b = getBadLit ();
+      return m_pSolver->addClause (&b, &b+1);
+    }
+    
+    
+
     void setEnabledAssumps (boost::dynamic_bitset<> &v)
     { m_pEnabledAssumps = &v; }
 

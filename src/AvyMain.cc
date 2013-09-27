@@ -250,6 +250,7 @@ namespace avy
         m_Unroller.newFrame ();
       }
     m_Vc->addBad (m_Unroller);
+    m_Unroller.pushBadUnit ();
     m_Solver.markPartition (nFrame + 1);
 
     LOG("dump_cnf", 
@@ -276,7 +277,16 @@ namespace avy
     
     // -- do not expect assumptions yet
     AVY_ASSERT (m_Unroller.getAssumps ().empty ());
+
+    LitVector bad;
+    bad.push_back (m_Unroller.getBadLit ());
     res = m_Solver.solve ();
+    // if (res == false)
+    //   {
+    //     AVY_ASSERT (m_Unroller.pushBadUnit ());
+    //     m_Solver.markPartition (nFrame + 1);
+    //     AVY_VERIFY (!m_Solver.solve ());
+    //   }
     return res;
   }
 
@@ -291,6 +301,7 @@ namespace avy
         unroller.newFrame ();
       }
     m_Vc->addBad (unroller);
+    unroller.pushBadUnit ();
     
     tribool res;
     
@@ -362,7 +373,11 @@ namespace avy
             unroller.addClause (&Lit, &Lit + 1);
           }
         else
-          m_Vc->addBad (unroller);
+          {
+            m_Vc->addBad (unroller);
+            unroller.pushBadUnit ();
+          }
+        
 
         
         if (satSolver.solve (unroller.getAssumps ()) != false) 

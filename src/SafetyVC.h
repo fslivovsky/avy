@@ -255,7 +255,7 @@ namespace avy
 
       // -- assert bad output
       lit Lit = toLit (m_cnfBad->pVarNums [Aig_ManCo (&*m_Bad, 0)->Id]);
-      unroller.addClause (&Lit, &Lit+1);
+      unroller.setBadLit (Lit);
     }
     
   };

@@ -84,6 +84,8 @@ namespace avy
     { sat_solver_setnvars (m_pSat, nVars); }
     
 
+    bool addUnit (lit unit) { return addClause (&unit, &unit + 1); }
+    
     /// add a clause
     bool addClause (lit* begin, lit* end)
     {
