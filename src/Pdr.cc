@@ -75,6 +75,22 @@ namespace avy
     out << "\n";
   }
 
+  void Pdr::resetCover (unsigned level)
+  {
+    ensureFrames (level);
+    
+    Vec_Ptr_t *vVec = Vec_VecEntry (m_pPdr->vClauses, level);
+    int i;
+    Pdr_Set_t* pCube;
+    
+    // -- dereference all cubes we are dropping
+    Vec_PtrForEachEntry (Pdr_Set_t*, vVec, pCube, i)
+      Pdr_SetDeref (pCube);
+    
+    // -- drop cubes
+    Vec_PtrClear (Vec_VecEntry (m_pPdr->vClauses, level));
+  }
+  
   
   void Pdr::addCoverCubes (unsigned level, Vec_Ptr_t *pCubes)
   {
@@ -361,7 +377,7 @@ namespace avy
   }
 
   
-  int Pdr::pushClauses ()
+  int Pdr::pushClauses (int kMin)
   {
     AVY_MEASURE_FN;
     Pdr_Man_t *p = m_pPdr;
@@ -375,6 +391,7 @@ namespace avy
     
     Vec_VecForEachLevelStartStop( p->vClauses, vArrayK, k, 1, kMax )
     {
+      if (k < kMin) continue;
         Vec_PtrSort( vArrayK, (int (*)(void))Pdr_SetCompare );
         vArrayK1 = Vec_VecEntry( p->vClauses, k+1 );
         Vec_PtrForEachEntry( Pdr_Set_t *, vArrayK, pCubeK, j )

@@ -32,7 +32,7 @@ namespace avy
      * 
      * \return 1 if an invariant is found, 0 if not, -1 on internal error
      */
-    int pushClauses ();
+    int pushClauses (int kMin=1);
   
     tribool tbool (int n)
     {
@@ -57,7 +57,8 @@ namespace avy
     
     void setSilent (bool v) { m_pPdr->pPars->fSilent = v; }
     
-    
+    /// -- drop all clauses from a cover
+    void resetCover (unsigned level);
     void addCoverCubes (unsigned level, Vec_Ptr_t *pCubes);
     void getCoverDeltaCubes (unsigned level, Vec_Ptr_t *pCubes);
     void getCoverCubes (unsigned level, Vec_Ptr_t *pCubes);
@@ -79,7 +80,7 @@ namespace avy
     /** Special version of solve used internally 
      */
     int solveSafe () { return solve (true); }
-    tribool push () { return tbool (pushClauses ()); }
+    tribool push (int kMin=1) { return tbool (pushClauses (kMin)); }
     
         
     Aig_Obj_t *getInit (Aig_Man_t *pAig = 0);
