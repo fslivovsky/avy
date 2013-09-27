@@ -308,14 +308,36 @@ namespace avy
     if ((res = sat.solve (unroller.getAssumps ())) != false) return res;
     
     
-    int *core;
-    int coreSz = sat.core (&core);
+    int *pCore;
+    int coreSz = sat.core (&pCore);
     
     VERBOSE(2, logs () << "Assumption size: " << unroller.getAssumps ().size ()  
             << " core size: " << coreSz << "\n";);
 
+    LitVector core (pCore, pCore + coreSz);
+    std::reverse (core.begin (), core.end ());
+    
+    Stats::resume ("unsat_core");
+    for (int i = 0; i < core.size (); ++i)
+      {
+        lit tmp = core [i];
+        core[i] = core.back ();
+        if (!sat.solve (core, core.size () - 1))
+          {
+            core.pop_back ();
+            --i;
+          }
+        else
+          core[i] = tmp;
+      }
+    Stats::stop ("unsat_core");
+
+    VERBOSE(2, logs () << "Original core: " << coreSz 
+            << " reduced " << core.size () << "\n");
+    
+
     m_Core.reset ();
-    for (unsigned i = 0; i < coreSz; ++i)
+    for (unsigned i = 0; i < core.size (); ++i)
       {
         int a = lit_neg (core[i]);
         if (m_Core.size () <= a) m_Core.resize (a + 1);

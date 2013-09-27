@@ -118,7 +118,7 @@ namespace avy
     bool isSolved () { return m_Trivial || m_State || !m_State; }
 
     /// decide context with assumptions
-    boost::tribool solve (LitVector &assumptions)
+    boost::tribool solve (LitVector &assumptions, int maxSize = -1)
     {
       if (isTrivial ()) return false;
       if (!assumptions.empty ()) m_State = boost::indeterminate;
@@ -129,12 +129,14 @@ namespace avy
       
       sat_solver_store_mark_roots( m_pSat );
       lit *beg = NULL;
-      if (!assumptions.empty ()) 
+      
+      if (maxSize < 0) maxSize = assumptions.size ();
+      if (maxSize > 0) 
         { 
           beg = &assumptions[0];
           sat_solver_compress (m_pSat);          
         }
-      int RetValue = sat_solver_solve( m_pSat, beg,  beg + assumptions.size (),
+      int RetValue = sat_solver_solve( m_pSat, beg,  beg + maxSize,
                                        (ABC_INT64_T)10000000, (ABC_INT64_T)0, 
                                        (ABC_INT64_T)0, (ABC_INT64_T)0 );
       
