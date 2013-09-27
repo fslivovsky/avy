@@ -117,7 +117,11 @@ namespace avy
       
       sat_solver_store_mark_roots( m_pSat );
       lit *beg = NULL;
-      if (!assumptions.empty ()) beg = &assumptions[0];
+      if (!assumptions.empty ()) 
+        { 
+          beg = &assumptions[0];
+          sat_solver_compress (m_pSat);          
+        }
       int RetValue = sat_solver_solve( m_pSat, beg,  beg + assumptions.size (),
                                        (ABC_INT64_T)10000000, (ABC_INT64_T)0, 
                                        (ABC_INT64_T)0, (ABC_INT64_T)0 );
