@@ -12,6 +12,8 @@
 #include "boost/dynamic_bitset.hpp"
 #include "boost/logic/tribool.hpp"
 
+#include "avy/Util/Global.h"
+
 namespace avy
 {
   template <typename SatSolver>
@@ -187,8 +189,16 @@ namespace avy
     }
     
 
+    void glueOutIn ()
+    {
+      if (gParams.abstraction)
+        glueOutIn2 ();
+      else
+        glueOutIn1 ();
+    }
+    
     /** Add glue clauses between current Inputs and previous frame outputs */
-    void glueOutIn_off ()
+    void glueOutIn1 ()
     {
       AVY_ASSERT (m_nFrames > 1);
       AVY_ASSERT (Vec_IntSize (m_vOutputs.at (frame () - 1)) == 
@@ -229,7 +239,7 @@ namespace avy
     }
     
 
-    void glueOutIn ()
+    void glueOutIn2 ()
     {
       AVY_ASSERT (m_nFrames > 1);
       AVY_ASSERT (Vec_IntSize (m_vOutputs.at (frame () - 1)) == 
