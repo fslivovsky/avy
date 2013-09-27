@@ -7,6 +7,9 @@
 #include "aig/saig/saig.h"
 
 #include "Unroller.h"
+#include "boost/foreach.hpp"
+
+#include <vector>
 namespace avy
 {
   /// smart pointer for Cnf_Dat_t. 
@@ -54,6 +57,11 @@ namespace avy
     /// Cnf of Bad sates
     CnfPtr m_cnfBad;
 
+    typedef std::vector<lit> Clause;
+    typedef std::vector<Clause> Clauses;
+    std::vector<Clauses> m_preCond;
+    std::vector<Clauses> m_postCond;
+
     /// initialize given a circuit
     void init (abc::Aig_Man_t *pCircuit);
 
@@ -65,6 +73,61 @@ namespace avy
     AigManPtr getTr () { return m_Tr; }
     AigManPtr getBad () { return m_Bad; }
 
+    /**
+       Add a (optinally negated) clause to the pre-condition at a given frame
+     */
+    template<typename Iterator>
+    void addPreCondClause (Iterator bgn, Iterator end, unsigned nFrame, 
+                           bool fCompl = false)
+    {
+      AVY_ASSERT (nFrame > 0);
+      
+      m_preCond.resize (nFrame + 1);
+      Clauses &clauses = m_preCond[nFrame];
+      clauses.resize (clauses.size () + 1);
+      for (Iterator it = bgn; it != end; ++it)
+        {
+          Aig_Obj_t* pLo = Saig_ManLo(&*m_Tr, lit_var (*it));
+          lit Lit = toLit (m_cnfTr->pVarNums [pLo->Id]);
+          if (fCompl) Lit = lit_neg (Lit);
+          clauses.back ().push_back (Lit);
+        }
+    }
+
+    /** 
+     * Add a (optionally negated) clause to the post-condition at a given frame
+     */
+    template<typename Iterator>
+    void addPostCondClause (Iterator bgn, Iterator end, unsigned nFrame, 
+                            bool fCompl = false)
+    {
+      m_postCond.resize (nFrame + 1);
+      Clauses &clauses = m_postCond [nFrame];
+      clauses.resize (clauses.size () + 1);
+      for (Iterator it = bgn; it != end; ++it)
+        {
+          Aig_Obj_t* pLi = Saig_ManLi(&*m_Tr, lit_var (*it));
+          lit Lit = toLit (m_cnfTr->pVarNums [pLi->Id]);
+          if (fCompl) Lit = lit_neg (Lit);
+          clauses.back ().push_back (Lit);
+        }
+    }
+    
+
+    template<typename S>
+    boost::tribool addClauses (Unroller<S> &unroller, Clauses &clauses, int nOffset)
+    {
+      Clause tmp;
+      BOOST_FOREACH (Clause &cls, clauses)
+        {
+          tmp.clear ();
+          BOOST_FOREACH (lit Lit, cls)
+            tmp.push_back (Lit + 2*nOffset);
+          unroller.addClause (&tmp[0], &tmp[0] + tmp.size ());
+        }
+    }
+    
+
     template <typename S>
     void addTr (Unroller<S> &unroller)
     {
@@ -75,6 +138,14 @@ namespace avy
                   "Unexpected inputs");
       AVY_ASSERT (Vec_IntSize (unroller.getOutputs (unroller.frame ())) == 0 &&
                   "Unexpected outputs");
+
+
+      /** pre-condition and post-condition clauses */
+      if (unroller.frame () < m_preCond.size ())
+        addClauses (unroller, m_preCond [unroller.frame ()], nOff);
+      if (unroller.frame () < m_postCond.size ())
+        addClauses (unroller, m_postCond [unroller.frame ()], nOff);
+        
 
       if (unroller.frame () == 0)
         {
