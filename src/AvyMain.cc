@@ -218,7 +218,7 @@ namespace avy
         
         Vec_PtrClear (pCubes);
         pdr.getCoverCubes (i == 0 ? 1 : 2, pCubes);
-        if (gParams.reset_cover) m_pPdr->resetCover (i+1);
+        if (gParams.reset_cover && i >= 1) m_pPdr->resetCover (i+1);
         m_pPdr->addCoverCubes (i+1, pCubes);
         Vec_PtrFree (pCubes);
         pCubes = NULL;
