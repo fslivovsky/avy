@@ -113,12 +113,17 @@ namespace avy
 
                 AVY_ASSERT (validateItp (itp));
 
-                bool res = doPdrTrace (itp);
-                if (res) 
+                // -- simplify
+                itp = aigPtr (Aig_ManSimplifyComb (&*itp));
+                
+                if (doPdrTrace (itp)) 
                   {
                     VERBOSE (0, vout () << "SAFE\n");
                     return 0;
                   }
+
+                doStrengthenVC ();
+                
               }
           }
         else 
@@ -130,6 +135,36 @@ namespace avy
       }
     return 3;
   }
+
+  /// Strengthen VC using current PDR trace
+  void AvyMain::doStrengthenVC ()
+  {
+    m_Vc->resetPreCond ();
+    Vec_Ptr_t *pCubes = Vec_PtrAlloc (16);
+    
+
+    /**
+                    I0      I1      I2
+       Init & TR(0) & TR(1) & TR(2) & Bad
+            F0      F1      F2      F3
+       add F1 to pre of TR(1), F2 to pre of TR(2), etc.
+     */
+
+    for (unsigned i = 1; i < m_pPdr->maxFrames (); ++i)
+      {
+        Vec_PtrClear (pCubes);
+        m_pPdr->getCoverCubes (i, pCubes);
+        Pdr_Set_t *pCube;
+        int j;
+        Vec_PtrForEachEntry (Pdr_Set_t*, pCubes, pCube, j)
+          m_Vc->addPreCondClause (pCube->Lits, (pCube->Lits) + pCube->nLits, i, true);
+        
+      }
+    
+    Vec_PtrFree (pCubes);
+    
+  }
+  
 
   /// convert interpolant into PDR trace
   tribool AvyMain::doPdrTrace (AigManPtr itp)
@@ -159,7 +194,7 @@ namespace avy
 
         Pdr pdr (&*newTr);
         
-        Vec_Ptr_t *pCubes = NULL;
+        Vec_Ptr_t *pCubes = Vec_PtrAlloc(16);
         pdr.setLimit (i == 0 ? 2 : 3);
         if (i >= 1)
           {
@@ -170,17 +205,16 @@ namespace avy
             Vec_PtrClear (pCubes);
             m_pPdr->getCoverCubes (i+1, pCubes);
             pdr.addCoverCubes (2, pCubes);
-            Vec_PtrFree (pCubes);
-            pCubes = NULL;            
+            Vec_PtrClear (pCubes);
           }
         pdr.solveSafe ();
         
-        pCubes = Vec_PtrAlloc (16);
+        Vec_PtrClear (pCubes);
         pdr.getCoverCubes (i == 0 ? 1 : 2, pCubes);
         m_pPdr->addCoverCubes (i+1, pCubes);
         Vec_PtrFree (pCubes);
         pCubes = NULL;
-
+        
         if (m_pPdr->push ()) return true;
         
         VERBOSE(1, m_pPdr->statusLn (vout ()););

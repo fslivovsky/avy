@@ -73,6 +73,10 @@ namespace avy
     AigManPtr getTr () { return m_Tr; }
     AigManPtr getBad () { return m_Bad; }
 
+    
+    void resetPreCond () { m_preCond.clear (); }
+    void resetPostCond () { m_postCond.clear (); }
+    
     /**
        Add a (optinally negated) clause to the pre-condition at a given frame
      */
@@ -82,16 +86,39 @@ namespace avy
     {
       AVY_ASSERT (nFrame > 0);
       
+      LOG("learnt", 
+          logs () << "CLS at " << nFrame << ": ";
+          BOOST_FOREACH (lit Lit, std::make_pair (bgn, end))
+          {
+            if (Lit == -1) continue;
+            if (lit_sign (Lit)) logs () << "-";
+            logs () << lit_var (Lit) << " ";
+          }
+          logs () << "\n";
+          );
+
       m_preCond.resize (nFrame + 1);
       Clauses &clauses = m_preCond[nFrame];
       clauses.resize (clauses.size () + 1);
       for (Iterator it = bgn; it != end; ++it)
         {
+          if (*it == -1) continue;
           Aig_Obj_t* pLo = Saig_ManLo(&*m_Tr, lit_var (*it));
           lit Lit = toLit (m_cnfTr->pVarNums [pLo->Id]);
           if (fCompl) Lit = lit_neg (Lit);
           clauses.back ().push_back (Lit);
-        }
+        }      
+
+      LOG("learnt2", 
+          logs () << "CLS at " << nFrame << ": ";
+          BOOST_FOREACH (lit Lit, clauses.back ())
+          {
+            if (lit_sign (Lit)) logs () << "-";
+            logs () << lit_var (Lit) << " ";
+          }
+          logs () << "\n";
+          );
+
     }
 
     /** 
@@ -106,25 +133,38 @@ namespace avy
       clauses.resize (clauses.size () + 1);
       for (Iterator it = bgn; it != end; ++it)
         {
+          if (*it == -1) continue;
           Aig_Obj_t* pLi = Saig_ManLi(&*m_Tr, lit_var (*it));
           lit Lit = toLit (m_cnfTr->pVarNums [pLi->Id]);
           if (fCompl) Lit = lit_neg (Lit);
           clauses.back ().push_back (Lit);
         }
+
+      LOG("learnt", 
+          logs () << "CLS at " << nFrame << ": ";
+          BOOST_FOREACH (lit Lit, clauses.back ())
+          {
+            if (lit_sign (Lit)) logs () << "-";
+            logs () << lit_var (Lit) << " ";
+          }
+          logs () << "\n";
+          );     
     }
     
 
     template<typename S>
     boost::tribool addClauses (Unroller<S> &unroller, Clauses &clauses, int nOffset)
     {
+      boost::tribool res = true;
       Clause tmp;
       BOOST_FOREACH (Clause &cls, clauses)
         {
           tmp.clear ();
           BOOST_FOREACH (lit Lit, cls)
             tmp.push_back (Lit + 2*nOffset);
-          unroller.addClause (&tmp[0], &tmp[0] + tmp.size ());
+          res = res && unroller.addClause (&tmp[0], &tmp[0] + tmp.size ());
         }
+      return res;
     }
     
 

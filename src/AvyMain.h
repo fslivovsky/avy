@@ -40,6 +40,9 @@ namespace avy
     boost::tribool doBmc (unsigned nFrame);
     /// convert interpolant into PDR trace
     boost::tribool doPdrTrace (AigManPtr itp);
+    /// strengthen VC with current Pdr trace
+    void doStrengthenVC ();
+    
     bool validateItp (AigManPtr itp);
   };
 }

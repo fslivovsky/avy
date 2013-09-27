@@ -3,6 +3,8 @@
 #include "AigPrint.h"
 #include "avy/Util/AvyDebug.h"
 #include "avy/Util/AvyAssert.h"
+#include "avy/Util/Global.h"
+
 
 namespace abc
 {
@@ -42,7 +44,7 @@ namespace avy
     for (unsigned i = Vec_PtrSize (m_pPdr->vSolvers); i <= lvl; ++i)
       Pdr_ManCreateSolver (m_pPdr, i);
   }
-  
+
   void Pdr::Print (std::ostream &out)
   {
     out << "PDR BEGIN\n";
@@ -80,12 +82,12 @@ namespace avy
     int j;
     Pdr_Set_t *pCube;
 
-    LOG("pdr_verbose", std::cerr << "Adding cubes to level: " << level << "\n";);
+    LOG("pdr_verbose", logs () << "Adding cubes to level: " << level << "\n";);
 
     Vec_PtrForEachEntry (Pdr_Set_t*, pCubes, pCube, j)
       {
         LOG("pdr_verbose",
-            std::cerr << j << ": " << *pCube << "\n";);
+            logs () << j << ": " << *pCube << "\n";);
         
         Vec_VecPush (m_pPdr->vClauses, level, Pdr_SetDup (pCube));
         m_pPdr->nCubes++;
@@ -183,7 +185,7 @@ namespace avy
   void Pdr::solverAddClause(int k, Pdr_Set_t * pCube )
   {
     LOG("pdr_verbose", 
-        std::cerr << "Adding cube to frame " << k << "\n" << *pCube << "\n";);
+        logs () << "Adding cube to frame " << k << "\n" << *pCube << "\n";);
     
     Pdr_Man_t *p = m_pPdr;
     sat_solver * pSat;
