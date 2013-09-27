@@ -208,12 +208,13 @@ namespace avy
             pCubes = Vec_PtrAlloc (16);
             m_pPdr->getCoverCubes (i, pCubes);
             pdr.addCoverCubes (1, pCubes);
-            
-            Vec_PtrClear (pCubes);
-            m_pPdr->getCoverCubes (i+1, pCubes);
-            pdr.addCoverCubes (2, pCubes);
-            Vec_PtrClear (pCubes);
           }
+
+        Vec_PtrClear (pCubes);
+        m_pPdr->getCoverCubes (i+1, pCubes);
+        pdr.addCoverCubes (i == 0 ? 1 : 2, pCubes);
+        Vec_PtrClear (pCubes);
+
         pdr.solveSafe ();
         
         Vec_PtrClear (pCubes);
