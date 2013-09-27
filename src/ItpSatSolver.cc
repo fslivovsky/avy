@@ -12,7 +12,7 @@ namespace avy
   Aig_Man_t* ItpSatSolver::getInterpolant (std::vector<Vec_Int_t*> &vSharedVars, 
                                            bool fMcM)
   {
-    Stats::resume ("sat1.itp");
+    AVY_MEASURE_FN;
     AVY_ASSERT (!isTrivial ());
     AVY_ASSERT (m_pSat != NULL);
     AVY_ASSERT (vSharedVars.size () >= m_nParts - 1);
@@ -42,7 +42,6 @@ namespace avy
 
     // Release memory
     Sto_ManFree( pSatCnf );
-    Stats::stop ("sat1.itp");
     return pMan;
   }
   

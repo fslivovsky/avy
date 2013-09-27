@@ -90,6 +90,7 @@ namespace avy
     unsigned nMaxFrames = 100;
     for (unsigned nFrame = 0; nFrame < 100; ++nFrame)
       {
+        ScoppedStats loopStats (string(__FUNCTION__) + ".loop");
         Stats::PrintBrunch (outs ());
         Stats::count("Frame");
         tribool res = doBmc (nFrame);
@@ -119,6 +120,8 @@ namespace avy
                 if (doPdrTrace (itp)) 
                   {
                     VERBOSE (0, vout () << "SAFE\n");
+                    VERBOSE(1, m_pPdr->statusLn (vout ()););
+                    m_pPdr->validateInvariant ();
                     return 0;
                   }
 
@@ -139,6 +142,7 @@ namespace avy
   /// Strengthen VC using current PDR trace
   void AvyMain::doStrengthenVC ()
   {
+    AVY_MEASURE_FN;
     m_Vc->resetPreCond ();
     Vec_Ptr_t *pCubes = Vec_PtrAlloc (16);
     
@@ -169,6 +173,9 @@ namespace avy
   /// convert interpolant into PDR trace
   tribool AvyMain::doPdrTrace (AigManPtr itp)
   {
+    AVY_MEASURE_FN;
+    AVY_MEASURE_FN_LAST;
+    
     VERBOSE (1, vout () << "Building PDR trace\n");
     unsigned itpSz = Aig_ManCoNum (&*itp);
     
@@ -211,21 +218,24 @@ namespace avy
         
         Vec_PtrClear (pCubes);
         pdr.getCoverCubes (i == 0 ? 1 : 2, pCubes);
+        if (gParams.reset_cover) m_pPdr->resetCover (i+1);
         m_pPdr->addCoverCubes (i+1, pCubes);
         Vec_PtrFree (pCubes);
         pCubes = NULL;
         
-        if (m_pPdr->push ()) return true;
+        if (m_pPdr->push (gParams.shallow_push ? i : 1)) return true;
         
         VERBOSE(1, m_pPdr->statusLn (vout ()););
       }
     
+    if (gParams.shallow_push && m_pPdr->push ()) return true;
     return boost::indeterminate;
   }
 
     
   tribool AvyMain::doBmc (unsigned nFrame)
   {
+    AVY_MEASURE_FN;
     m_Solver.reset (nFrame + 2, 5000);
     m_Unroller.reset (&m_Solver);
     

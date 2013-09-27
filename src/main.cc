@@ -33,7 +33,11 @@ std::string parseCmdLine (int argc, char** argv)
      "Verbosity level: 0 means silent")
     ("avy", po::value<bool> (&gParams.avy)->default_value(false))
     ("stutter,s", po::value<bool> (&gParams.stutter)->default_value (false),
-     "Stutter circuit instead of reseting to the initial state");
+     "Stutter circuit instead of reseting to the initial state")
+    ("reset-cover", po::value<bool> (&gParams.reset_cover)->default_value (false),
+     "Reset cover of global PDR before updating it")
+    ("shallow-push", po::value<bool> (&gParams.shallow_push)->default_value (false),
+     "Push only updated covers");
   
 
   po::options_description hidden("Hidden options");
@@ -78,6 +82,8 @@ std::string parseCmdLine (int argc, char** argv)
         }
 
       gParams.fName = vm["input-file"].as< string > ();
+
+      VERBOSE(2, vout () << gParams << "\n";);
   
       return gParams.fName;
     }

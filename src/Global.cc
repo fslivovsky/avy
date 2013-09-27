@@ -11,6 +11,8 @@ namespace avy
         << "\tipt = " << p.itp << "\n"
         << "\tavy = " << p.avy << "\n"
         << "\tstutter = " << p.stutter << "\n"
+        << "\treset_cover = " << p.reset_cover << "\n"
+        << "\tshallow_push = " << p.shallow_push << "\n"
         << "END";
     return out;
   }
