@@ -41,7 +41,7 @@ namespace avy
 {
   AvyMain::AvyMain (std::string fname) : 
     m_fName (fname), m_Vc (0), m_Solver(2, 2), 
-    m_Unroller (m_Solver), m_pPdr(0)
+    m_Unroller (m_Solver, true), m_pPdr(0)
   {
     VERBOSE (2, vout () << "Starting ABC\n");
     Abc_Start ();
@@ -161,9 +161,7 @@ namespace avy
         int j;
         Vec_PtrForEachEntry (Pdr_Set_t*, pCubes, pCube, j)
           m_Vc->addPreCondClause (pCube->Lits, (pCube->Lits) + pCube->nLits, i, true);
-        
       }
-    
     Vec_PtrFree (pCubes);
     
   }
@@ -236,10 +234,15 @@ namespace avy
   tribool AvyMain::doBmc (unsigned nFrame)
   {
     AVY_MEASURE_FN;
+
+    tribool res;
+    m_Core.clear ();
+    if ((res = solveWithCore (nFrame)) != false) return res;
+    
     m_Solver.reset (nFrame + 2, 5000);
     m_Unroller.reset (&m_Solver);
+    m_Unroller.setEnabledAssumps (m_Core);
     
-
     for (unsigned i = 0; i <= nFrame; ++i)
       {
         m_Vc->addTr (m_Unroller);
@@ -265,12 +268,51 @@ namespace avy
               logs () << nVar << " ";
             logs () << "\n";
           });
+
+    logs () << "Assumptions: " << m_Unroller.getAssumps ().size () << "\n";
+    BOOST_FOREACH (int a, m_Unroller.getAssumps ())
+      logs () << a << " ";
+    logs () << "\n";
     
     // -- do not expect assumptions yet
     AVY_ASSERT (m_Unroller.getAssumps ().empty ());
-    logs () << "Assumptions: " << m_Unroller.getAssumps ().size () << "\n";
-    return m_Solver.solve (m_Unroller.getAssumps ());
+    res = m_Solver.solve ();
+    return res;
   }
+
+  boost::tribool AvyMain::solveWithCore (unsigned nFrame)
+  {
+    ItpSatSolver sat (2, 2);
+    Unroller<ItpSatSolver> unroller (sat, true);
+
+    for (unsigned i = 0; i <= nFrame; ++i)
+      {
+        m_Vc->addTr (unroller);
+        unroller.newFrame ();
+      }
+    m_Vc->addBad (unroller);
+    
+    tribool res;
+    
+    if ((res = sat.solve (unroller.getAssumps ())) != false) return res;
+    
+    
+    int *core;
+    int coreSz = sat.core (&core);
+    
+    VERBOSE(2, logs () << "Assumption size: " << unroller.getAssumps ().size ()  
+            << " core size: " << coreSz << "\n";);
+
+    m_Core.reset ();
+    for (unsigned i = 0; i < coreSz; ++i)
+      {
+        int a = lit_neg (core[i]);
+        if (m_Core.size () <= a) m_Core.resize (a + 1);
+        m_Core.set (a);
+      }
+    return false;
+  }
+  
   
   bool AvyMain::validateItp (AigManPtr itp)
   {

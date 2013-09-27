@@ -9,6 +9,7 @@
 #include "sat/cnf/cnf.h"
 
 #include "boost/foreach.hpp"
+#include "boost/dynamic_bitset.hpp"
 #include "boost/logic/tribool.hpp"
 
 namespace avy
@@ -33,15 +34,23 @@ namespace avy
      * m_Assumps[i] is the start of assumptions of frame i in m_Assumps
      */
     std::vector<unsigned> m_FrameAssump;
-  
+
+    boost::dynamic_bitset<> *m_pEnabledAssumps;
+
+    bool m_fWithAssump;
   
   
   public:
-    Unroller(SatSolver &s) : 
-      m_pSolver (&s), m_nVars(0), m_nFrames(0) 
+    Unroller(SatSolver &s, bool fWithAssump = false) : 
+      m_pSolver (&s), m_nVars(0), m_nFrames(0),
+      m_pEnabledAssumps(0), m_fWithAssump (fWithAssump)
     { newFrame (); }
 
     ~Unroller () { reset (NULL); }
+
+    
+    void setEnabledAssumps (boost::dynamic_bitset<> &v)
+    { m_pEnabledAssumps = &v; }
 
     /** Reset everything */
     void reset (SatSolver *solver)
@@ -59,6 +68,7 @@ namespace avy
       
       m_nVars = 0;
       m_nFrames = 0;
+      m_pEnabledAssumps = NULL;
       
       if (solver)
         {
@@ -86,8 +96,8 @@ namespace avy
     }
 
 
-    /// register an assumption
-    void addAssump (int a) { m_Assumps.push_back (a); }
+    /// register literal as an assumption
+    void addAssump (lit a) { m_Assumps.push_back (a); }
   
     /// return all assumptions
     std::vector<int> &getAssumps () { return m_Assumps; }
@@ -151,7 +161,7 @@ namespace avy
     
 
     /** Add glue clauses between current Inputs and previous frame outputs */
-    void glueOutIn (bool fWithAssump = false)
+    void glueOutIn ()
     {
       AVY_ASSERT (m_nFrames > 1);
       AVY_ASSERT (Vec_IntSize (m_vOutputs.at (frame () - 1)) == 
@@ -164,12 +174,23 @@ namespace avy
     
       Vec_Int_t *ins = m_vInputs.at (frame ());
       
-      if (fWithAssump)
+      if (m_fWithAssump)
         {
           int a = freshVar ();
-          addAssump (a);
-          Lit[2] = toLitCond (a, 1);
-          litSz = 3;
+          lit aLit = toLit (a);
+          
+          // -- if known assumption, either add the clause or skip it
+          // -- based on the value
+          if (m_pEnabledAssumps && aLit < m_pEnabledAssumps->size ())
+            {
+              if (!m_pEnabledAssumps->test (aLit)) return;
+            }
+          else // unknown assumption, proceed as usual
+            {
+              addAssump (aLit);
+              Lit[2] = lit_neg (aLit);
+              litSz = 3;
+            }
         }
       
       Vec_IntForEachEntry (m_vOutputs.at (frame () - 1), out, i)

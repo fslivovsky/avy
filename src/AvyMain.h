@@ -10,6 +10,7 @@
 #include <string>
 #include "boost/logic/tribool.hpp"
 #include "boost/foreach.hpp"
+#include "boost/dynamic_bitset.hpp"
 
 #include "boost/noncopyable.hpp"
 
@@ -29,7 +30,9 @@ namespace avy
     Unroller<ItpSatSolver> m_Unroller;
 
     Pdr *m_pPdr;
-
+    
+    dynamic_bitset<> m_Core;
+    
   public:
     AvyMain(std::string fname);
     
@@ -45,6 +48,7 @@ namespace avy
     void doStrengthenVC ();
     
     bool validateItp (AigManPtr itp);
+    boost::tribool solveWithCore (unsigned nFrame);
   };
 }
 
