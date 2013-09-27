@@ -102,9 +102,8 @@ namespace avy
         else if (!res)
           {
             VERBOSE(0, vout () << "UNSAT from BMC at frame: " << nFrame << "\n";);
-            if (m_Solver.isTrivial ()) 
-              logs () << "Trivialy UNSAT\n";
-            else
+            AVY_ASSERT (!m_Solver.isTrivial () && "Cannot handle trivial unsat");
+            
               {
                 AigManPtr itp = 
                   aigPtr (m_Solver.getInterpolant (m_Unroller.getAllOutputs ()));
