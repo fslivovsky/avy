@@ -227,7 +227,7 @@ namespace avy
       }
     
     if (gParams.shallow_push && m_pPdr->push ()) return true;
-    return boost::indeterminate;
+    return boost::tribool (boost::indeterminate);
   }
 
     

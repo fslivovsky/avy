@@ -40,7 +40,7 @@ namespace avy
         {
         case 1: return true;
         case 0: return false;
-        case -1: return boost::indeterminate;
+        case -1: return boost::tribool (boost::indeterminate);
         }
     AVY_UNREACHABLE ();
     }

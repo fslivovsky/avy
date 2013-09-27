@@ -42,7 +42,7 @@ namespace avy
         {
         case l_False: return false;
         case l_True: return true;
-        case l_Undef: return boost::indeterminate;
+        case l_Undef: return boost::tribool (boost::indeterminate);
         default: AVY_UNREACHABLE();
         }
     }
@@ -63,7 +63,7 @@ namespace avy
     {
       if (m_pSat) sat_solver2_delete (m_pSat);
       m_Trivial = false;
-      m_State = boost::indeterminate;
+      m_State = boost::tribool (boost::indeterminate);
       m_pSat = sat_solver2_new ();
       AVY_ASSERT (m_pSat != NULL);
 
@@ -107,7 +107,7 @@ namespace avy
     boost::tribool solve (LitVector &assumptions)
     {
       if (isTrivial ()) return false;
-      if (!assumptions.empty ()) m_State = boost::indeterminate;
+      if (!assumptions.empty ()) m_State = boost::tribool (boost::indeterminate);
       
       if (isSolved ()) return m_State;
       

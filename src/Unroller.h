@@ -177,10 +177,12 @@ namespace avy
     }
     
 
-    boost::tribool getValue (lit a)
+    boost::tribool eval (lit a)
     {
-      if (!m_pEnabledAssumps) return boost::indeterminate;
-      if (a >= m_pEnabledAssumps->size ()) return boost::indeterminate;
+      boost::tribool res(boost::indeterminate);
+      
+      if (!m_pEnabledAssumps) return res;
+      if (a >= m_pEnabledAssumps->size ()) return res;
       return m_pEnabledAssumps->test (a);
     }
     
@@ -204,8 +206,8 @@ namespace avy
           int a = freshVar ();
           lit aLit = toLit (a);
           
-          boost::tribool aVal = getValue (aLit);
-          if (aVal == boost::indeterminate)
+          boost::tribool aVal = eval (aLit);
+          if (boost::indeterminate(aVal))
             {
               addAssump (aLit);
               Lit[2] = lit_neg (aLit);
@@ -217,6 +219,48 @@ namespace avy
       
       Vec_IntForEachEntry (m_vOutputs.at (frame () - 1), out, i)
         {
+          Lit[0] = toLit (out);
+          Lit[1] = toLitCond (Vec_IntEntry (ins, i), 1);
+          addClause (Lit, Lit+litSz);
+          Lit[0] = lit_neg (Lit[0]);
+          Lit[1] = lit_neg (Lit[1]);
+          addClause (Lit, Lit+litSz);
+        }
+    }
+    
+
+    void glueOutIn_off ()
+    {
+      AVY_ASSERT (m_nFrames > 1);
+      AVY_ASSERT (Vec_IntSize (m_vOutputs.at (frame () - 1)) == 
+                  Vec_IntSize (m_vInputs.at (frame ())));
+
+      lit Lit[3];
+      unsigned litSz = 2;
+      
+      int out, i;
+    
+      Vec_Int_t *ins = m_vInputs.at (frame ());
+
+      Vec_IntForEachEntry (m_vOutputs.at (frame () - 1), out, i)
+        {      
+          if (m_fWithAssump)
+            {
+              int a = freshVar ();
+              lit aLit = toLit (a);
+          
+              boost::tribool aVal = eval (aLit);
+              logs () << "assumption here\n";
+              if (boost::indeterminate (aVal))
+                {
+                  addAssump (aLit);
+                  Lit[2] = lit_neg (aLit);
+                  litSz = 3;
+                }
+              else if (!aVal) return; // disabled assumption
+              // ow, assumption enabled proceed as usual
+            }
+      
           Lit[0] = toLit (out);
           Lit[1] = toLitCond (Vec_IntEntry (ins, i), 1);
           addClause (Lit, Lit+litSz);
