@@ -182,7 +182,7 @@ namespace avy
       boost::tribool res(boost::indeterminate);
       
       if (!m_pEnabledAssumps) return res;
-      if (a >= m_pEnabledAssumps->size ()) return res;
+      if (a >= m_pEnabledAssumps->size ()) return false;
       return m_pEnabledAssumps->test (a);
     }
     
@@ -229,7 +229,7 @@ namespace avy
     }
     
 
-    void glueOutIn_off ()
+    void glueOutIn_one_per_wire ()
     {
       AVY_ASSERT (m_nFrames > 1);
       AVY_ASSERT (Vec_IntSize (m_vOutputs.at (frame () - 1)) == 
@@ -250,15 +250,14 @@ namespace avy
               lit aLit = toLit (a);
           
               boost::tribool aVal = eval (aLit);
-              logs () << "assumption here\n";
-              if (boost::indeterminate (aVal))
+              if (!aVal) return;
+              else if (aVal) ; // nothing
+              else
                 {
                   addAssump (aLit);
                   Lit[2] = lit_neg (aLit);
                   litSz = 3;
                 }
-              else if (!aVal) return; // disabled assumption
-              // ow, assumption enabled proceed as usual
             }
       
           Lit[0] = toLit (out);
