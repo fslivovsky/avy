@@ -102,8 +102,19 @@ namespace avy
         else if (!res)
           {
             VERBOSE(0, vout () << "UNSAT from BMC at frame: " << nFrame << "\n";);
-            AVY_ASSERT (!m_Solver.isTrivial () && "Cannot handle trivial unsat");
-            
+            //AVY_ASSERT (!m_Solver.isTrivial () && "Cannot handle trivial unsat");
+            if (m_Solver.isTrivial ())
+              {
+                m_pPdr->setLimit (m_Unroller.frame () + 1);
+                if (m_pPdr->solve ()) 
+                  {
+                    VERBOSE (1, m_pPdr->statusLn (vout ()););
+                    m_pPdr->validateInvariant ();
+                    return 0;
+                  }
+                m_pPdr->setLimit (100000);
+              }
+            else
               {
                 AigManPtr itp = 
                   aigPtr (m_Solver.getInterpolant (m_Unroller.getAllOutputs ()));
@@ -123,10 +134,8 @@ namespace avy
                     m_pPdr->validateInvariant ();
                     return 0;
                   }
-
-                doStrengthenVC ();
-                
               }
+            doStrengthenVC ();
           }
         else 
           {
@@ -317,20 +326,20 @@ namespace avy
     LitVector core (pCore, pCore + coreSz);
     std::reverse (core.begin (), core.end ());
     
-    Stats::resume ("unsat_core");
-    for (int i = 0; i < core.size (); ++i)
-      {
-        lit tmp = core [i];
-        core[i] = core.back ();
-        if (!sat.solve (core, core.size () - 1))
-          {
-            core.pop_back ();
-            --i;
-          }
-        else
-          core[i] = tmp;
-      }
-    Stats::stop ("unsat_core");
+    // Stats::resume ("unsat_core");
+    // for (int i = 0; i < core.size (); ++i)
+    //   {
+    //     lit tmp = core [i];
+    //     core[i] = core.back ();
+    //     if (!sat.solve (core, core.size () - 1))
+    //       {
+    //         core.pop_back ();
+    //         --i;
+    //       }
+    //     else
+    //       core[i] = tmp;
+    //   }
+    // Stats::stop ("unsat_core");
 
     VERBOSE(2, logs () << "Original core: " << coreSz 
             << " reduced " << core.size () << "\n");
