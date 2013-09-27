@@ -9,6 +9,7 @@
 #include "AigUtils.h"
 
 #include "sat/bsat/satSolver.h"
+#include "sat/bsat/satStore.h"
 
 #include <vector>
 
@@ -92,6 +93,15 @@ namespace avy
             logs () << (lit_sign (*it) ? "-" : "") << lit_var (*it) << " ";
 
           logs () << "\n";);
+      
+      if (m_Trivial && m_pSat->pStore)
+        {
+          int RetValue = 
+            Sto_ManAddClause( (Sto_Man_t *)m_pSat->pStore, NULL, NULL );
+          AVY_ASSERT( RetValue );
+          (void) RetValue;
+        }
+
       return !m_Trivial;
     }
     
