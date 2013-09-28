@@ -60,12 +60,34 @@ namespace avy
     SafetyVC vc (&*m_Aig);
     m_Vc = &vc;
 
-    unsigned nMaxFrames = 100;
-    for (unsigned nFrame = 0; nFrame < 100; ++nFrame)
+    unsigned nMaxFrames = 100000;
+    for (unsigned nFrame = 0; nFrame < nMaxFrames; ++nFrame)
       {
         ScoppedStats loopStats (string(__FUNCTION__) + ".loop");
         Stats::PrintBrunch (outs ());
         Stats::count("Frame");
+
+        if (nFrame >= gParams.pdr)
+          {
+            int res = m_pPdr->solve ();
+            VERBOSE (2, m_pPdr->statusLn (vout ()));
+            if (res == 1) 
+              {
+                m_pPdr->validateInvariant ();
+                return 0;
+              }
+            else if (res == 0)
+              {
+                outs () << "CEX\n";
+                return 1;
+              }
+            else
+              {
+                outs () << "UNKNOWN\n";
+                return 2;
+              }
+          }
+        
         tribool res = doBmc (nFrame);
         if (res)
           {

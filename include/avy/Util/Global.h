@@ -40,6 +40,9 @@ namespace avy
 
     /** Make Tr0 special */
     bool tr0;
+
+    /** Frame at which to start PDR */
+    int pdr;
     
   };
   

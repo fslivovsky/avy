@@ -50,7 +50,10 @@ std::string parseCmdLine (int argc, char** argv)
      "Enable interface abstraction (one-assumption-per-wire)")
     ("tr0",
      po::value<bool> (&gParams.tr0)->default_value (false)->implicit_value(true),
-     "Make only Tr0 be special (stutter or reset init)");
+     "Make only Tr0 be special (stutter or reset init)")
+    ("pdr",
+     po::value<int> (&gParams.pdr)->default_value (100000),
+     "Frame at which to drop to PDR");
   
   po::options_description hidden("Hidden options");
   hidden.add_options()
