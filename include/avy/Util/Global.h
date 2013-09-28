@@ -43,6 +43,9 @@ namespace avy
 
     /** Frame at which to start PDR */
     int pdr;
+
+    /** minimize suffix of interpolation sequence */
+    bool min_suffix;
     
   };
   

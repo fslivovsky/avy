@@ -9,6 +9,7 @@
 #include "avy/Util/Stats.h"
 
 #include "Unroller.h"
+#include "boost/range/algorithm/copy.hpp"
 
 using namespace boost;
 using namespace std;
@@ -301,8 +302,8 @@ namespace avy
 
   boost::tribool AvyMain::solveWithCore (unsigned nFrame)
   {
-    ItpSatSolver sat (2, 2);
-    Unroller<ItpSatSolver> unroller (sat, true);
+    ItpSatSolver2 sat (2);
+    Unroller<ItpSatSolver2> unroller (sat, true);
 
     for (unsigned i = 0; i <= nFrame; ++i)
       {
@@ -313,9 +314,26 @@ namespace avy
     unroller.pushBadUnit ();
     
     tribool res;
-    
+
     if ((res = sat.solve (unroller.getAssumps ())) != false) return res;
-    
+
+    if (gParams.min_suffix)
+      {
+        // -- minimize suffix
+        ScoppedStats _s_("min_suffix");
+        LitVector assumps;
+        assumps.reserve (unroller.getAssumps ().size ());
+        for (unsigned i = unroller.frame (); i >= 0; --i)
+          {
+            boost::copy (unroller.getFrameAssumps (i), std::back_inserter (assumps));
+            res = sat.solve (assumps);
+            if (!res)
+              {
+                VERBOSE(2, if (i > 0) vout () << "Killed " << i << " of prefix\n";);
+                break;
+              }
+          }
+      }
     
     int *pCore;
     int coreSz = sat.core (&pCore);
@@ -327,7 +345,7 @@ namespace avy
     std::reverse (core.begin (), core.end ());
     
     Stats::resume ("unsat_core");
-    for (int i = 0; gParams.min_core && i < core.size (); ++i)
+    for (int i = 0; gParams.min_core && core.size () > 1 && i < core.size (); ++i)
       {
         lit tmp = core [i];
         core[i] = core.back ();

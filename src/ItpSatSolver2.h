@@ -104,7 +104,7 @@ namespace avy
     bool isSolved () { return m_Trivial || m_State || !m_State; }
 
     /// decide context with assumptions
-    boost::tribool solve (LitVector &assumptions)
+    boost::tribool solve (LitVector &assumptions, int maxSize = -1)
     {
       if (isTrivial ()) return false;
       if (!assumptions.empty ()) m_State = boost::tribool (boost::indeterminate);
@@ -115,7 +115,8 @@ namespace avy
 
 
       lit *beg = NULL;
-      if (!assumptions.empty ()) beg = &assumptions[0];
+      if (maxSize < 0) maxSize = assumptions.size ();
+      if (maxSize > 0) beg = &assumptions[0];
 
       int RetValue;
       if (m_pSat->qtail != m_pSat->qhead)

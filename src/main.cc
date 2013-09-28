@@ -53,7 +53,10 @@ std::string parseCmdLine (int argc, char** argv)
      "Make only Tr0 be special (stutter or reset init)")
     ("pdr",
      po::value<int> (&gParams.pdr)->default_value (100000),
-     "Frame at which to drop to PDR");
+     "Frame at which to drop to PDR")
+    ("min-suffix",
+     po::value<bool> (&gParams.min_suffix)->default_value (false)->implicit_value(true),
+     "Minimize the suffix of the interpolation sequence");
   
   po::options_description hidden("Hidden options");
   hidden.add_options()

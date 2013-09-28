@@ -96,7 +96,7 @@ namespace avy
 
           logs () << "\n";);
       
-      if (m_Trivial && m_pSat->pStore)
+      if (false && m_Trivial && m_pSat->pStore)
         {
           int RetValue = 
             Sto_ManAddClause( (Sto_Man_t *)m_pSat->pStore, NULL, NULL );

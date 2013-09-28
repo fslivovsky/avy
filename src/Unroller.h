@@ -126,9 +126,10 @@ namespace avy
     /// return assumptions for a given frame
     std::pair<int*,int*> getFrameAssumps (unsigned nFrame)
     {
+      AVY_ASSERT (nFrame < m_FrameAssump.size ());
       int *bgn = &m_Assumps[0] + m_FrameAssump.at (nFrame);
       int *end = &m_Assumps[0];
-      if (nFrame == m_FrameAssump.size ())
+      if (nFrame + 1 == m_FrameAssump.size ())
         end += m_Assumps.size ();
       else
         end += m_FrameAssump.at (nFrame + 1);
