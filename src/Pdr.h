@@ -83,8 +83,8 @@ namespace avy
     tribool push (int kMin=1, int kMax=0) { return tbool (pushClauses (kMin, kMax)); }
     
 
-    void validateInvariant () { Pdr_ManVerifyInvariant (m_pPdr); }
-      
+    bool validateInvariant ();
+    
 
     friend std::ostream &operator<< (std::ostream& out, Pdr &pdr);
   };

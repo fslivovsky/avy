@@ -77,7 +77,7 @@ namespace avy
             VERBOSE (2, m_pPdr->statusLn (vout ()));
             if (res == 1) 
               {
-                m_pPdr->validateInvariant ();
+                AVY_ASSERT (m_pPdr->validateInvariant ());
                 return 0;
               }
             else if (res == 0)
@@ -110,8 +110,7 @@ namespace avy
                 if (nPdrRes == 1)
                   {
                     VERBOSE (1, m_pPdr->statusLn (vout ()););
-                    m_pPdr->validateInvariant ();
-                    return 0;
+                    return m_pPdr->validateInvariant () ? 0 : 3;
                   }
                 m_pPdr->setLimit (100000);
               }
@@ -132,8 +131,7 @@ namespace avy
                   {
                     VERBOSE (0, vout () << "SAFE\n");
                     VERBOSE(1, m_pPdr->statusLn (vout ()););
-                    m_pPdr->validateInvariant ();
-                    return 0;
+                    return m_pPdr->validateInvariant () ? 0 : 3;
                   }
               }
             doStrengthenVC ();

@@ -10,6 +10,9 @@
 namespace abc
 {
   int * Pdr_ManSortByPriority( Pdr_Man_t * p, Pdr_Set_t * pCube );
+  int Pdr_ManFindInvariantStart( Pdr_Man_t * p );
+  Vec_Ptr_t * Pdr_ManCollectCubes( Pdr_Man_t * p, int kStart );
+  
 }
   
 
@@ -32,12 +35,12 @@ namespace avy
 
   Pdr::~Pdr ()
   {
-    std::cout.flush ();
-    std::cerr.flush ();
-    
-    Pdr_Par_t *p = m_pPdr->pPars;
-    Pdr_ManStop (m_pPdr);
-    ABC_FREE (p);
+    if (m_pPdr)
+      {
+        Pdr_Par_t *p = m_pPdr->pPars;
+        Pdr_ManStop (m_pPdr);
+        ABC_FREE (p);
+      }
   }
 
   void Pdr::ensureFrames (unsigned lvl)
@@ -777,5 +780,74 @@ namespace avy
       }
     AVY_ASSERT(!safe);
     return -1;
-  }  
+  }
+
+  /// Adapted from Pdr_ManVerifyInvariant
+  bool Pdr::validateInvariant ()
+  {
+    bool res = true;
+
+    Pdr_Man_t *p = m_pPdr;
+    sat_solver * pSat;
+    Vec_Int_t * vLits;
+    Vec_Ptr_t * vCubes;
+    Pdr_Set_t * pCube;
+    int i, kStart, kThis, RetValue, Counter = 0;
+
+    // collect cubes used in the inductive invariant
+    kStart = Pdr_ManFindInvariantStart( p );
+    vCubes = Pdr_ManCollectCubes( p, kStart );
+    // create solver with the cubes
+    kThis = Vec_PtrSize(p->vSolvers);
+    pSat  = Pdr_ManCreateSolver( p, kThis );
+
+    // add the clauses
+    Vec_PtrForEachEntry( Pdr_Set_t *, vCubes, pCube, i )
+    {
+        vLits = Pdr_ManCubeToLits( p, kThis, pCube, 1, 0 );
+        RetValue = sat_solver_addclause( pSat, Vec_IntArray(vLits), Vec_IntArray(vLits) + Vec_IntSize(vLits) );
+        AVY_ASSERT( RetValue );
+        sat_solver_compress( pSat );
+    }
+    // check each clause
+    Vec_PtrForEachEntry( Pdr_Set_t *, vCubes, pCube, i )
+    {
+        vLits = Pdr_ManCubeToLits( p, kThis, pCube, 0, 1 );
+        RetValue = sat_solver_solve( pSat, Vec_IntArray(vLits), Vec_IntArray(vLits) + Vec_IntSize(vLits), 0, 0, 0, 0 );
+        if ( RetValue != l_False )
+        {
+          VERBOSE (2, vout () << "Warning: " << 
+                   "Verification of clause " << i << " failed.\n";);
+          Counter++;
+          res = false;
+        }
+    }
+    int nPropHolds = Pdr_ManCheckCube(p, kThis, NULL, NULL, 100000);
+    if (nPropHolds != 1)
+      {
+        VERBOSE(2, vout () << "Verification failed. Invariant is not SAFE\n";);
+        res = false;
+      }
+    else if ( Counter)
+      VERBOSE(2, vout () << "Warning: " << 
+              "Verification of " << Counter << " clauses has failed.\n";);
+    else
+      VERBOSE(2, vout () << "Verification of invariant with " 
+              << Vec_PtrSize(vCubes) << " clauses was successful.";);
+
+    Vec_PtrFree( vCubes );
+    
+
+    // -- in debug mode, fail with assertion
+    AVY_ASSERT (res && "PDR: Validation of Invariant Failed");
+    
+    // -- delete pdr object to avoid accidental use
+    Pdr_Par_t *pars = m_pPdr->pPars;
+    Pdr_ManStop (m_pPdr);
+    ABC_FREE (pars);
+    m_pPdr = NULL;
+
+    return res;
+  }
+  
 }
