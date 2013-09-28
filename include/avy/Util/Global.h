@@ -52,6 +52,9 @@ namespace avy
 
     /** by how much to increase BMC in each iteration */
     unsigned kStep;
+
+    /** stick error output */
+    bool stick_error;
     
   };
   

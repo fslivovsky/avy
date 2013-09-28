@@ -62,7 +62,10 @@ std::string parseCmdLine (int argc, char** argv)
      "Always use satSolver (do not use satSolver2)")
     ("kstep,k",
      po::value<unsigned> (&gParams.kStep)->default_value (1),
-     "Step size for BMC problems");
+     "Step size for BMC problems")
+    ("stick-error",
+     po::value<bool> (&gParams.stick_error)->default_value (false)->implicit_value (true),
+     "Stick error output");
   
   
   po::options_description hidden("Hidden options");

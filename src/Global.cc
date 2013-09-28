@@ -13,6 +13,15 @@ namespace avy
         << "\tstutter = " << p.stutter << "\n"
         << "\treset_cover = " << p.reset_cover << "\n"
         << "\tshallow_push = " << p.shallow_push << "\n"
+        << "\treset-cover = " << p.reset_cover << "\n"
+        << "\tmin-core = " << p.min_core << "\n"
+        << "\tabstraction = " << p.abstraction << "\n"
+        << "\ttr0 = " << p.tr0 << "\n"
+        << "\tpdr = " << p.pdr << "\n"
+        << "\tmin-suffix = " << p.min_suffix << "\n"
+        << "\tsat1 = " << p.sat1 << "\n"
+        << "\tkstep = " << p.kStep << "\n"
+        << "\tstick-error = " << p.stick_error << "\n"
         << "END";
     return out;
   }

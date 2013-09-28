@@ -22,7 +22,12 @@ namespace avy
     if (gParams.stutter)
       aig = aigPtr (Aig_AddStutterPi (&*m_Circuit));
     else 
-      aig = aigPtr (Aig_AddResetPi (&*m_Circuit));
+      {
+        aig = aigPtr (Aig_AddResetPi (&*m_Circuit));
+        if (gParams.stick_error)
+          aig = aigPtr (Aig_AddStutterPi (&*aig));
+      }
+    
     
     // -- construct Tr 
     Aig_Man_t *pTr0 = Aig_ManDupNoPo (&*aig);
