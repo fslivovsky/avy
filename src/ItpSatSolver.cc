@@ -26,7 +26,7 @@ namespace avy
 
     // Create the interpolating manager and extract the interpolation-seq
     // with m_nParts-1 interpolants
-    Ints_Man_t* pManInter = Ints_ManAlloc(m_nParts-1);
+    Ints_Man_t* pManInter = Ints_ManAlloc(m_nParts-1, gParams.itp);
     // XXX how to wire fMcM properly?
     Aig_Man_t* pMan = (Aig_Man_t *) Ints_ManInterpolate( pManInter,
                                                          pSatCnf, 
