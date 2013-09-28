@@ -59,7 +59,11 @@ std::string parseCmdLine (int argc, char** argv)
      "Minimize the suffix of the interpolation sequence")
     ("sat1",
      po::value<bool> (&gParams.sat1)->default_value (false)->implicit_value (true),
-     "Always use satSolver (do not use satSolver2)");
+     "Always use satSolver (do not use satSolver2)")
+    ("kstep,k",
+     po::value<unsigned> (&gParams.kStep)->default_value (1),
+     "Step size for BMC problems");
+  
   
   po::options_description hidden("Hidden options");
   hidden.add_options()

@@ -58,11 +58,14 @@ namespace avy
 
   int AvyMain::run ()
   {
+
+    if (gParams.kStep > 1 && !gParams.stutter)
+      outs () << "Warning: using kStep>1 without stuttering is unsound\n";
     SafetyVC vc (&*m_Aig);
     m_Vc = &vc;
 
     unsigned nMaxFrames = 100000;
-    for (unsigned nFrame = 0; nFrame < nMaxFrames; ++nFrame)
+    for (unsigned nFrame = 0; nFrame < nMaxFrames; nFrame+=gParams.kStep)
       {
         ScoppedStats loopStats (string(__FUNCTION__) + ".loop");
         Stats::PrintBrunch (outs ());

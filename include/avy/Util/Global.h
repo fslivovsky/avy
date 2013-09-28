@@ -49,6 +49,9 @@ namespace avy
 
     /** always use sat_solver1 */
     bool sat1;
+
+    /** by how much to increase BMC in each iteration */
+    unsigned kStep;
     
   };
   
