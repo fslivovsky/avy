@@ -71,6 +71,11 @@ namespace avy
    */
   abc::Aig_Man_t *Aig_AddStutterPi (abc::Aig_Man_t *p);
 
+  /**
+   * Duplicate and stutter the unique first Po
+   * stick-on-error
+   */
+  abc::Aig_Man_t *Aig_AddStutterPo (abc::Aig_Man_t *p);
 
   /**
    * Create an AIG with PO = AND (!PI_0, ..., !PI_N)
