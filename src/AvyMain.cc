@@ -447,7 +447,7 @@ namespace avy
         
         if (satSolver.solve (unroller.getAssumps ()) != false) 
           {
-            errs () << "\nFailed validation at i: " << i << "\n";
+            outs () << "\nFailed validation at i: " << i << "\n";
             return false;
           }
         else
@@ -455,6 +455,40 @@ namespace avy
         
       }
     
+    // validate against bad state
+    for (unsigned i = 0; i < coNum; ++i)
+    {
+      ItpSatSolver satSolver (2, 5000);
+      Unroller<ItpSatSolver> unroller (satSolver);
+      
+      unroller.freshBlock (cnfItp->nVars);
+      unroller.addCnf (&*cnfItp);
+      
+      lit Lit = toLit (cnfItp->pVarNums [Aig_ManCo (&*itp, i)->Id]);
+      satSolver.addClause (&Lit, &Lit + 1);
+  
+      // -- register outputs
+      Aig_Obj_t *pCi;
+      int j;
+      Aig_ManForEachCi (&*itp, pCi, j)
+        unroller.addOutput (cnfItp->pVarNums [pCi->Id]);
+            
+      unroller.newFrame ();
+  
+      m_Vc->addBad (unroller);
+      unroller.pushBadUnit ();
+        
+      if (satSolver.solve (unroller.getAssumps ()) != false)
+        {
+          outs () << "\nFailed SAFE validation at: " << i << "\n";
+          return false;
+        }
+      else
+        outs () << "!" << std::flush;
+      
+    }
+    
+
     outs () << " Done\n" << std::flush;
     return true;    
   }
