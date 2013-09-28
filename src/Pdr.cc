@@ -377,7 +377,7 @@ namespace avy
   }
 
   
-  int Pdr::pushClauses (int kMin)
+  int Pdr::pushClauses (int kMin, int pkMax)
   {
     AVY_MEASURE_FN;
     Pdr_Man_t *p = m_pPdr;
@@ -388,7 +388,9 @@ namespace avy
     abctime clk = Abc_Clock();
     //assert( p->iUseFrame > 0 );
     LOG("pdr_verbose", std::cerr << __FILE__ << ":" << __LINE__ << "\n");
-    
+
+    if (pkMax >= kMin && pkMax <= kMax) kMax = pkMax;
+
     Vec_VecForEachLevelStartStop( p->vClauses, vArrayK, k, 1, kMax )
     {
       if (k < kMin) continue;

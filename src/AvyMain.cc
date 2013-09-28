@@ -227,7 +227,10 @@ namespace avy
         Vec_PtrFree (pCubes);
         pCubes = NULL;
         
-        if (m_pPdr->push (gParams.shallow_push ? i : 1)) return true;
+        int kMin = gParams.shallow_push ? i+1 : 1;
+        int kMax = 0;
+        
+        if (m_pPdr->push (kMin, kMax)) return true;
         
         VERBOSE(1, m_pPdr->statusLn (vout ()););
       }

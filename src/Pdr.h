@@ -32,7 +32,7 @@ namespace avy
      * 
      * \return 1 if an invariant is found, 0 if not, -1 on internal error
      */
-    int pushClauses (int kMin=1);
+    int pushClauses (int kMin=1, int pkMax=0);
   
     tribool tbool (int n)
     {
@@ -80,7 +80,7 @@ namespace avy
     /** Special version of solve used internally 
      */
     int solveSafe () { return solve (true); }
-    tribool push (int kMin=1) { return tbool (pushClauses (kMin)); }
+    tribool push (int kMin=1, int kMax=0) { return tbool (pushClauses (kMin, kMax)); }
     
 
     void validateInvariant () { Pdr_ManVerifyInvariant (m_pPdr); }
