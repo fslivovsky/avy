@@ -384,21 +384,15 @@ namespace avy
     // -- registers
     Aig_Obj_t *pLi;
     Saig_ManForEachLi( p, pLi, i )
-      {
-        Aig_Obj_t* pTmp = Aig_Mux(pNew, 
-                                  pStutterPi,
-                                  Saig_ManLo (pNew, i),
-                                  Aig_ObjChild0Copy(pLi));
+      Aig_ObjCreateCo (pNew, Aig_ObjChild0Copy (pLi));
 
-        Aig_ObjCreateCo( pNew, pTmp );
-      }
 
 
     // -- new Li = newPoDriver || new Lo
     Aig_ObjCreateCo (pNew, Aig_Or (pNew, pNewLo, pNewPoDriver));
     // -- re-connect newPo
     Aig_ObjDisconnect (pNew, pNewPo);
-    Aig_ObjConnect (pNew, pNewLo, Aig_Or (pNew, pNewLo, pNewPoDriver), NULL);
+    Aig_ObjConnect (pNew, pNewPo, Aig_Or (pNew, pNewLo, pNewPoDriver), NULL);
 
     Aig_ManCleanup( pNew );
     return pNew;

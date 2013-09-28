@@ -19,16 +19,28 @@ namespace avy
     m_Circuit = aigPtr (Aig_ManDupSimple (pCircuit));
 
     AigManPtr aig;
+    AigManPtr stuckErrorAig;
     if (gParams.stutter)
       aig = aigPtr (Aig_AddStutterPi (&*m_Circuit));
     else 
       {
-        aig = aigPtr (Aig_AddResetPi (&*m_Circuit));
         if (gParams.stick_error)
-          aig = aigPtr (Aig_AddStutterPi (&*aig));
+          {
+            stuckErrorAig = aigPtr (Aig_AddStutterPo (&*m_Circuit));
+            aig = stuckErrorAig;
+            // XXX HACK XXX
+            // Add one extra reg to the INPUT circuit
+            Aig_ObjCreateCi (pCircuit);
+            Aig_ObjCreateCo (pCircuit, Aig_ManConst0 (pCircuit));
+            pCircuit->nRegs++;
+            m_Circuit = aigPtr (Aig_ManDupSimple (pCircuit));
+          }
+        else
+          aig = m_Circuit;
+        
+        aig = aigPtr (Aig_AddResetPi (&*aig));
       }
-    
-    
+        
     // -- construct Tr 
     Aig_Man_t *pTr0 = Aig_ManDupNoPo (&*aig);
     Aig_ManRebuild (&pTr0);
@@ -37,7 +49,12 @@ namespace avy
 
     if (gParams.tr0)
       {
-        Aig_Man_t *pTr = Aig_ManDupNoPo (&*m_Circuit);
+        Aig_Man_t *pTr;
+        if (gParams.stick_error)
+          pTr = Aig_ManDupNoPo (&*stuckErrorAig);
+        else
+          pTr = Aig_ManDupNoPo (&*m_Circuit);
+        
         Aig_ManRebuild (&pTr);
         m_Tr = aigPtr (pTr);
         m_cnfTr = cnfPtr (Cnf_Derive (&*m_Tr, Aig_ManRegNum (&*m_Tr)));
