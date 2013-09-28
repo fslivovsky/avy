@@ -103,11 +103,12 @@ std::string parseCmdLine (int argc, char** argv)
 int main(int argc, char* argv[])
 {
   std::string fileName = parseCmdLine (argc, argv);
-
+  int ret = 0;
+  
   if (gParams.avy)
     {
       AvyMain avy (fileName);
-      return avy.run ();
+      ret = avy.run ();
     }
   else
     {
@@ -116,6 +117,7 @@ int main(int argc, char* argv[])
     }
 
   Stats::PrintBrunch (outs ());
+  return ret;
 }
 
 
