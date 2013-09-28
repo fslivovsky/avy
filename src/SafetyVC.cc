@@ -25,10 +25,13 @@ namespace avy
       aig = aigPtr (Aig_AddResetPi (&*m_Circuit));
     
     // -- construct Tr 
-    Aig_Man_t *pTr = Aig_ManDupNoPo (&*aig);
-    Aig_ManRebuild (&pTr);
-    m_Tr = aigPtr (pTr);
-    m_cnfTr = cnfPtr (Cnf_Derive (&*m_Tr, Aig_ManRegNum (m_Tr.get ())));    
+    Aig_Man_t *pTr0 = Aig_ManDupNoPo (&*aig);
+    Aig_ManRebuild (&pTr0);
+    m_Tr0 = aigPtr (pTr0);
+    m_cnfTr0 = cnfPtr (Cnf_Derive (&*m_Tr0, Aig_ManRegNum (&*m_Tr0)));    
+
+    m_Tr = m_Tr0;
+    m_cnfTr = m_cnfTr0;
 
     // -- construct Bad
     Aig_Man_t *pBad = Aig_ManDupSinglePo (&*aig, 0, false);

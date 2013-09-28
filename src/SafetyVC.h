@@ -51,11 +51,17 @@ namespace avy
     /// the bad state
     AigManPtr m_Bad;
 
+    /// Tr of the 0 frame
+    AigManPtr m_Tr0;
+    
     /// Cnf of Tr
     CnfPtr m_cnfTr;
     
     /// Cnf of Bad sates
     CnfPtr m_cnfBad;
+    
+    /// Cnf of Tr0
+    CnfPtr m_cnfTr0;
 
     typedef std::vector<lit> Clause;
     typedef std::vector<Clause> Clauses;
@@ -186,6 +192,12 @@ namespace avy
               Lits[0] = toLitCond (m_cnfTr->pVarNums [pObj->Id], 1);
               unroller.addClause (Lits, Lits + 1);
             }
+
+          unroller.addCnf (&*m_cnfTr0);
+
+          // -- register frame outputs
+          Saig_ManForEachLi (&*m_Tr0, pObj, i)
+            unroller.addOutput (m_cnfTr0->pVarNums [pObj->Id]);
         }
       else
         {
@@ -201,17 +213,15 @@ namespace avy
           if (nFrame < m_preCond.size ())
             addClauses (unroller, m_preCond [nFrame], unroller.getInputs (nFrame));
 
+          // -- add transition relation
+          unroller.addCnf (&*m_cnfTr);
+
+          // -- register frame outputs
+          Saig_ManForEachLi (&*m_Tr, pObj, i)
+            unroller.addOutput (m_cnfTr->pVarNums [pObj->Id]);
         }
       
-      // -- add transition relation
-      unroller.addCnf (&*m_cnfTr);
-      
 
-      // -- register frame outputs
-      Aig_Obj_t *pObj;
-      int i;
-      Saig_ManForEachLi (&*m_Tr, pObj, i)
-        unroller.addOutput (m_cnfTr->pVarNums [pObj->Id]);
 
       /** post-condition clauses */
       if (unroller.frame () < m_postCond.size ())
