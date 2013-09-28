@@ -102,9 +102,9 @@ namespace avy
         else if (!res)
           {
             VERBOSE(0, vout () << "UNSAT from BMC at frame: " << nFrame << "\n";);
-            //AVY_ASSERT (!m_Solver.isTrivial () && "Cannot handle trivial unsat");
             if (m_Solver.isTrivial ())
               {
+                Stats::count("Trivial");
                 m_pPdr->setLimit (m_Unroller.frame ()+1);
                 int nPdrRes = m_pPdr->solve ();
                 AVY_ASSERT(nPdrRes != 0);
