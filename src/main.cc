@@ -38,9 +38,12 @@ std::string parseCmdLine (int argc, char** argv)
     ("reset-cover", po::value<bool> (&gParams.reset_cover)->default_value (false),
      "Reset cover of global PDR before updating it")
     ("shallow-push", po::value<bool> (&gParams.shallow_push)->default_value (false),
-     "Push only updated covers");
+     "Push only updated covers")
+    ("min-core", po::value<bool> (&gParams.min_core)->default_value (false),
+     "Minimize unsat core")
+    ("abstraction,a",po::value<bool> (&gParams.abstraction)->default_value(false),
+     "Enable interface abstraction (one-assumption-per-wire)");
   
-
   po::options_description hidden("Hidden options");
   hidden.add_options()
     ("input-file", po::value< string >(), "input file");        

@@ -328,23 +328,24 @@ namespace avy
     LitVector core (pCore, pCore + coreSz);
     std::reverse (core.begin (), core.end ());
     
-    // Stats::resume ("unsat_core");
-    // for (int i = 0; i < core.size (); ++i)
-    //   {
-    //     lit tmp = core [i];
-    //     core[i] = core.back ();
-    //     if (!sat.solve (core, core.size () - 1))
-    //       {
-    //         core.pop_back ();
-    //         --i;
-    //       }
-    //     else
-    //       core[i] = tmp;
-    //   }
-    // Stats::stop ("unsat_core");
+    Stats::resume ("unsat_core");
+    for (int i = 0; gParams.min_core && i < core.size (); ++i)
+      {
+        lit tmp = core [i];
+        core[i] = core.back ();
+        if (!sat.solve (core, core.size () - 1))
+          {
+            core.pop_back ();
+            --i;
+          }
+        else
+          core[i] = tmp;
+      }
+    Stats::stop ("unsat_core");
 
-    VERBOSE(2, logs () << "Original core: " << coreSz 
-            << " reduced " << core.size () << "\n");
+    VERBOSE(2, if (gParams.min_core)
+                 logs () << "Original core: " << coreSz 
+                         << " reduced " << core.size () << "\n");
     
 
     m_Core.reset ();
