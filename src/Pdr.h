@@ -86,8 +86,6 @@ namespace avy
     void validateInvariant () { Pdr_ManVerifyInvariant (m_pPdr); }
       
 
-    Aig_Obj_t *getInit (Aig_Man_t *pAig = 0);
-
     friend std::ostream &operator<< (std::ostream& out, Pdr &pdr);
   };
 

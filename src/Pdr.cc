@@ -777,25 +777,5 @@ namespace avy
       }
     AVY_ASSERT(!safe);
     return -1;
-  }    
-
-
-  Aig_Obj_t *Pdr::getInit (Aig_Man_t *pAig)
-  {
-    if (!pAig) pAig = m_pAig;
-
-    Aig_Obj_t *pRes;
-    
-    int nRegs = Aig_ManRegNum (m_pAig);
-    assert (nRegs > 0);
-    Aig_Obj_t **ppIntputs = ABC_ALLOC (Aig_Obj_t*, nRegs);
-    for (int i = 0; i < nRegs; ++i)
-      ppIntputs [i] = Aig_Not (Aig_ManCi (pAig, i));
-    pRes = Aig_Multi (pAig, ppIntputs, nRegs, AIG_OBJ_AND);
-    
-    ABC_FREE (ppIntputs);
-    return pRes;
-  }
-  
-  
+  }  
 }
