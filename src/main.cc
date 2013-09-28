@@ -56,7 +56,10 @@ std::string parseCmdLine (int argc, char** argv)
      "Frame at which to drop to PDR")
     ("min-suffix",
      po::value<bool> (&gParams.min_suffix)->default_value (false)->implicit_value(true),
-     "Minimize the suffix of the interpolation sequence");
+     "Minimize the suffix of the interpolation sequence")
+    ("sat1",
+     po::value<bool> (&gParams.sat1)->default_value (false)->implicit_value (true),
+     "Always use satSolver (do not use satSolver2)");
   
   po::options_description hidden("Hidden options");
   hidden.add_options()

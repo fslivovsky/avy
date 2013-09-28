@@ -46,6 +46,9 @@ namespace avy
 
     /** minimize suffix of interpolation sequence */
     bool min_suffix;
+
+    /** always use sat_solver1 */
+    bool sat1;
     
   };
   

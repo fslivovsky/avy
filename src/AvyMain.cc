@@ -302,8 +302,22 @@ namespace avy
 
   boost::tribool AvyMain::solveWithCore (unsigned nFrame)
   {
-    ItpSatSolver2 sat (2);
-    Unroller<ItpSatSolver2> unroller (sat, true);
+    if (gParams.sat1)
+      {
+        ItpSatSolver sat (2, 2);
+        return solveWithCore (sat, nFrame);
+      }
+    else
+      {
+        ItpSatSolver2 sat (2);
+        return solveWithCore (sat, nFrame);
+      }
+  }
+  
+  template <typename Sat>
+  boost::tribool AvyMain::solveWithCore (Sat &sat, unsigned nFrame)
+  {
+    Unroller<Sat> unroller (sat, true);
 
     for (unsigned i = 0; i <= nFrame; ++i)
       {
@@ -323,7 +337,7 @@ namespace avy
         ScoppedStats _s_("min_suffix");
         LitVector assumps;
         assumps.reserve (unroller.getAssumps ().size ());
-        for (unsigned i = unroller.frame (); i >= 0; --i)
+        for (int i = unroller.frame (); i >= 0; --i)
           {
             boost::copy (unroller.getFrameAssumps (i), std::back_inserter (assumps));
             res = sat.solve (assumps);

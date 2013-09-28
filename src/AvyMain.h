@@ -32,6 +32,9 @@ namespace avy
     Pdr *m_pPdr;
     
     dynamic_bitset<> m_Core;
+
+    template <typename Sat>
+    boost::tribool solveWithCore (Sat &sat, unsigned nFrame);
     
   public:
     AvyMain(std::string fname);
