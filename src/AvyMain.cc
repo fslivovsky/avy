@@ -45,42 +45,15 @@ namespace avy
   {
     VERBOSE (2, vout () << "Starting ABC\n");
     Abc_Start ();
-    
-    Aig_Man_t *pAig1 = loadAig (fname);
-    
-    Aig_Man_t *pAig2;
-
-    if (gParams.stutter)
-      {
-        VERBOSE (2, vout () << "\tAdding stutering signal\n");
-        pAig2 = Aig_AddStutterPi (pAig1);
-      }
-    else
-      {
-        VERBOSE (2, vout () << "\tAdding reset signal\n");
-        pAig2 = Aig_AddResetPi (pAig1);
-      }
-
-    Aig_ManStop (pAig1);
-    pAig1 = NULL;
-    
-    string tmpName = "__tmp.aig";
-    VERBOSE (2, vout () << "\tDumping to disk: " << tmpName << "\n");
-    Ioa_WriteAiger (pAig2, const_cast<char*>(tmpName.c_str ()), 1, 0);
-
-    VERBOSE(2, vout () << "Restarting ABC\n");
-    Abc_Stop ();
-    Abc_Start ();
-
-    m_Aig = aigPtr (loadAig (tmpName));
-
-    // -- keep abc running, just in case
-    //Abc_Stop ()
-
+    m_Aig = aigPtr (loadAig (fname));
     m_pPdr = new Pdr (&*m_Aig);
-    
-    
-  }  
+  }
+  
+  AvyMain::~AvyMain() 
+  { 
+    if (m_pPdr) delete m_pPdr; 
+    Abc_Stop ();
+  }
 
   int AvyMain::run ()
   {

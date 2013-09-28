@@ -36,7 +36,7 @@ namespace avy
   public:
     AvyMain(std::string fname);
     
-    virtual ~AvyMain() { if (m_pPdr) delete m_pPdr; }
+    virtual ~AvyMain() ;
 
     int run ();
 

@@ -18,15 +18,20 @@ namespace avy
     // -- save circuit
     m_Circuit = aigPtr (Aig_ManDupSimple (pCircuit));
 
+    AigManPtr aig;
+    if (gParams.stutter)
+      aig = aigPtr (Aig_AddStutterPi (&*m_Circuit));
+    else 
+      aig = aigPtr (Aig_AddResetPi (&*m_Circuit));
     
     // -- construct Tr 
-    Aig_Man_t *pTr = Aig_ManDupNoPo (pCircuit);
+    Aig_Man_t *pTr = Aig_ManDupNoPo (&*aig);
     Aig_ManRebuild (&pTr);
     m_Tr = aigPtr (pTr);
     m_cnfTr = cnfPtr (Cnf_Derive (&*m_Tr, Aig_ManRegNum (m_Tr.get ())));    
 
     // -- construct Bad
-    Aig_Man_t *pBad = Aig_ManDupSinglePo (pCircuit, 0, false);
+    Aig_Man_t *pBad = Aig_ManDupSinglePo (&*aig, 0, false);
     Aig_ManRebuild (&pBad);
     m_Bad = aigPtr (pBad);
     m_cnfBad = cnfPtr (Cnf_Derive (&*m_Bad, Aig_ManCoNum (&*m_Bad)));
