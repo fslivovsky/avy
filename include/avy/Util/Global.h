@@ -37,6 +37,9 @@ namespace avy
 
     /** interface abstraction */
     bool abstraction;
+
+    /** Make Tr0 special */
+    bool tr0;
     
   };
   

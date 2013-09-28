@@ -30,8 +30,21 @@ namespace avy
     m_Tr0 = aigPtr (pTr0);
     m_cnfTr0 = cnfPtr (Cnf_Derive (&*m_Tr0, Aig_ManRegNum (&*m_Tr0)));    
 
-    m_Tr = m_Tr0;
-    m_cnfTr = m_cnfTr0;
+    if (gParams.tr0)
+      {
+        Aig_Man_t *pTr = Aig_ManDupNoPo (&*m_Circuit);
+        Aig_ManRebuild (&pTr);
+        m_Tr = aigPtr (pTr);
+        m_cnfTr = cnfPtr (Cnf_Derive (&*m_Tr, Aig_ManRegNum (&*m_Tr)));
+      }
+    else
+      {
+        m_Tr = m_Tr0;
+        m_cnfTr = m_cnfTr0;
+      }
+    
+    
+    AVY_ASSERT (Saig_ManRegNum (&*m_Tr0) == Saig_ManRegNum (&*m_Tr));
 
     // -- construct Bad
     Aig_Man_t *pBad = Aig_ManDupSinglePo (&*aig, 0, false);

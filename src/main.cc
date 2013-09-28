@@ -32,17 +32,25 @@ std::string parseCmdLine (int argc, char** argv)
      "Interpolation system: 0 - McM, 1 - Mcm-prime")
     ("verbose,v", po::value<unsigned> (&gParams.verbosity)->default_value(0),
      "Verbosity level: 0 means silent")
-    ("avy", po::value<bool> (&gParams.avy)->default_value(false))
-    ("stutter,s", po::value<bool> (&gParams.stutter)->default_value (false),
+    ("avy", po::value<bool> (&gParams.avy)->implicit_value(true)->default_value (false))
+    ("stutter,s", 
+     po::value<bool> (&gParams.stutter)->default_value (false)->implicit_value(true),
      "Stutter circuit instead of reseting to the initial state")
-    ("reset-cover", po::value<bool> (&gParams.reset_cover)->default_value (false),
+    ("reset-cover", 
+     po::value<bool> (&gParams.reset_cover)->default_value (false)->implicit_value(true),
      "Reset cover of global PDR before updating it")
-    ("shallow-push", po::value<bool> (&gParams.shallow_push)->default_value (false),
+    ("shallow-push", 
+     po::value<bool> (&gParams.shallow_push)->default_value (false)->implicit_value (true),
      "Push only updated covers")
-    ("min-core", po::value<bool> (&gParams.min_core)->default_value (false),
+    ("min-core", 
+     po::value<bool> (&gParams.min_core)->default_value (false)->implicit_value(true),
      "Minimize unsat core")
-    ("abstraction,a",po::value<bool> (&gParams.abstraction)->default_value(false),
-     "Enable interface abstraction (one-assumption-per-wire)");
+    ("abstraction,a",
+     po::value<bool> (&gParams.abstraction)->default_value(false)->implicit_value(true),
+     "Enable interface abstraction (one-assumption-per-wire)")
+    ("tr0",
+     po::value<bool> (&gParams.tr0)->default_value (false)->implicit_value(true),
+     "Make only Tr0 be special (stutter or reset init)");
   
   po::options_description hidden("Hidden options");
   hidden.add_options()

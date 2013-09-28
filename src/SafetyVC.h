@@ -170,6 +170,53 @@ namespace avy
     template <typename S>
     void addTr (Unroller<S> &unroller)
     {
+      unsigned nFrame = unroller.frame ();
+      if (nFrame == 0) addTr0 (unroller);
+      else addTrN (unroller);
+
+      /** post-condition clauses */
+      if (unroller.frame () < m_postCond.size ())
+        addClauses (unroller, m_postCond [nFrame], unroller.getOutputs (nFrame));
+    }
+
+  private:
+    template <typename S>
+    void addTr0 (Unroller<S> &unroller)
+    {
+      unsigned nOff = unroller.freshBlock (m_cnfTr0->nVars);
+      ScoppedCnfLift scLift (m_cnfTr0, nOff);
+
+      unsigned nFrame = unroller.frame ();
+
+      AVY_ASSERT (Vec_IntSize (unroller.getInputs (nFrame)) == 0 &&
+                  "Unexpected inputs");
+      AVY_ASSERT (Vec_IntSize (unroller.getOutputs (nFrame)) == 0 &&
+                  "Unexpected outputs");        
+      AVY_ASSERT (nFrame == 0);
+      
+      // add clauses for Init
+      Aig_Obj_t *pObj;
+      int i;
+      lit Lits[1];
+        
+      Saig_ManForEachLo (&*m_Tr0, pObj, i)
+        {
+          Lits[0] = toLitCond (m_cnfTr0->pVarNums [pObj->Id], 1);
+          unroller.addClause (Lits, Lits + 1);
+        }
+
+      unroller.addCnf (&*m_cnfTr0);
+
+      // -- register frame outputs
+      Saig_ManForEachLi (&*m_Tr0, pObj, i)
+        unroller.addOutput (m_cnfTr0->pVarNums [pObj->Id]);
+
+    }
+
+
+    template <typename S>
+    void addTrN (Unroller<S> &unroller)
+    {
       unsigned nOff = unroller.freshBlock (m_cnfTr->nVars);
       ScoppedCnfLift scLift (m_cnfTr, nOff);
 
@@ -179,55 +226,30 @@ namespace avy
                   "Unexpected inputs");
       AVY_ASSERT (Vec_IntSize (unroller.getOutputs (nFrame)) == 0 &&
                   "Unexpected outputs");        
-
-      if (unroller.frame () == 0)
-        {
-          // add clauses for Init
-          Aig_Obj_t *pObj;
-          int i;
-          lit Lits[1];
-        
-          Saig_ManForEachLo (&*m_Tr, pObj, i)
-            {
-              Lits[0] = toLitCond (m_cnfTr->pVarNums [pObj->Id], 1);
-              unroller.addClause (Lits, Lits + 1);
-            }
-
-          unroller.addCnf (&*m_cnfTr0);
-
-          // -- register frame outputs
-          Saig_ManForEachLi (&*m_Tr0, pObj, i)
-            unroller.addOutput (m_cnfTr0->pVarNums [pObj->Id]);
-        }
-      else
-        {
-          Aig_Obj_t *pObj;
-          int i;
-          Saig_ManForEachLo (&*m_Tr, pObj, i)
-            unroller.addInput (m_cnfTr->pVarNums [pObj->Id]);
-
-          // glue new In to old Out
-          unroller.glueOutIn ();
-
-          /** pre-condition clauses */
-          if (nFrame < m_preCond.size ())
-            addClauses (unroller, m_preCond [nFrame], unroller.getInputs (nFrame));
-
-          // -- add transition relation
-          unroller.addCnf (&*m_cnfTr);
-
-          // -- register frame outputs
-          Saig_ManForEachLi (&*m_Tr, pObj, i)
-            unroller.addOutput (m_cnfTr->pVarNums [pObj->Id]);
-        }
+      AVY_ASSERT (nFrame > 0);
       
+      // -- register inputs
+      Aig_Obj_t *pObj;
+      int i;
+      Saig_ManForEachLo (&*m_Tr, pObj, i)
+        unroller.addInput (m_cnfTr->pVarNums [pObj->Id]);
 
+      // glue new In to old Out
+      unroller.glueOutIn ();
 
-      /** post-condition clauses */
-      if (unroller.frame () < m_postCond.size ())
-        addClauses (unroller, m_postCond [nFrame], unroller.getOutputs (nFrame));
+      /** pre-condition clauses */
+      if (nFrame < m_preCond.size ())
+        addClauses (unroller, m_preCond [nFrame], unroller.getInputs (nFrame));
 
+      // -- add transition relation
+      unroller.addCnf (&*m_cnfTr);
+
+      // -- register frame outputs
+      Saig_ManForEachLi (&*m_Tr, pObj, i)
+        unroller.addOutput (m_cnfTr->pVarNums [pObj->Id]);
     }
+    
+  public:
     
     template <typename S>
     void addBad (Unroller<S> &unroller)
@@ -248,7 +270,7 @@ namespace avy
       Aig_ManForEachCi (&*m_Bad, pCi, i)
         {
           // -- skip Ci that corresponds to Pi of Tr
-          if (i < Saig_ManPiNum (&*m_Tr)) continue;
+          if (i < Saig_ManPiNum (&*m_Tr0)) continue;
           unroller.addInput (m_cnfBad->pVarNums [pCi->Id]);
         }
 
