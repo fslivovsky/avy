@@ -4,6 +4,7 @@
 
 #include "AigUtils.h"
 #include "avy/Util/AvyAssert.h"
+#include "avy/Util/Stats.h"
 
 namespace abc
 {
@@ -205,11 +206,14 @@ namespace avy
 
   Aig_Man_t *Aig_ManSimplifyComb (Aig_Man_t *p)
   {
+    AVY_MEASURE_FN;
     Dch_Pars_t pars;
     Dch_ManSetDefaultParams(&pars);
     pars.nWords = 16;
     Gia_Man_t* pGia = Gia_ManFromAigSimple(p);
-    Gia_Man_t *pSynGia = Gia_ManFraigSweep(pGia, (void*)(&pars));
+    //Gia_Man_t *pSynGia = Gia_ManFraigSweep(pGia, (void*)(&pars));
+    // Gia_Man_t *pSynGia = Gia_ManPerformDch (pSynGia1, &pars);
+    Gia_Man_t *pSynGia = Gia_ManCompress2 (pGia, 1, 0);
     Gia_ManStop(pGia);
     Aig_Man_t* pSyn = Gia_ManToAigSimple(pSynGia);
     Gia_ManStop(pSynGia);

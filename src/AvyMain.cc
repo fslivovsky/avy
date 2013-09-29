@@ -70,6 +70,7 @@ namespace avy
         ScoppedStats loopStats (string(__FUNCTION__) + ".loop");
         Stats::PrintBrunch (outs ());
         Stats::count("Frame");
+        Stats::uset("Depth", nFrame);
 
         if (nFrame >= gParams.pdr)
           {
@@ -127,15 +128,14 @@ namespace avy
               {
                 AigManPtr itp = 
                   aigPtr (m_Solver.getInterpolant (m_Unroller.getAllOutputs ()));
-                (logs () << "Interpolant is: \n").flush ();
-                LOG("itp_verbose", logs () << *itp << "\n";);
-                Aig_ManPrintStats (&*itp);
 
                 AVY_ASSERT (validateItp (itp));
 
                 // -- simplify
-                itp = aigPtr (Aig_ManSimplifyComb (&*itp));
                 
+                itp = aigPtr (Aig_ManSimplifyComb (&*itp));
+                VERBOSE(2, Aig_ManPrintStats (&*itp));
+
                 if (doPdrTrace (itp)) 
                   {
                     VERBOSE (0, vout () << "SAFE\n");

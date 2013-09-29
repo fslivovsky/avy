@@ -2,6 +2,7 @@
 #include "misc/vec/vec.h"
 #include "sat/bsat/satStore.h"
 
+#include "AigPrint.h"
 #include "avy/Util/Global.h" 
 #include "avy/Util/Stats.h" 
 namespace avy
@@ -38,7 +39,9 @@ namespace avy
     Aig_ManStop (pMan);
     pMan = tmp; tmp = NULL;
 
-    VERBOSE(1, Aig_ManPrintStats(pMan););
+    VERBOSE(2, Aig_ManPrintStats(pMan););
+    LOG("itp_verbose", logs () << *pMan << "\n";);
+
 
     // Release memory
     Sto_ManFree( pSatCnf );
