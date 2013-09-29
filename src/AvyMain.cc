@@ -238,6 +238,8 @@ namespace avy
       }
     
     if (gParams.shallow_push && m_pPdr->push ()) return true;
+
+    //AVY_ASSERT (m_pPdr->validateTrace ());
     return boost::tribool (boost::indeterminate);
   }
 
@@ -396,11 +398,14 @@ namespace avy
     CnfPtr cnfItp = cnfPtr (Cnf_Derive (&*itp, Aig_ManCoNum (&*itp)));
 
     unsigned coNum = Aig_ManCoNum (&*itp);
-    for (unsigned i = 0; i <= coNum; ++i)
+    for (int i = 0; i <= coNum; ++i)
       {
         ItpSatSolver satSolver (2, 5000);
         Unroller<ItpSatSolver> unroller (satSolver);
-        
+
+        // -- fast forward the unroller to the right frame
+        while (i >= 2 && unroller.frame () < i-1) unroller.newFrame  ();
+
         if (i > 0)
           {
             unroller.freshBlock (cnfItp->nVars);
@@ -452,43 +457,8 @@ namespace avy
           }
         else
           outs () << "." << std::flush;
-        
       }
     
-    // validate against bad state
-    for (unsigned i = 0; i < coNum; ++i)
-    {
-      ItpSatSolver satSolver (2, 5000);
-      Unroller<ItpSatSolver> unroller (satSolver);
-      
-      unroller.freshBlock (cnfItp->nVars);
-      unroller.addCnf (&*cnfItp);
-      
-      lit Lit = toLit (cnfItp->pVarNums [Aig_ManCo (&*itp, i)->Id]);
-      satSolver.addClause (&Lit, &Lit + 1);
-  
-      // -- register outputs
-      Aig_Obj_t *pCi;
-      int j;
-      Aig_ManForEachCi (&*itp, pCi, j)
-        unroller.addOutput (cnfItp->pVarNums [pCi->Id]);
-            
-      unroller.newFrame ();
-  
-      m_Vc->addBad (unroller);
-      unroller.pushBadUnit ();
-        
-      if (satSolver.solve (unroller.getAssumps ()) != false)
-        {
-          outs () << "\nFailed SAFE validation at: " << i << "\n";
-          return false;
-        }
-      else
-        outs () << "!" << std::flush;
-      
-    }
-    
-
     outs () << " Done\n" << std::flush;
     return true;    
   }
