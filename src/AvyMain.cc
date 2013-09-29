@@ -74,11 +74,11 @@ namespace avy
         if (nFrame >= gParams.pdr)
           {
             int res = m_pPdr->solve ();
-            VERBOSE (2, m_pPdr->statusLn (vout ()));
+            VERBOSE (1, m_pPdr->statusLn (vout ()));
             if (res == 1) 
               {
-                AVY_ASSERT (m_pPdr->validateInvariant ());
-                return 0;
+                outs () << "SAFE\n";
+                return m_pPdr->validateInvariant () ? 0 : 3;
               }
             else if (res == 0)
               {
