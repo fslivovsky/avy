@@ -51,6 +51,9 @@ namespace avy
     Pdr (Aig_Man_t *pAig);
     ~Pdr ();
 
+    Pdr_Man_t *get () { return m_pPdr; }
+    
+
     void setLimit (unsigned v) { m_pPdr->pPars->nFrameMax = v; }
     void setVerbose (bool v) { m_pPdr->pPars->fVerbose = v; }
     bool isVerbose () { return m_pPdr->pPars->fVerbose; }

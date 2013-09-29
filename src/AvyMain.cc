@@ -113,6 +113,10 @@ namespace avy
                     return m_pPdr->validateInvariant () ? 0 : 3;
                   }
                 m_pPdr->setLimit (100000);
+                // logs () << *m_pPdr << "\n";
+                // PrintAig (logs (), &*m_Aig, m_pPdr->getCover (1, &*m_Aig));
+                // logs () << "\n";
+                AVY_ASSERT (m_pPdr->validateTrace ());
               }
             else
               {
@@ -239,7 +243,7 @@ namespace avy
     
     if (gParams.shallow_push && m_pPdr->push ()) return true;
 
-    //AVY_ASSERT (m_pPdr->validateTrace ());
+    AVY_ASSERT (m_pPdr->validateTrace ());
     return boost::tribool (boost::indeterminate);
   }
 
