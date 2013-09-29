@@ -655,30 +655,38 @@ namespace avy
         p->nFrames = k;
         //assert( k == Vec_PtrSize(p->vSolvers)-1 );
         p->iUseFrame = ABC_INFINITY;
-        Saig_ManForEachPo( p->pAig, pObj, p->iOutCur )
+        Aig_Obj_t* pObj = Aig_ManCo(p->pAig, p->iOutCur);
+        // check if the output is trivially solved
+        if ( Aig_ObjChild0(pObj) == Aig_ManConst0(p->pAig) )
           {
-            // check if the output is trivially solved
-            if ( Aig_ObjChild0(pObj) == Aig_ManConst0(p->pAig) )
+            continue;
+          }
+        // check if the output is trivially solved
+        if ( Aig_ObjChild0(pObj) == Aig_ManConst1(p->pAig) )
+          {
+            AVY_ASSERT (!safe);
+          }
+        // try to solve this output
+        if ( p->pTime4Outs )
+          {
+            assert( p->pTime4Outs[p->iOutCur] > 0 );
+            clkOne = Abc_Clock();
+            p->timeToStopOne = p->pTime4Outs[p->iOutCur] + Abc_Clock();
+          }
+        while ( 1 )
+          {
+            RetValue = Pdr_ManCheckCube( p, k, NULL, &pCube, p->pPars->nConfLimit );
+            if ( RetValue == 1 )
+              break;
+            if ( RetValue == -1 )
               {
-                continue;
+                AVY_ASSERT(!safe);
+                p->pPars->iFrame = k;
+                return -1;
               }
-            // check if the output is trivially solved
-            if ( Aig_ObjChild0(pObj) == Aig_ManConst1(p->pAig) )
+            if ( RetValue == 0 )
               {
-                AVY_ASSERT (!safe);
-              }
-            // try to solve this output
-            if ( p->pTime4Outs )
-              {
-                assert( p->pTime4Outs[p->iOutCur] > 0 );
-                clkOne = Abc_Clock();
-                p->timeToStopOne = p->pTime4Outs[p->iOutCur] + Abc_Clock();
-              }
-            while ( 1 )
-              {
-                RetValue = Pdr_ManCheckCube( p, k, NULL, &pCube, p->pPars->nConfLimit );
-                if ( RetValue == 1 )
-                  break;
+                RetValue = blockCube ( pCube );
                 if ( RetValue == -1 )
                   {
                     AVY_ASSERT(!safe);
@@ -687,34 +695,26 @@ namespace avy
                   }
                 if ( RetValue == 0 )
                   {
-                    RetValue = blockCube ( pCube );
-                    if ( RetValue == -1 )
-                      {
-                        AVY_ASSERT(!safe);
-                        p->pPars->iFrame = k;
-                        return -1;
-                      }
-                    if ( RetValue == 0 )
-                      {
-                        AVY_ASSERT (!safe);
-                      }
-                    if ( p->pPars->fVerbose )
-                      Pdr_ManPrintProgress( p, 0, Abc_Clock() - clkStart );
+                    if (!safe)
+                        return 0;
+                    AVY_ASSERT (!safe);
                   }
+                if ( p->pPars->fVerbose )
+                  Pdr_ManPrintProgress( p, 0, Abc_Clock() - clkStart );
               }
-            if ( p->pTime4Outs )
+          }
+        if ( p->pTime4Outs )
+          {
+            abctime timeSince = Abc_Clock() - clkOne;
+            assert( p->pTime4Outs[p->iOutCur] > 0 );
+            p->pTime4Outs[p->iOutCur] = (p->pTime4Outs[p->iOutCur] > timeSince) ? p->pTime4Outs[p->iOutCur] - timeSince : 0;
+            if ( p->pTime4Outs[p->iOutCur] == 0 && (p->vCexes == NULL || Vec_PtrEntry(p->vCexes, p->iOutCur) == NULL) )
               {
-                abctime timeSince = Abc_Clock() - clkOne;
-                assert( p->pTime4Outs[p->iOutCur] > 0 );
-                p->pTime4Outs[p->iOutCur] = (p->pTime4Outs[p->iOutCur] > timeSince) ? p->pTime4Outs[p->iOutCur] - timeSince : 0;
-                if ( p->pTime4Outs[p->iOutCur] == 0 && (p->vCexes == NULL || Vec_PtrEntry(p->vCexes, p->iOutCur) == NULL) )
-                  {
-                    p->pPars->nDropOuts++;
-                    if ( p->pPars->vOutMap ) Vec_IntWriteEntry( p->pPars->vOutMap, p->iOutCur, -1 );
-                    //                    printf( "Dropping output %d.\n", p->iOutCur );
-                  }
-                p->timeToStopOne = 0;
+                p->pPars->nDropOuts++;
+                if ( p->pPars->vOutMap ) Vec_IntWriteEntry( p->pPars->vOutMap, p->iOutCur, -1 );
+                //                    printf( "Dropping output %d.\n", p->iOutCur );
               }
+            p->timeToStopOne = 0;
           }
 
         if ( p->pPars->fVerbose )
