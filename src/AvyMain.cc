@@ -104,9 +104,14 @@ namespace avy
             if (m_Solver.isTrivial ())
               {
                 Stats::count("Trivial");
-                m_pPdr->setLimit (m_Unroller.frame ());
+                m_pPdr->setLimit (m_Unroller.frame () + 1);
                 int nPdrRes = m_pPdr->solve ();
-                AVY_ASSERT(nPdrRes != 0);
+                // -- Check if a CEX exists
+                if (nPdrRes == 0)
+                  {
+                    // A CEX. Let BMC find it...
+                    continue;
+                  }
                 if (nPdrRes == 1)
                   {
                     VERBOSE (1, m_pPdr->statusLn (vout ()););
