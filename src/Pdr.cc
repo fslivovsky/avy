@@ -857,7 +857,7 @@ namespace avy
     unsigned count = 0;
 
     if (nMax >= 0 && nMax <= maxFrames ()) max = nMax;
-    
+    m_pPdr->iOutCur = 0;
     for (unsigned i = 0; i < max; ++i)
       {
         if (Pdr_ManCheckCube (m_pPdr, i, NULL, NULL, 100000) != 1)

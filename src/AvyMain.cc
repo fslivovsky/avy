@@ -104,7 +104,7 @@ namespace avy
             if (m_Solver.isTrivial ())
               {
                 Stats::count("Trivial");
-                m_pPdr->setLimit (m_Unroller.frame ()+1);
+                m_pPdr->setLimit (m_Unroller.frame ());
                 int nPdrRes = m_pPdr->solve ();
                 AVY_ASSERT(nPdrRes != 0);
                 if (nPdrRes == 1)
