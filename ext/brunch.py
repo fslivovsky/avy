@@ -116,7 +116,7 @@ def runTool (tool_args, f, out, cpu, mem, fmt):
     stats['File'] = f
     stats['base'] = base
     stats['Status'] = p.returncode
-    stats['Cpu'] = '{:.2f}'.format (cpuUsage - cpuTotal)
+    stats['Cpu'] = '{0:.2f}'.format (cpuUsage - cpuTotal)
     cpuTotal = cpuUsage
     
     stats = collectStats (stats, outfile)
