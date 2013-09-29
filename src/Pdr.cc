@@ -849,5 +849,25 @@ namespace avy
 
     return res;
   }
+
+  bool Pdr::validateTrace (int nMax)
+  {
+    bool res = true;
+    unsigned max = maxFrames () - 1;
+    unsigned count = 0;
+
+    if (nMax >= 0 && nMax <= maxFrames ()) max = nMax;
+    
+    for (unsigned i = 0; i < max; ++i)
+      {
+        if (Pdr_ManCheckCube (m_pPdr, i, NULL, NULL, 100000) != 1)
+          {
+            count++;
+            VERBOSE (2, vout () << "Frame " << i << " is NOT safe\n");
+            res = false;
+          }
+      }
+    return res;
+  }
   
 }

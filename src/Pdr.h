@@ -84,7 +84,7 @@ namespace avy
     
 
     bool validateInvariant ();
-    
+    bool validateTrace (int nMax = -1);
 
     friend std::ostream &operator<< (std::ostream& out, Pdr &pdr);
   };
