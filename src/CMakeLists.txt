@@ -9,5 +9,5 @@ target_link_libraries (main
   AvyDebug
   ${ABC_LIBRARY} 
   ${Boost_PROGRAM_OPTIONS_LIBRARY}
-  readline m dl pthread 
+  m dl pthread 
   ${RT_LIB})
