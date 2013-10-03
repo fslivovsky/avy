@@ -67,7 +67,7 @@ std::string parseCmdLine (int argc, char** argv)
      po::value<bool> (&gParams.stick_error)->default_value (false)->implicit_value (true),
      "Stick error output")
      ("itp-simplify",
-      po::value<bool> (&gParams.itp_simplify)->default_value (false)->implicit_value (true),
+      po::value<bool> (&gParams.itp_simplify)->default_value (true),
       "Simplify the interpolant using synthesis");
   
   
