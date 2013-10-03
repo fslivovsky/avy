@@ -21,7 +21,7 @@ namespace avy
         << "\tsat1 = " << p.sat1 << "\n"
         << "\tkstep = " << p.kStep << "\n"
         << "\tstick-error = " << p.stick_error << "\n"
-        << "\itp-simplify = " << p.itp_simplify << "\n"
+        << "\titp-simplify = " << p.itp_simplify << "\n"
         << "END";
     return out;
   }
