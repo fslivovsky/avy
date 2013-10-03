@@ -56,6 +56,8 @@ namespace avy
     /** stick error output */
     bool stick_error;
     
+    bool itp_simplify;
+
   };
   
   std::ostream &operator<< (std::ostream& out, const AvyParams& p);

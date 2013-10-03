@@ -65,7 +65,10 @@ std::string parseCmdLine (int argc, char** argv)
      "Step size for BMC problems")
     ("stick-error",
      po::value<bool> (&gParams.stick_error)->default_value (false)->implicit_value (true),
-     "Stick error output");
+     "Stick error output")
+     ("itp-simplify",
+      po::value<bool> (&gParams.itp_simplify)->default_value (false)->implicit_value (true),
+      "Simplify the interpolant using synthesis");
   
   
   po::options_description hidden("Hidden options");

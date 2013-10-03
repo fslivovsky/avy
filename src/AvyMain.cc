@@ -132,9 +132,11 @@ namespace avy
                 AVY_ASSERT (validateItp (itp));
 
                 // -- simplify
-                
-                itp = aigPtr (Aig_ManSimplifyComb (&*itp));
-                VERBOSE(2, Aig_ManPrintStats (&*itp));
+                if (gParams.itp_simplify)
+                {
+                    itp = aigPtr (Aig_ManSimplifyComb (&*itp));
+                    VERBOSE(2, Aig_ManPrintStats (&*itp));
+                }
 
                 if (doPdrTrace (itp)) 
                   {

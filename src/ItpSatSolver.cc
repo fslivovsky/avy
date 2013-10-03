@@ -35,9 +35,12 @@ namespace avy
                                                          0 );
     Ints_ManFree( pManInter );
 
-    Aig_Man_t *tmp = Aig_ManSimplifyComb (pMan);
-    Aig_ManStop (pMan);
-    pMan = tmp; tmp = NULL;
+    if (gParams.itp_simplify)
+    {
+        Aig_Man_t *tmp = Aig_ManSimplifyComb (pMan);
+        Aig_ManStop (pMan);
+        pMan = tmp; tmp = NULL;
+    }
 
     VERBOSE(2, Aig_ManPrintStats(pMan););
     LOG("itp_verbose", logs () << *pMan << "\n";);
