@@ -2,7 +2,7 @@
 
 set(MINISAT_ROOT "" CACHE PATH "Root of Minisat installation.")
 
-find_path(MINISAT_INCLUDE_DIR NAMES minisat/core/Solver.h PATHS ${MINISAT_ROOT}/include)
+find_path(MINISAT_INCLUDE_DIR NAMES core/Solver.h PATHS ${MINISAT_ROOT}/include/minisat)
 find_library(MINISAT_LIBRARY  NAMES minisat  PATHS ${MINISAT_ROOT}/lib)
 
 include (FindPackageHandleStandardArgs)
