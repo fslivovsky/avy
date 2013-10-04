@@ -51,6 +51,12 @@ else()
   set(PERIPLO_LIBRARY "")
 endif ()
 
+find_package(Minisat)
+if (MINISAT_FOUND)
+  include_directories(${MINISAT_INCLUDE_DIR})
+else()
+  set (MINISAT_LIBRARY "")
+endif()
 
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/include
