@@ -8,6 +8,7 @@ target_link_libraries (main
   AbcCpp
   AvyDebug
   ${ABC_LIBRARY} 
+  ${MINISAT_LIBRARY}
   ${Boost_PROGRAM_OPTIONS_LIBRARY}
-  m dl pthread 
+  m dl pthread z
   ${RT_LIB})

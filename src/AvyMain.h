@@ -5,6 +5,7 @@
 #include "SafetyVC.h"
 #include "ItpSatSolver.h"
 #include "ItpSatSolver2.h"
+#include "Minisat.h"
 #include "Pdr.h"
 #include "Unroller.h"
 #include <string>
