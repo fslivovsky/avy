@@ -370,8 +370,10 @@ namespace avy
             << " core size: " << coreSz << "\n";);
 
     LitVector core (pCore, pCore + coreSz);
+    // -- negate
+    BOOST_FOREACH (lit &p, core) p = lit_neg (p);
     std::reverse (core.begin (), core.end ());
-    
+
     Stats::resume ("unsat_core");
     for (int i = 0; gParams.min_core && core.size () > 1 && i < core.size (); ++i)
       {
@@ -388,14 +390,14 @@ namespace avy
     Stats::stop ("unsat_core");
 
     VERBOSE(2, if (gParams.min_core)
-                 logs () << "Original core: " << coreSz 
-                         << " reduced " << core.size () << "\n");
+                 logs () << "Core size: original: " << coreSz 
+                         << " mincore: " << core.size () << "\n");
     
 
     m_Core.reset ();
     for (unsigned i = 0; i < core.size (); ++i)
       {
-        int a = lit_neg (core[i]);
+        int a = core [i];
         if (m_Core.size () <= a) m_Core.resize (a + 1);
         m_Core.set (a);
       }
