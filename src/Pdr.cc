@@ -396,9 +396,14 @@ namespace avy
 
     if (pkMax >= kMin && pkMax <= kMax) kMax = pkMax;
 
+    bool doNext = true;
+    
     Vec_VecForEachLevelStartStop( p->vClauses, vArrayK, k, 1, kMax )
     {
       if (k < kMin) continue;
+      if (!doNext) continue;
+      doNext = true;
+      
         Vec_PtrSort( vArrayK, (int (*)(void))Pdr_SetCompare );
         vArrayK1 = Vec_VecEntry( p->vClauses, k+1 );
         Vec_PtrForEachEntry( Pdr_Set_t *, vArrayK, pCubeK, j )
@@ -415,14 +420,17 @@ namespace avy
                 Vec_PtrPop(vArrayK);
                 m--;
             }
-
+            
+            Stats::resume ("pushClauses.Pdr_ManCheckCube");
             // check if the clause can be moved to the next frame
             RetValue2 = Pdr_ManCheckCube( p, k, pCubeK, NULL, 0 );
+            Stats::stop ("pushClauses.Pdr_ManCheckCube");
             if ( RetValue2 == -1 )
                 return -1;
             if ( !RetValue2 )
                 continue;
 
+            doNext = true;
             {
                 Pdr_Set_t * pCubeMin;
                 pCubeMin = reduceClause( k, pCubeK );
