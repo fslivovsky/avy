@@ -1,14 +1,13 @@
 #ifndef _MINISAT_H_
 #define _MINISAT_H_
 
-#include "core/Solver.h"
+#include "simp/SimpSolver.h"
 
 namespace avy
 {
-  template<typename Solver>
   class Minisat
   {
-    Solver *m_sat;
+    ::Minisat::SimpSolver *m_sat;
     bool m_Trivial;
 
     std::vector<int> m_core;
@@ -26,7 +25,7 @@ namespace avy
     {
       m_core.clear ();
       if (m_sat) delete m_sat;
-      m_sat = new Solver ();      
+      m_sat = new ::Minisat::SimpSolver ();      
       reserve (nVars);
     }
 
@@ -100,6 +99,7 @@ namespace avy
     
     bool isTrivial () { return m_Trivial; }
     
+    void setFrozen (int v, bool p) { m_sat->setFrozen (v, p); }
     
     
     

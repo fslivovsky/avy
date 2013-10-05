@@ -334,7 +334,7 @@ namespace avy
       }
     else if (gParams.minisat)
       {
-        Minisat< ::Minisat::Solver> sat (5000);
+        Minisat sat (5000);
         return solveWithCore (sat, nFrame);
       }
     else
@@ -358,8 +358,10 @@ namespace avy
     m_Vc->addBad (unroller);
     unroller.pushBadUnit ();
     
-    tribool res;
+    // -- freeze
+    BOOST_FOREACH (lit Lit, unroller.getAssumps ()) sat.setFrozen (lit_var (Lit), true);
 
+    tribool res;
     if ((res = sat.solve (unroller.getAssumps ())) != false) return res;
 
     if (gParams.min_suffix)
@@ -367,6 +369,7 @@ namespace avy
         // -- minimize suffix
         ScoppedStats _s_("min_suffix");
         LitVector assumps;
+        
         assumps.reserve (unroller.getAssumps ().size ());
         for (int i = unroller.frame (); i >= 0; --i)
           {

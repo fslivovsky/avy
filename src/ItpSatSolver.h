@@ -163,6 +163,9 @@ namespace avy
     /// Variables can only be shared between adjacent partitions.
     /// fMcM == true for McMillan, and false for McMillan'
     Aig_Man_t* getInterpolant (std::vector<Vec_Int_t*> &vSharedVars, bool fMcM=true);
+
+    void setFrozen (int v, bool b) { }
+    
   };
   
 }

@@ -147,6 +147,7 @@ namespace avy
 
     bool isTrivial () { return m_Trivial; }
     
+    void setFrozen (int v, bool b) {}
 
     /// Compute an interpolant. User provides the list of shared variables
     /// Variables can only be shared between adjacent partitions.
