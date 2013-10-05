@@ -19,6 +19,7 @@ namespace avy
         << "\tpdr = " << p.pdr << "\n"
         << "\tmin-suffix = " << p.min_suffix << "\n"
         << "\tsat1 = " << p.sat1 << "\n"
+        << "\tminisat = " << p.minisat << "\n"
         << "\tkstep = " << p.kStep << "\n"
         << "\tstick-error = " << p.stick_error << "\n"
         << "\titp-simplify = " << p.itp_simplify << "\n"

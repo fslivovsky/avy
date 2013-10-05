@@ -11,6 +11,8 @@
 #include "Unroller.h"
 #include "boost/range/algorithm/copy.hpp"
 
+#include "simp/SimpSolver.h"
+
 using namespace boost;
 using namespace std;
 using namespace abc;
@@ -330,11 +332,17 @@ namespace avy
         ItpSatSolver sat (2, 2);
         return solveWithCore (sat, nFrame);
       }
+    else if (gParams.minisat)
+      {
+        Minisat< ::Minisat::Solver> sat (5000);
+        return solveWithCore (sat, nFrame);
+      }
     else
       {
         ItpSatSolver2 sat (2);
         return solveWithCore (sat, nFrame);
       }
+
   }
   
   template <typename Sat>

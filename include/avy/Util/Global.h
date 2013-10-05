@@ -50,6 +50,9 @@ namespace avy
     /** always use sat_solver1 */
     bool sat1;
 
+    /** use minisat */
+    bool minisat;
+
     /** by how much to increase BMC in each iteration */
     unsigned kStep;
 

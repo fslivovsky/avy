@@ -60,6 +60,9 @@ std::string parseCmdLine (int argc, char** argv)
     ("sat1",
      po::value<bool> (&gParams.sat1)->default_value (false)->implicit_value (true),
      "Always use satSolver (do not use satSolver2)")
+    ("minisat",
+     po::value<bool> (&gParams.minisat)->default_value(false)->implicit_value (true),
+     "Use Minisat 2.2.0 for abstraction")
     ("kstep,k",
      po::value<unsigned> (&gParams.kStep)->default_value (1),
      "Step size for BMC problems")
