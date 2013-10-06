@@ -115,7 +115,7 @@ namespace avy
 
 
       lit *beg = NULL;
-      if (maxSize < 0) maxSize = assumptions.size ();
+      if (maxSize < 0 || maxSize > assumptions.size ()) maxSize = assumptions.size ();
       if (maxSize > 0) beg = &assumptions[0];
 
       int RetValue;
@@ -125,7 +125,7 @@ namespace avy
           AVY_ASSERT (RetValue != 0);
         }
       
-      RetValue = sat_solver2_solve( m_pSat, beg, beg + assumptions.size (), 
+      RetValue = sat_solver2_solve( m_pSat, beg, beg + maxSize, 
                                     (ABC_INT64_T)10000000, (ABC_INT64_T)0, 
                                     (ABC_INT64_T)0, (ABC_INT64_T)0 );      
 
