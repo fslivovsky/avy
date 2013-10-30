@@ -129,14 +129,14 @@ namespace avy
                 AigManPtr itp = 
                   aigPtr (m_Solver.getInterpolant (m_Unroller.getAllOutputs ()));
 
-                AVY_ASSERT (validateItp (itp));
-
                 // -- simplify
                 if (gParams.itp_simplify)
                 {
                     itp = aigPtr (Aig_ManSimplifyComb (&*itp));
                     VERBOSE(2, Aig_ManPrintStats (&*itp));
                 }
+
+                AVY_ASSERT (validateItp (itp));
 
                 if (doPdrTrace (itp)) 
                   {
