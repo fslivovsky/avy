@@ -5,9 +5,10 @@
 
 namespace avy
 {
+  template <class CoreSolver=::Minisat::Solver >
   class Minisat
   {
-    ::Minisat::SimpSolver *m_sat;
+    ::Minisat::SimpSolver<CoreSolver> *m_sat;
     bool m_Trivial;
 
     std::vector<int> m_core;

@@ -57,6 +57,15 @@ if (MINISAT_FOUND)
 else()
   set (MINISAT_LIBRARY "")
 endif()
+ 
+find_package(Glucose)
+if (GLUCOSE_FOUND)
+  include_directories(${GLUCOSE_INCLUDE_DIR})
+else()
+  set (GLUCOSE_LIBRARY "")
+endif()
+ 
+
 
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/include

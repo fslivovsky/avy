@@ -9,6 +9,7 @@ target_link_libraries (main
   AvyDebug
   ${ABC_LIBRARY} 
   ${MINISAT_LIBRARY}
+  ${GLUCOSE_LIBRARY}
   ${Boost_PROGRAM_OPTIONS_LIBRARY}
   m dl pthread z
   ${RT_LIB})
