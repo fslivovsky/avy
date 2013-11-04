@@ -68,6 +68,7 @@ namespace avy
     for (unsigned nFrame = 0; nFrame < nMaxFrames; nFrame+=gParams.kStep)
       {
         ScoppedStats loopStats (string(__FUNCTION__) + ".loop");
+        Stats::set ("Result", "UNKNOWN");
         Stats::PrintBrunch (outs ());
         Stats::count("Frame");
         Stats::uset("Depth", nFrame);
@@ -79,15 +80,18 @@ namespace avy
             if (res == 1) 
               {
                 outs () << "SAFE\n";
+                Stats::set("Result", "UNSAT");
                 return m_pPdr->validateInvariant () ? 0 : 3;
               }
             else if (res == 0)
               {
                 outs () << "CEX\n";
+                Stats::set ("Result", "SAT");
                 return 1;
               }
             else
               {
+                Stats::set ("Result", "UNKNOWN");
                 outs () << "UNKNOWN\n";
                 return 2;
               }
@@ -96,12 +100,15 @@ namespace avy
         tribool res = doBmc (nFrame);
         if (res)
           {
-            VERBOSE (0, vout () << "SAT from BMC at frame: " << nFrame << "\n";);
+            VERBOSE (0, 
+                     vout () << "SAT from BMC at frame: " << nFrame << "\n";);
+            Stats::set ("Result", "SAT");
             return 1;
           }
         else if (!res)
           {
-            VERBOSE(0, vout () << "UNSAT from BMC at frame: " << nFrame << "\n";);
+            VERBOSE(0, 
+                    vout () << "UNSAT from BMC at frame: " << nFrame << "\n";);
             if (m_Solver.isTrivial ())
               {
                 Stats::count("Trivial");
@@ -116,6 +123,7 @@ namespace avy
                 if (nPdrRes == 1)
                   {
                     VERBOSE (1, m_pPdr->statusLn (vout ()););
+                    Stats::set ("Result", "UNSAT");
                     return m_pPdr->validateInvariant () ? 0 : 3;
                   }
                 m_pPdr->setLimit (100000);
@@ -142,6 +150,7 @@ namespace avy
                   {
                     VERBOSE (0, vout () << "SAFE\n");
                     VERBOSE(1, m_pPdr->statusLn (vout ()););
+                    Stats::set ("Result", "UNSAT");
                     return m_pPdr->validateInvariant () ? 0 : 3;
                   }
               }
