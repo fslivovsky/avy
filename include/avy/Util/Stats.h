@@ -131,12 +131,14 @@ namespace avy
     static std::map<std::string,unsigned> counters;
     static std::map<std::string,Stopwatch> sw;
     static std::map<std::string,Averager> av;
+    static std::map<std::string,std::string> txt;
 
     
   public:
     static unsigned  get (const std::string &n);
     static double avg (const std::string &n, double v);
     static unsigned uset (const std::string &n, unsigned v);
+    static void set (const std::string &k, const std::string &v);
 
     static void count (const std::string &name);
     
