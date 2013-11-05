@@ -63,6 +63,9 @@ std::string parseCmdLine (int argc, char** argv)
     ("minisat",
      po::value<bool> (&gParams.minisat)->default_value(false)->implicit_value (true),
      "Use Minisat 2.2.0 for abstraction")
+    ("glucose",
+     po::value<bool> (&gParams.glucose)->default_value(false)->implicit_value (true),
+     "Use Glucose for abstraction")
     ("kstep,k",
      po::value<unsigned> (&gParams.kStep)->default_value (1),
      "Step size for BMC problems")

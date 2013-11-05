@@ -337,6 +337,11 @@ namespace avy
         Minisat sat (5000);
         return solveWithCore (sat, nFrame);
       }
+    else if (gParams.glucose)
+      {
+        Glucose sat (5000);
+        return solveWithCore (sat, nFrame);
+      }
     else
       {
         ItpSatSolver2 sat (2);

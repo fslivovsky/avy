@@ -20,6 +20,7 @@ namespace avy
         << "\tmin-suffix = " << p.min_suffix << "\n"
         << "\tsat1 = " << p.sat1 << "\n"
         << "\tminisat = " << p.minisat << "\n"
+        << "\tglucose = " << p.glucose << "\n"
         << "\tkstep = " << p.kStep << "\n"
         << "\tstick-error = " << p.stick_error << "\n"
         << "\titp-simplify = " << p.itp_simplify << "\n"
