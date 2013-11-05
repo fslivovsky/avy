@@ -2,7 +2,7 @@
 
 set(GLUCOSE_ROOT "" CACHE PATH "Root of Glucose installation.")
 
-find_path(GLUCOSE_INCLUDE_DIR NAMES core/Solver.h PATHS ${GLUCOSE_ROOT}/include/glucose)
+find_path(GLUCOSE_INCLUDE_DIR NAMES glucose/core/Solver.h PATHS ${GLUCOSE_ROOT}/include)
 find_library(GLUCOSE_LIBRARY  NAMES glucose  PATHS ${GLUCOSE_ROOT}/lib)
 
 include (FindPackageHandleStandardArgs)
