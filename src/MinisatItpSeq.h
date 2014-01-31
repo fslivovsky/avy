@@ -32,6 +32,8 @@ public:
             Gia_ManAppendCi(m_pMan);
     }
 
+    Gia_Man_t* getInterpolantMan() { return m_pMan; }
+
     virtual int visitLeaf(::Minisat::Var v, const ::Minisat::vec< ::Minisat::Lit>& lits)
     {
         for (int part = 1; part <= seqSize; part++)
