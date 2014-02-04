@@ -16,6 +16,8 @@
 
 #include "boost/noncopyable.hpp"
 
+#include "ItpMinisat.h"
+
 namespace avy
 {
   class AvyMain : boost::noncopyable
@@ -38,15 +40,24 @@ namespace avy
     template <typename Sat>
     boost::tribool solveWithCore (Sat &sat, unsigned nFrame);
     
+
+    Glucose m_Glucose;
+    Unroller<Glucose> m_GUnroller;
+    unsigned m_nPrevFrame;
+    boost::tribool incSolveWithCore (unsigned nFrame);
+
   public:
     AvyMain(std::string fname);
     
     virtual ~AvyMain() ;
 
     int run ();
+    template <typename Sat>
+    int run (Sat& solver, Unroller<Sat>& unroller);
 
     /// do BMC check up to depth nFrame
-    boost::tribool doBmc (unsigned nFrame);
+    template <typename Sat>
+    boost::tribool doBmc (unsigned nFrame, Sat& solver, Unroller<Sat>& unroller);
     /// convert interpolant into PDR trace
     boost::tribool doPdrTrace (AigManPtr itp);
     /// strengthen VC with current Pdr trace

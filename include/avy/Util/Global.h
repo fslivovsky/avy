@@ -56,6 +56,9 @@ namespace avy
     /** use glucose */
     bool glucose;
     
+    /** use minisat itp */
+    bool minisat_itp;
+
     /** by how much to increase BMC in each iteration */
     unsigned kStep;
 

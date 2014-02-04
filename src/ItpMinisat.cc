@@ -12,7 +12,9 @@ namespace avy
   /// Compute an interpolant. User provides the list of shared variables
   /// Variables can only be shared between adjacent partitions.
   /// fMcM == true for McMillan, and false for McMillan'
-  Aig_Man_t* ItpMinisat::getInterpolant (std::vector<int> &vVarToId, int nNumOfVars)
+  Aig_Man_t* ItpMinisat::getInterpolant (std::vector<Vec_Int_t*> &vSharedVars,
+                                         std::vector<int> &vVarToId, int nNumOfVars,
+                                         bool fMcM)
   {
     AVY_MEASURE_FN;
     AVY_ASSERT (!isTrivial ());
