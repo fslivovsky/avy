@@ -105,5 +105,8 @@ namespace avy
     
 }
 
+#undef l_True
+#undef l_False
+#undef l_Undef
 
 #endif /* _GLUCOSE_H_ */
