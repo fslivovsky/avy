@@ -98,6 +98,21 @@ namespace avy
         }
     }
     
+    void resetLastFrame ()
+    {
+
+      Vec_IntClear (m_vInputs.back());
+      //m_vInputs.pop_back();
+
+      //Vec_IntFree (m_vOutputs.back());
+      //m_vOutputs.pop_back ();
+
+      //m_Assumps.pop_back ();
+      //m_FrameAssump.pop_back ();
+
+      //m_nFrames--;
+    }
+
   
     /** allocate a variable */
     unsigned freshVar () 
@@ -165,7 +180,18 @@ namespace avy
     abc::Vec_Int_t *getOutputs (unsigned nFrame) { return m_vOutputs.at (nFrame); }
     std::vector<abc::Vec_Int_t*> &getAllOutputs () { return m_vOutputs; }
     
+    void setFrozenOutputs(unsigned nFrame, bool v)
+    {
+        abc::Vec_Int_t* outputs = m_vOutputs[nFrame];
+        int out;
+        int i;
+        Vec_IntForEachEntry( outputs, out, i )
+        {
+            lit l = toLit(out);
+            m_pSolver->setFrozen(lit_var(l), v);
+        }
 
+    }
 
     /** Add clause to solver */
     boost::tribool addClause (abc::lit* beg, abc::lit* end) 
