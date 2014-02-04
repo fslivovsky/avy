@@ -131,6 +131,8 @@ namespace avy
   
 }
 
-
+#undef l_True
+#undef l_False
+#undef l_Undef
 
 #endif /* _ITPSATSOLVER_H_ */
