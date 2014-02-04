@@ -1,9 +1,11 @@
+#include "AigPrint.h"
 #include "ItpMinisat.h"
 #include "misc/vec/vec.h"
+#include "aig/gia/giaAig.h"
 
-#include "AigPrint.h"
 #include "avy/Util/Global.h" 
 #include "avy/Util/Stats.h"
+
 
 #include "MinisatItpSeq.h"
 
