@@ -16,7 +16,7 @@ namespace avy
 {
   using namespace abc;
 
-  typedef std::vector<lit> LitVector;
+  //typedef std::vector< ::Minisat::Lit> LitVector;
   
   
   /// Thin wrapper around interpolating sat solver
