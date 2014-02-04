@@ -33,7 +33,7 @@ namespace avy
 
 
     // Release memory
-    Sto_ManFree( pSatCnf );
+    //Sto_ManFree( pSatCnf );
     return pMan;
   }
   
