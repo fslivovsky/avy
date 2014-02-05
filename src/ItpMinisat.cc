@@ -24,6 +24,20 @@ namespace avy
     AVY_ASSERT (vVarToId.size () >= m_nParts - 1);
     
     AVY_VERIFY (!solve ());
+
+    vVarToId.clear ();    
+    BOOST_FOREACH (Vec_Int_t *vVec, vSharedVars)
+      {
+        int nVar;
+        int i;
+        Vec_IntForEachEntry (vVec, nVar, i)
+          {
+            // -- resize (not needed if we know how many variables there are)
+            vVarToId.resize (nVar + 1, 0);
+            vVarToId [nVar] = i;
+          }
+      }
+    
     
     MinisatItpSeq itpSeqVisitor(*m_pSat, nNumOfVars, vVarToId, m_nParts);
     m_pSat->replay(itpSeqVisitor);
