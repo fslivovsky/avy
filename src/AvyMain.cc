@@ -156,7 +156,13 @@ namespace avy
               {
                 vector<int> vVarToId;
                 AigManPtr itp = 
-                  aigPtr (solver.getInterpolant (unroller.getAllOutputs (), vVarToId, unroller.getAllOutputs().size()));
+                  aigPtr (solver.getInterpolant (unroller.getAllOutputs (), 
+                                                 vVarToId, 
+                                                 /* XXX This seems
+                                                    wrong. You are
+                                                    passing number of
+                                                    partitions XXX */
+                                                 unroller.getAllOutputs().size()));
 
                 // -- simplify
                 if (gParams.itp_simplify)
