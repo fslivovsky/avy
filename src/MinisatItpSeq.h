@@ -30,16 +30,20 @@ public:
         m_pMan = Gia_ManStart(numOfVars);
         for (unsigned i=0; i < numOfVars; i++)
             Gia_ManAppendCi(m_pMan);
+
+        for (int i=0; i < seqSize; i++)
+        	itpForVar[i].growTo(s.nVars());
     }
 
     Gia_Man_t* getInterpolantMan() { return m_pMan; }
 
-    virtual int visitLeaf(::Minisat::Var v, const ::Minisat::vec< ::Minisat::Lit>& lits)
+    virtual int visitLeaf(::Minisat::Var v, ::Minisat::CRef c, const ::Minisat::vec< ::Minisat::Lit>& lits)
     {
         for (int part = 1; part <= seqSize; part++)
         {
             int label = markLeaf(part, lits);
             itpForVar[part-1][v] = label;
+            clauseToItp[part-1].insert(c,label);
         }
         return 0;
     }
@@ -111,26 +115,40 @@ public:
     {
         assert(hyperChildren.size() > 0);
         assert(hyperClauses.size() > 0);
-        assert(hyperChildren.size() == hyperClauses.size());
+        assert(hyperChildren.size() >= hyperClauses.size() ||
+        		hyperChildren.size() == hyperClauses.size() - 1);
 
+        ::Minisat::CRef c = hyperClauses[0];
         int size = hyperClauses.size();
         for (int part=1; part <= seqSize; part++)
         {
             ::Minisat::CMap<int>& clsToItp = clauseToItp[part-1];
+            ::Minisat::vec<int>& itpVec = itpForVar[part-1];
             int label;
-            bool res = clsToItp.has(parent, label);
+            bool res = clsToItp.has(c, label);
             assert(res == true);
 
-            for (int i = 0; i < size; i++)
+            int i = 0;
+            for (; i < size-1; i++)
             {
                 ::Minisat::Var pivot = hyperChildren[i];
                 int l;
-                res = clsToItp.has(hyperClauses[i], l);
+                res = clsToItp.has(hyperClauses[i+1], l);
                 assert(res == true);
                 label = getLabelByPivot(pivot, part, label, l);
             }
+            size = hyperChildren.size();
+            for (; i < size; i++)
+            {
+            	::Minisat::Var pivot = hyperChildren[i];
+				int l = itpVec[pivot];
+				label = getLabelByPivot(pivot, part, label, l);
+            }
 
-            clsToItp.insert(parent, label);
+            if (parent != ::Minisat::CRef_Undef)
+            	clsToItp.insert(parent, label);
+            else
+            	Gia_ManAppendCo(m_pMan, label);
         }
         return 0;
 
@@ -159,7 +177,7 @@ private:
             ::Minisat::Var x = ::Minisat::var(lits[i]);
             ::Minisat::Range r = m_Solver.getVarRange(x);
             if (r.min() == part && r.max() == part) continue;
-            assert(r.min() == r.max() + 1 || r.min() == r.max() - 1);
+            assert(r.min() <= r.max() + 1 && r.min() >= r.max() - 1);
             int varId = m_VarToModelVarId[x];
             assert(varId >= 0 && varId < m_NumOfVars);
 
@@ -177,8 +195,16 @@ private:
     int getLabelByPivot(::Minisat::Var pivot, int part, int label1, int label2)
     {
         ::Minisat::Range r = m_Solver.getVarRange(pivot);
+        if (label1 == label2 && label1 == 0) return 0;
+        if (label1 == label2 && label1 == 1) return 1;
         if (r.min() <= part && r.max() <= part) // -- Interpolation for (A,B) pair - partition 1 = localA
-            return Gia_ManAppendOr(m_pMan, label1, label2);
+        	if (label1 == 1 || label2 == 1)
+        		return 1;
+        	else
+        		return Gia_ManAppendOr(m_pMan, label1, label2);
+
+        if (label1 == 0 || label2 == 0)
+        	return 0;
         return Gia_ManAppendAnd(m_pMan, label1, label2);
     }
 

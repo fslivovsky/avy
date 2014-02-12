@@ -61,7 +61,7 @@ namespace avy
     /// Mark currently unmarked clauses as belonging to partition nPart
     void markPartition (unsigned nPart)
     { 
-      AVY_ASSERT (nPart > 1 && nPart <= m_nParts);
+      AVY_ASSERT (nPart > 0 && nPart <= m_nParts);
       m_pSat->setCurrentPart(nPart);
     }
     

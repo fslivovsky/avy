@@ -301,7 +301,7 @@ namespace avy
     for (unsigned i = 0; i <= nFrame; ++i)
       {
         m_Vc->addTr (unroller);
-        solver.markPartition (i);
+        solver.markPartition (i+1);
         unroller.newFrame ();
       }
     m_Vc->addBad (unroller);
@@ -557,6 +557,7 @@ boost::tribool AvyMain::incSolveWithCore (unsigned nFrame)
     CnfPtr cnfItp = cnfPtr (Cnf_Derive (&*itp, Aig_ManCoNum (&*itp)));
 
     unsigned coNum = Aig_ManCoNum (&*itp);
+    outs() << "CoNum: " << coNum << "\n";
     for (int i = 0; i <= coNum; ++i)
       {
         ItpSatSolver satSolver (2, 5000);

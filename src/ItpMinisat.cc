@@ -38,7 +38,8 @@ namespace avy
       }
     
     
-    MinisatItpSeq itpSeqVisitor(*m_pSat, nNumOfVars, vVarToId, m_nParts);
+    MinisatItpSeq itpSeqVisitor(*m_pSat, nNumOfVars, vVarToId, m_nParts-1);
+    m_pSat->validate();
     m_pSat->replay(itpSeqVisitor);
 
     Aig_Man_t* pMan = Gia_ManToAigSimple(itpSeqVisitor.getInterpolantMan());
