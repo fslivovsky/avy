@@ -106,11 +106,13 @@ public:
             for (int i = 0; i < size; i++)
             {
                 ::Minisat::Var pivot = hyperChildren[i];
+                assert(itpVec.size() > pivot);
                 int l = itpVec[pivot];
                 assert(l != -1);
                 label = getLabelByPivot(pivot, part, label, l);
             }
 
+            if (itpVec.size() <= parent) itpVec.growTo(parent+1,-1);
             itpVec[parent] = label;
         }
         return 0;
@@ -146,6 +148,7 @@ public:
             for (; i < size; i++)
             {
             	::Minisat::Var pivot = hyperChildren[i];
+            	assert(itpVec.size() > pivot);
 				int l = itpVec[pivot];
 				assert(l != -1);
 				label = getLabelByPivot(pivot, part, label, l);
