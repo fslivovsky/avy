@@ -35,6 +35,7 @@ namespace avy
             vVarToId.resize (nVar + 1, -1);
             vVarToId [nVar] = i;
           }
+        cout << "i: " << i << "\n";
       }
     
     

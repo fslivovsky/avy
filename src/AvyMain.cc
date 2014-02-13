@@ -129,7 +129,7 @@ namespace avy
           {
             VERBOSE(0, 
                     vout () << "UNSAT from BMC at frame: " << nFrame << "\n";);
-            if (solver.isTrivial ())
+            if (solver.isTrivial () && typeid(solver) != typeid(ItpMinisat))
               {
                 Stats::count("Trivial");
                 m_pPdr->setLimit (unroller.frame () + 1);
@@ -300,13 +300,13 @@ namespace avy
     
     for (unsigned i = 0; i <= nFrame; ++i)
       {
+    	solver.markPartition (i+1);
         m_Vc->addTr (unroller);
-        solver.markPartition (i+1);
         unroller.newFrame ();
       }
+    solver.markPartition (nFrame + 2);
     m_Vc->addBad (unroller);
     unroller.pushBadUnit ();
-    solver.markPartition (nFrame + 1);
 
     LOG("dump_cnf", 
         solver.dumpCnf ("frame" + lexical_cast<string>(nFrame+1) + ".cnf"););

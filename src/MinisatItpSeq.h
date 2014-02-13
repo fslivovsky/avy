@@ -32,7 +32,7 @@ public:
             Gia_ManAppendCi(m_pMan);
 
         for (int i=0; i < seqSize; i++)
-        	itpForVar[i].growTo(s.nVars());
+        	itpForVar[i].growTo(s.nVars(),-1);
     }
 
     Gia_Man_t* getInterpolantMan() { return m_pMan; }
@@ -81,6 +81,7 @@ public:
             int label1, label2;
             assert(itpVec.size() > p1);
             label1 = itpVec[p1];
+            assert(label1 != -1);
             assert(clauseToItp[part-1].has(p2, label2));
 
             int label = getLabelByPivot(resolvent, part, label1, label2);
@@ -93,16 +94,20 @@ public:
 
     virtual int visitHyperResolvent (::Minisat::Var parent)
     {
+    	::Minisat::CRef c = hyperClauses[0];
         int size = hyperChildren.size();
         assert(size > 0);
         for (int part=1; part <= seqSize; part++)
         {
+        	int label;
+			bool res = clauseToItp[part-1].has(c, label);
+			assert(res == true);
             ::Minisat::vec<int>& itpVec = itpForVar[part-1];
-            int label = itpVec[parent];
             for (int i = 0; i < size; i++)
             {
                 ::Minisat::Var pivot = hyperChildren[i];
                 int l = itpVec[pivot];
+                assert(l != -1);
                 label = getLabelByPivot(pivot, part, label, l);
             }
 
@@ -142,6 +147,7 @@ public:
             {
             	::Minisat::Var pivot = hyperChildren[i];
 				int l = itpVec[pivot];
+				assert(l != -1);
 				label = getLabelByPivot(pivot, part, label, l);
             }
 
@@ -176,17 +182,21 @@ private:
         {
             ::Minisat::Var x = ::Minisat::var(lits[i]);
             ::Minisat::Range r = m_Solver.getVarRange(x);
-            if (r.min() == part && r.max() == part) continue;
-            assert(r.min() <= r.max() + 1 && r.min() >= r.max() - 1);
-            int varId = m_VarToModelVarId[x];
-            assert(varId >= 0 && varId < m_NumOfVars);
+            if (r.min() == part && r.max() > part)
+            {
+            	assert(r.min() <= r.max() + 1 && r.min() >= r.max() - 1);
+            	//cout << "(min,max): (" << r.min() << "," << r.max() << ")\n";
+            	assert(m_VarToModelVarId.size() > x);
+				int varId = m_VarToModelVarId[x];
+				assert(varId >= 0 && varId < m_NumOfVars);
 
-            Gia_Obj_t* pLeaf = Gia_ManCi(m_pMan, varId);
-            if (::Minisat::sign(lits[i]))
-                pLeaf = Gia_Not(pLeaf);
+				Gia_Obj_t* pLeaf = Gia_ManCi(m_pMan, varId);
+				if (::Minisat::sign(lits[i]))
+					pLeaf = Gia_Not(pLeaf);
 
-            label = Gia_ManAppendOr(m_pMan, label, Gia_ObjToLit(m_pMan, pLeaf));
-            pLabel = Gia_Lit2Obj(m_pMan, label);
+				label = Gia_ManAppendOr(m_pMan, label, Gia_ObjToLit(m_pMan, pLeaf));
+				pLabel = Gia_Lit2Obj(m_pMan, label);
+            }
         }
 
         return label;
@@ -195,16 +205,21 @@ private:
     int getLabelByPivot(::Minisat::Var pivot, int part, int label1, int label2)
     {
         ::Minisat::Range r = m_Solver.getVarRange(pivot);
-        if (label1 == label2 && label1 == 0) return 0;
-        if (label1 == label2 && label1 == 1) return 1;
+        if (label1 == label2 && label1 == Gia_ManConst0Lit()) return Gia_ManConst0Lit();
+        if (label1 == label2 && label1 == Gia_ManConst1Lit()) return Gia_ManConst1Lit();
+        if (label1 == label2) return label1;
         if (r.min() <= part && r.max() <= part) // -- Interpolation for (A,B) pair - partition 1 = localA
-        	if (label1 == 1 || label2 == 1)
-        		return 1;
+        	if (label1 == Gia_ManConst1Lit() || label2 == Gia_ManConst1Lit())
+        		return Gia_ManConst1Lit();
+        	else if (label1 == Gia_ManConst0Lit() || label2 == Gia_ManConst0Lit())
+        		return (label1 == Gia_ManConst0Lit()) ? label2 : label1;
         	else
         		return Gia_ManAppendOr(m_pMan, label1, label2);
 
-        if (label1 == 0 || label2 == 0)
-        	return 0;
+        if (label1 == Gia_ManConst0Lit() || label2 == Gia_ManConst0Lit())
+        	return Gia_ManConst0Lit();
+        else if (label1 == Gia_ManConst1Lit() || label2 == Gia_ManConst1Lit())
+        	return (label1 == Gia_ManConst1Lit()) ? label2 : label1;
         return Gia_ManAppendAnd(m_pMan, label1, label2);
     }
 
