@@ -43,7 +43,8 @@ namespace avy
     m_pSat->validate();
     m_pSat->replay(itpSeqVisitor);
 
-    Aig_Man_t* pMan = Gia_ManToAigSimple(itpSeqVisitor.getInterpolantMan());
+    Gia_Man_t* pManGia = itpSeqVisitor.getInterpolantMan();
+    Aig_Man_t* pMan = Gia_ManToAig(pManGia, 0);
 
     VERBOSE(2, Aig_ManPrintStats(pMan););
     LOG("itp_verbose", logs () << *pMan << "\n";);

@@ -216,6 +216,8 @@ private:
         		return Gia_ManConst1Lit();
         	else if (label1 == Gia_ManConst0Lit() || label2 == Gia_ManConst0Lit())
         		return (label1 == Gia_ManConst0Lit()) ? label2 : label1;
+        	else if (label1 == Abc_LitNot(label2))
+        		return Gia_ManConst1Lit();
         	else
         		return Gia_ManAppendOr(m_pMan, label1, label2);
 
@@ -223,6 +225,8 @@ private:
         	return Gia_ManConst0Lit();
         else if (label1 == Gia_ManConst1Lit() || label2 == Gia_ManConst1Lit())
         	return (label1 == Gia_ManConst1Lit()) ? label2 : label1;
+        else if (label1 == Abc_LitNot(label2))
+			return Gia_ManConst0Lit();
         return Gia_ManAppendAnd(m_pMan, label1, label2);
     }
 
