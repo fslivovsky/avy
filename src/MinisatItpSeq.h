@@ -28,11 +28,18 @@ public:
         , m_VarToModelVarId(vars2vars)
     {
         m_pMan = Gia_ManStart(numOfVars);
+        Gia_ManHashStart(m_pMan);
         for (unsigned i=0; i < numOfVars; i++)
             Gia_ManAppendCi(m_pMan);
 
         for (int i=0; i < seqSize; i++)
         	itpForVar[i].growTo(s.nVars(),-1);
+    }
+
+    ~MinisatItpSeq()
+    {
+    	Gia_ManHashStop(m_pMan);
+    	Gia_ManStop(m_pMan);
     }
 
     Gia_Man_t* getInterpolantMan() { return m_pMan; }
@@ -41,7 +48,11 @@ public:
     {
         for (int part = 1; part <= seqSize; part++)
         {
-            int label = markLeaf(part, lits);
+            int label = Gia_ManConst1Lit();
+            const ::Minisat::Range& r = m_Solver.getClsRange(c);
+            assert(r.min() == r.max());
+            if (r.min() <= part)
+            	label = markLeaf(part, lits);
             itpForVar[part-1][v] = label;
             clauseToItp[part-1].insert(c,label);
         }
@@ -52,7 +63,11 @@ public:
     {
         for (int part = 1; part <= seqSize; part++)
         {
-            int label = markLeaf(part, lits);
+        	int label = Gia_ManConst1Lit();
+			const ::Minisat::Range& r = m_Solver.getClsRange(cls);
+			assert(r.min() == r.max());
+			if (r.min() <= part)
+				label = markLeaf(part, lits);
             clauseToItp[part-1].insert(cls, label);
         }
         return 0;
@@ -84,7 +99,7 @@ public:
             assert(label1 != -1);
             assert(clauseToItp[part-1].has(p2, label2));
 
-            int label = getLabelByPivot(resolvent, part, label1, label2);
+            int label = getLabelByPivot(p1, part, label1, label2);
             if (itpVec.size() <= resolvent)
                 itpVec.growTo(resolvent+1);
             itpVec[resolvent] = label;
@@ -212,22 +227,9 @@ private:
         if (label1 == label2 && label1 == Gia_ManConst1Lit()) return Gia_ManConst1Lit();
         if (label1 == label2) return label1;
         if (r.min() <= part && r.max() <= part) // -- Interpolation for (A,B) pair - partition 1 = localA
-        	if (label1 == Gia_ManConst1Lit() || label2 == Gia_ManConst1Lit())
-        		return Gia_ManConst1Lit();
-        	else if (label1 == Gia_ManConst0Lit() || label2 == Gia_ManConst0Lit())
-        		return (label1 == Gia_ManConst0Lit()) ? label2 : label1;
-        	else if (label1 == Abc_LitNot(label2))
-        		return Gia_ManConst1Lit();
-        	else
-        		return Gia_ManAppendOr(m_pMan, label1, label2);
+			return Gia_ManHashOr(m_pMan, label1, label2);
 
-        if (label1 == Gia_ManConst0Lit() || label2 == Gia_ManConst0Lit())
-        	return Gia_ManConst0Lit();
-        else if (label1 == Gia_ManConst1Lit() || label2 == Gia_ManConst1Lit())
-        	return (label1 == Gia_ManConst1Lit()) ? label2 : label1;
-        else if (label1 == Abc_LitNot(label2))
-			return Gia_ManConst0Lit();
-        return Gia_ManAppendAnd(m_pMan, label1, label2);
+        return Gia_ManHashAnd(m_pMan, label1, label2);
     }
 
 private:
