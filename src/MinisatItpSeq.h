@@ -79,8 +79,10 @@ public:
         {
             ::Minisat::CMap<int>& clsToItp = clauseToItp[part-1];
             int label1, label2;
-            assert(clsToItp.has(p1, label1));
-            assert(clsToItp.has(p2, label2));
+            bool res = clsToItp.has(p1, label1);
+            assert(res == true);
+            res = clsToItp.has(p2, label2);
+            assert(res == true);
 
             int label = getLabelByPivot(resolvent, part, label1, label2);
             clsToItp.insert(parent, label);
@@ -97,7 +99,8 @@ public:
             assert(itpVec.size() > p1);
             label1 = itpVec[p1];
             assert(label1 != -1);
-            assert(clauseToItp[part-1].has(p2, label2));
+            bool res = clauseToItp[part-1].has(p2, label2);
+            assert(res == true);
 
             int label = getLabelByPivot(p1, part, label1, label2);
             if (itpVec.size() <= resolvent)
