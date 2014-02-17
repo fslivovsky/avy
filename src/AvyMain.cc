@@ -300,13 +300,29 @@ namespace avy
     
     for (unsigned i = 0; i <= nFrame; ++i)
       {
-    	solver.markPartition (i+1);
-        m_Vc->addTr (unroller);
-        unroller.newFrame ();
+    	if (gParams.minisat_itp) {
+    		solver.markPartition (i+1);
+    		m_Vc->addTr (unroller);
+    		unroller.newFrame ();
+    	}
+    	else {
+    		m_Vc->addTr (unroller);
+    		solver.markPartition (i);
+			unroller.newFrame ();
+    	}
+
       }
-    solver.markPartition (nFrame + 2);
-    m_Vc->addBad (unroller);
-    unroller.pushBadUnit ();
+    if (gParams.minisat_itp) {
+    	solver.markPartition (nFrame + 2);
+    	m_Vc->addBad (unroller);
+    	unroller.pushBadUnit ();
+    }
+    else {
+    	m_Vc->addBad (unroller);
+    	unroller.pushBadUnit ();
+    	solver.markPartition (nFrame + 1);
+    }
+
 
     LOG("dump_cnf", 
         solver.dumpCnf ("frame" + lexical_cast<string>(nFrame+1) + ".cnf"););
