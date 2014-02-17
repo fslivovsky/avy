@@ -129,7 +129,7 @@ namespace avy
           {
             VERBOSE(0, 
                     vout () << "UNSAT from BMC at frame: " << nFrame << "\n";);
-            if (solver.isTrivial () && typeid(solver) != typeid(ItpMinisat))
+            if (solver.isTrivial ())// && typeid(solver) != typeid(ItpMinisat))
               {
                 Stats::count("Trivial");
                 m_pPdr->setLimit (unroller.frame () + 1);

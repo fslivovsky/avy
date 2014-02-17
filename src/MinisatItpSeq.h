@@ -141,7 +141,6 @@ public:
         		hyperChildren.size() == hyperClauses.size() - 1);
 
         ::Minisat::CRef c = hyperClauses[0];
-        int size = hyperClauses.size();
         for (int part=1; part <= seqSize; part++)
         {
             ::Minisat::CMap<int>& clsToItp = clauseToItp[part-1];
@@ -151,6 +150,7 @@ public:
             assert(res == true);
 
             int i = 0;
+            int size = hyperClauses.size();
             for (; i < size-1; i++)
             {
                 ::Minisat::Var pivot = hyperChildren[i];
@@ -212,7 +212,7 @@ private:
 				if (::Minisat::sign(lits[i]))
 					pLeaf = Gia_Not(pLeaf);
 
-				label = Gia_ManAppendOr(m_pMan, label, Gia_ObjToLit(m_pMan, pLeaf));
+				label = Gia_ManHashOr(m_pMan, label, Gia_ObjToLit(m_pMan, pLeaf));
 				pLabel = Gia_Lit2Obj(m_pMan, label);
             }
         }
