@@ -45,6 +45,9 @@ namespace avy
     Gia_Man_t* pManGia = Gia_ManRehash(itpSeqVisitor.getInterpolantMan(), 1);
     Aig_Man_t* pMan = Gia_ManToAigSimple(pManGia);
 
+    Gia_ManHashStop(pManGia);
+    Gia_ManStop(pManGia);
+
     VERBOSE(2, Aig_ManPrintStats(pMan););
     LOG("itp_verbose", logs () << *pMan << "\n";);
 
