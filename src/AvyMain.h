@@ -17,6 +17,7 @@
 #include "boost/noncopyable.hpp"
 
 #include "ItpMinisat.h"
+#include "ItpGlucose.h"
 
 namespace avy
 {

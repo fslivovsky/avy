@@ -67,6 +67,12 @@ namespace avy
           Unroller<ItpMinisat> unroller(solver, true);
           return run(solver, unroller);
         }
+      else if (gParams.glucose_itp)
+        {
+    	  ItpGlucose solver(2,2);
+    	  Unroller<ItpGlucose> unroller(solver, true);
+    	  return run(solver, unroller);
+        }
       else
         {
           ItpSatSolver solver(2,2);
@@ -300,7 +306,7 @@ namespace avy
     
     for (unsigned i = 0; i <= nFrame; ++i)
       {
-    	if (gParams.minisat_itp) {
+    	if (gParams.minisat_itp || gParams.glucose_itp) {
     		solver.markPartition (i+1);
     		m_Vc->addTr (unroller);
     		unroller.newFrame ();
@@ -312,7 +318,7 @@ namespace avy
     	}
 
       }
-    if (gParams.minisat_itp) {
+    if (gParams.minisat_itp || gParams.glucose_itp) {
     	solver.markPartition (nFrame + 2);
     	m_Vc->addBad (unroller);
     	unroller.pushBadUnit ();
