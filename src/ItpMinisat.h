@@ -100,7 +100,10 @@ namespace avy
     }
     
     void dumpCnf (std::string fname)
-    { m_pSat->toDimacs(const_cast<char*>(fname.c_str ()), ::Minisat::vec< ::Minisat::Lit>()); }
+    { 
+      ::Minisat::vec< ::Minisat::Lit> assumps;
+      m_pSat->toDimacs(const_cast<char*>(fname.c_str ()), assumps);
+    }
 
 
     /// raw access to the sat solver
