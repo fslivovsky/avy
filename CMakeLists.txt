@@ -12,6 +12,7 @@ set(CMAKE_MODULE_PATH
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
   )
 
+add_definitions(-D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS)
 
 set (CUSTOM_BOOST_ROOT "" CACHE PATH "Path to custom boost installation.")
 if (CUSTOM_BOOST_ROOT)
