@@ -26,6 +26,7 @@ namespace avy
       m_core.clear ();
       if (m_sat) delete m_sat;
       m_sat = new ::Minisat::SimpSolver ();      
+      m_sat->proofLogging (false);
       reserve (nVars);
     }
 
