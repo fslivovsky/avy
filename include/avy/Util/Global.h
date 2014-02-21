@@ -32,7 +32,7 @@ namespace avy
     /** reset global pdr cover before updating it */
     bool reset_cover;
 
-    /** minimize unsat core */
+    /** satminimize unsat core */
     bool min_core;
 
     /** interface abstraction */
@@ -55,6 +55,9 @@ namespace avy
 
     /** use glucose */
     bool glucose;
+    
+    /** use glucose for itp */
+    bool glucose_itp;
     
     /** use minisat itp */
     bool minisat_itp;
