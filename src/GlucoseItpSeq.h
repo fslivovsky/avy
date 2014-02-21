@@ -22,10 +22,13 @@ class GlucoseItpSeq : public ::Glucose::ProofVisitor
 {
 public:
     GlucoseItpSeq(::Glucose::Solver& s, int numOfVars, const vector<int>& vars2vars, unsigned size) :
-          ::Glucose::ProofVisitor(size)
+          ::Glucose::ProofVisitor()
         , m_Solver(s)
         , m_NumOfVars(numOfVars)
         , m_VarToModelVarId(vars2vars)
+        , seqSize(size)
+        , clauseToItp(size)
+        , itpForVar(size)
     {
         m_pMan = Gia_ManStart(numOfVars);
         Gia_ManHashStart(m_pMan);
@@ -44,71 +47,51 @@ public:
 
     Gia_Man_t* getInterpolantMan() { return m_pMan; }
 
-    virtual int visitLeaf(::Glucose::Var v, ::Glucose::CRef c, const ::Glucose::vec< ::Glucose::Lit>& lits)
+    void visitLeaf(::Glucose::CRef cls, const ::Glucose::Clause& c)
     {
-        for (int part = 1; part <= seqSize; part++)
-        {
-            int label = Gia_ManConst1Lit();
-            const ::Glucose::Range& r = m_Solver.getClsRange(c);
-            assert(r.min() == r.max());
-            if (r.min() <= part)
-            	label = markLeaf(part, lits);
-            itpForVar[part-1][v] = label;
-            clauseToItp[part-1].insert(c,label);
-        }
-        return 0;
-    }
-
-    virtual int visitLeaf(::Glucose::CRef cls, const ::Glucose::vec< ::Glucose::Lit>& lits)
-    {
+    	::Glucose::Var v = var(c[0]);
         for (int part = 1; part <= seqSize; part++)
         {
         	int label = Gia_ManConst1Lit();
-			const ::Glucose::Range& r = m_Solver.getClsRange(cls);
+			const ::Glucose::Range& r = c.part();
 			assert(r.min() == r.max());
 			if (r.min() <= part)
-				label = markLeaf(part, lits);
+				label = markLeaf(part, c);
             clauseToItp[part-1].insert(cls, label);
+            if (c.size() == 1) itpForVar[part-1][v] = label;
         }
-        return 0;
-    }
-
-    virtual int visitResolvent (::Glucose::CRef parent, ::Glucose::Var resolvent, ::Glucose::CRef p1, ::Glucose::CRef p2)
-    {
-        for (int part=1; part <= seqSize; part++)
-        {
-            ::Glucose::CMap<int>& clsToItp = clauseToItp[part-1];
-            int label1, label2;
-            bool res = clsToItp.has(p1, label1);
-            assert(res == true);
-            res = clsToItp.has(p2, label2);
-            assert(res == true);
-
-            int label = getLabelByPivot(resolvent, part, label1, label2);
-            clsToItp.insert(parent, label);
-        }
-        return 0;
     }
 
     virtual int visitResolvent (::Glucose::Var resolvent, ::Glucose::Var p1, ::Glucose::CRef p2)
     {
-        for (int part=1; part <= seqSize; part++)
-        {
-            ::Glucose::vec<int>& itpVec = itpForVar[part-1];
-            int label1, label2;
-            assert(itpVec.size() > p1);
-            label1 = itpVec[p1];
-            assert(label1 != -1);
-            bool res = clauseToItp[part-1].has(p2, label2);
-            assert(res == true);
+		for (int part=1; part <= seqSize; part++)
+		{
+			::Glucose::vec<int>& itpVec = itpForVar[part-1];
+			int label1, label2;
+			assert(itpVec.size() > p1);
+			label1 = itpVec[p1];
+			if (label1 == -1) {
+				::Glucose::CRef r = m_Solver.getReason(p1);
+				const ::Glucose::Clause& c1 = m_Solver.getClause(r);
+				assert(c1.part().min() == c1.part().max());
+				assert(c1.size() == 1);
+				visitLeaf(r, c1);
+				label1 = itpVec[p1];
+			}
+			assert(label1 != -1);
+			bool res = clauseToItp[part-1].has(p2, label2);
+			if (res == false) {
+				const ::Glucose::Clause& c2 = m_Solver.getClause(p2);
+				assert(c2.part().min() == c2.part().max());
+				visitLeaf(p2, c2);
+				label2 = clauseToItp[part-1][p2];
+			}
 
-            int label = getLabelByPivot(p1, part, label1, label2);
-            if (itpVec.size() <= resolvent)
-                itpVec.growTo(resolvent+1);
-            itpVec[resolvent] = label;
-        }
-        return 0;
-    }
+			int label = getLabelByPivot(p1, part, label1, label2);
+			itpVec[resolvent] = label;
+		 }
+		 return 0;
+	 }
 
     virtual int visitHyperResolvent (::Glucose::Var parent)
     {
@@ -119,18 +102,27 @@ public:
         {
         	int label;
 			bool res = clauseToItp[part-1].has(c, label);
-			assert(res == true);
+			if (res == false) {
+				visitLeaf(c, m_Solver.getClause(c));
+				label = clauseToItp[part-1][c];
+			}
             ::Glucose::vec<int>& itpVec = itpForVar[part-1];
             for (int i = 0; i < size; i++)
             {
                 ::Glucose::Var pivot = hyperChildren[i];
-                assert(itpVec.size() > pivot);
                 int l = itpVec[pivot];
+                if (l == -1) {
+                	::Glucose::CRef r = m_Solver.getReason(pivot);
+                	const ::Glucose::Clause& pC = m_Solver.getClause(r);
+					assert(pC.part().min() == pC.part().max());
+                	assert(pC.size() == 1);
+                	visitLeaf(r, pC);
+                	l = itpVec[pivot];
+                }
                 assert(l != -1);
                 label = getLabelByPivot(pivot, part, label, l);
             }
 
-            if (itpVec.size() <= parent) itpVec.growTo(parent+1,-1);
             itpVec[parent] = label;
         }
         return 0;
@@ -150,7 +142,12 @@ public:
             ::Glucose::vec<int>& itpVec = itpForVar[part-1];
             int label;
             bool res = clsToItp.has(c, label);
-            assert(res == true);
+            if (res == false) {
+            	const ::Glucose::Clause& cls = m_Solver.getClause(c);
+				assert(cls.part().min() == cls.part().max());
+				visitLeaf(c, cls);
+				label = clauseToItp[part-1][c];
+			}
 
             int i = 0;
             int size = hyperClauses.size();
@@ -158,8 +155,14 @@ public:
             {
                 ::Glucose::Var pivot = hyperChildren[i];
                 int l;
-                res = clsToItp.has(hyperClauses[i+1], l);
-                assert(res == true);
+                ::Glucose::CRef r = hyperClauses[i+1];
+                res = clsToItp.has(r, l);
+                if (res == false) {
+                	const ::Glucose::Clause& cls = m_Solver.getClause(r);
+					assert(cls.part().min() == cls.part().max());
+					visitLeaf(r, cls);
+					l = clauseToItp[part-1][r];
+				}
                 label = getLabelByPivot(pivot, part, label, l);
             }
             size = hyperChildren.size();
@@ -168,12 +171,23 @@ public:
             	::Glucose::Var pivot = hyperChildren[i];
             	assert(itpVec.size() > pivot);
 				int l = itpVec[pivot];
+				if (l == -1) {
+					::Glucose::CRef r = m_Solver.getReason(pivot);
+					const ::Glucose::Clause& cls = m_Solver.getClause(r);
+					assert(cls.part().min() == cls.part().max());
+					assert(cls.size() == 1);
+					visitLeaf(r, cls);
+					l = itpVec[pivot];
+				}
 				assert(l != -1);
 				label = getLabelByPivot(pivot, part, label, l);
             }
 
-            if (parent != ::Glucose::CRef_Undef)
+            if (parent != ::Glucose::CRef_Undef) {
             	clsToItp.insert(parent, label);
+            	const ::Glucose::Clause& cP = m_Solver.getClause(parent);
+            	if (cP.size() == 1) itpForVar[part-1][var(cP[0])] = label;
+            }
             else
             	Gia_ManAppendCo(m_pMan, label);
         }
@@ -181,27 +195,14 @@ public:
 
     }
 
-    virtual bool itpExists(::Glucose::CRef c)
-    {
-        for (int part=1; part <= seqSize; part++)
-        {
-            ::Glucose::CMap<int>& clsToItp = clauseToItp[part-1];
-            int x;
-            if (clsToItp.has(c, x) == false)
-                return false;
-        }
-        return true;
-    }
-
-
 private:
-    int markLeaf(int part, const ::Glucose::vec< ::Glucose::Lit>& lits)
+    int markLeaf(int part, const ::Glucose::Clause& c)
     {
         Gia_Obj_t* pLabel = Gia_ManConst0(m_pMan);
         int label = Gia_ObjToLit(m_pMan, pLabel);
-        for (int i=0; i < lits.size(); i++)
+        for (int i=0; i < c.size(); i++)
         {
-            ::Glucose::Var x = ::Glucose::var(lits[i]);
+            ::Glucose::Var x = ::Glucose::var(c[i]);
             ::Glucose::Range r = m_Solver.getVarRange(x);
             if (r.min() == part && r.max() > part)
             {
@@ -212,7 +213,7 @@ private:
 				assert(varId >= 0 && varId < m_NumOfVars);
 
 				Gia_Obj_t* pLeaf = Gia_ManCi(m_pMan, varId);
-				if (::Glucose::sign(lits[i]))
+				if (::Glucose::sign(c[i]))
 					pLeaf = Gia_Not(pLeaf);
 
 				label = Gia_ManHashOr(m_pMan, label, Gia_ObjToLit(m_pMan, pLeaf));
@@ -236,10 +237,14 @@ private:
     }
 
 private:
-    const ::Glucose::Solver&    m_Solver;           // -- The SAT instance
-    Gia_Man_t*                  m_pMan;             // -- Manager for the interpolant
-    int                         m_NumOfVars;
-    const vector<int>&          m_VarToModelVarId;
+    const ::Glucose::Solver&               m_Solver;           // -- The SAT instance
+    Gia_Man_t*                             m_pMan;             // -- Manager for the interpolant
+    int                                    m_NumOfVars;
+    const vector<int>&                     m_VarToModelVarId;
+
+    unsigned int                           seqSize;            // -- ItpSeq size, always greater than 0.
+    ::Glucose::vec< ::Glucose::vec<int> >  itpForVar;          // -- Itp labeling on the trail
+    ::Glucose::vec< ::Glucose::CMap<int> > clauseToItp;        // -- Clause to its Itp labeling
 };
 
 }
