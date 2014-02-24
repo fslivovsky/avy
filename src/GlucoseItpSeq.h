@@ -62,21 +62,23 @@ public:
         }
     }
 
-    virtual int visitResolvent (::Glucose::Var resolvent, ::Glucose::Var p1, ::Glucose::CRef p2)
+    virtual int visitResolvent (::Glucose::Lit resolvent, ::Glucose::Lit p1, ::Glucose::CRef p2)
     {
+    	::Glucose::Var v = ::Glucose::var(resolvent);
+    	::Glucose::Var v1 = ::Glucose::var(p1);
 		for (int part=1; part <= seqSize; part++)
 		{
 			::Glucose::vec<int>& itpVec = itpForVar[part-1];
 			int label1, label2;
-			assert(itpVec.size() > p1);
-			label1 = itpVec[p1];
+			assert(itpVec.size() > v1);
+			label1 = itpVec[v1];
 			if (label1 == -1) {
-				::Glucose::CRef r = m_Solver.getReason(p1);
+				::Glucose::CRef r = m_Solver.getReason(v1);
 				const ::Glucose::Clause& c1 = m_Solver.getClause(r);
 				assert(c1.part().min() == c1.part().max());
 				assert(c1.size() == 1);
 				visitLeaf(r, c1);
-				label1 = itpVec[p1];
+				label1 = itpVec[v1];
 			}
 			assert(label1 != -1);
 			bool res = clauseToItp[part-1].has(p2, label2);
@@ -87,16 +89,17 @@ public:
 				label2 = clauseToItp[part-1][p2];
 			}
 
-			int label = getLabelByPivot(p1, part, label1, label2);
-			itpVec[resolvent] = label;
+			int label = getLabelByPivot(v1, part, label1, label2);
+			itpVec[v] = label;
 		 }
 		 return 0;
 	 }
 
-    virtual int visitHyperResolvent (::Glucose::Var parent)
+    virtual int visitChainResolvent (::Glucose::Lit parent)
     {
-    	::Glucose::CRef c = hyperClauses[0];
-        int size = hyperChildren.size();
+    	::Glucose::Var v = ::Glucose::var(parent);
+    	::Glucose::CRef c = chainClauses[0];
+        int size = chainPivots.size();
         assert(size > 0);
         for (int part=1; part <= seqSize; part++)
         {
@@ -109,7 +112,7 @@ public:
             ::Glucose::vec<int>& itpVec = itpForVar[part-1];
             for (int i = 0; i < size; i++)
             {
-                ::Glucose::Var pivot = hyperChildren[i];
+                ::Glucose::Var pivot = ::Glucose::var(chainPivots[i]);
                 int l = itpVec[pivot];
                 if (l == -1) {
                 	::Glucose::CRef r = m_Solver.getReason(pivot);
@@ -123,19 +126,19 @@ public:
                 label = getLabelByPivot(pivot, part, label, l);
             }
 
-            itpVec[parent] = label;
+            itpVec[v] = label;
         }
         return 0;
     }
 
-    virtual int visitHyperResolvent (::Glucose::CRef parent)
+    virtual int visitChainResolvent (::Glucose::CRef parent)
     {
-        assert(hyperChildren.size() > 0);
-        assert(hyperClauses.size() > 0);
-        assert(hyperChildren.size() >= hyperClauses.size() ||
-        		hyperChildren.size() == hyperClauses.size() - 1);
+        assert(chainPivots.size() > 0);
+        assert(chainClauses.size() > 0);
+        assert(chainPivots.size() >= chainClauses.size() ||
+        		chainPivots.size() == chainClauses.size() - 1);
 
-        ::Glucose::CRef c = hyperClauses[0];
+        ::Glucose::CRef c = chainClauses[0];
         for (int part=1; part <= seqSize; part++)
         {
             ::Glucose::CMap<int>& clsToItp = clauseToItp[part-1];
@@ -150,12 +153,12 @@ public:
 			}
 
             int i = 0;
-            int size = hyperClauses.size();
+            int size = chainClauses.size();
             for (; i < size-1; i++)
             {
-                ::Glucose::Var pivot = hyperChildren[i];
+                ::Glucose::Var pivot = ::Glucose::var(chainPivots[i]);
                 int l;
-                ::Glucose::CRef r = hyperClauses[i+1];
+                ::Glucose::CRef r = chainClauses[i+1];
                 res = clsToItp.has(r, l);
                 if (res == false) {
                 	const ::Glucose::Clause& cls = m_Solver.getClause(r);
@@ -165,10 +168,10 @@ public:
 				}
                 label = getLabelByPivot(pivot, part, label, l);
             }
-            size = hyperChildren.size();
+            size = chainPivots.size();
             for (; i < size; i++)
             {
-            	::Glucose::Var pivot = hyperChildren[i];
+            	::Glucose::Var pivot = ::Glucose::var(chainPivots[i]);
             	assert(itpVec.size() > pivot);
 				int l = itpVec[pivot];
 				if (l == -1) {
