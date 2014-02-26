@@ -21,7 +21,18 @@ namespace avy
 class MinisatItpSeq : public ::Minisat::ProofVisitor
 {
 public:
-    MinisatItpSeq(::Minisat::Solver& s, int numOfVars, const vector<int>& vars2vars, unsigned size) :
+  typedef ::Minisat::Solver Solver;
+  typedef ::Minisat::Var Var;
+  typedef ::Minisat::Lit Lit;
+  typedef ::Minisat::CRef CRef;
+  typedef ::Minisat::Clause Clause;
+  typedef ::Minisat::vec<int> IntVec;
+  typedef ::Minisat::vec<IntVec> IntIntVec;
+  typedef ::Minisat::CMap<int> IntCMap;
+  typedef ::Minisat::vec<IntCMap> VecIntCMap;
+  typedef ::Minisat::Range Range;
+  
+    MinisatItpSeq(Solver& s, int numOfVars, const vector<int>& vars2vars, unsigned size) :
           ::Minisat::ProofVisitor()
         , m_Solver(s)
         , m_NumOfVars(numOfVars)
@@ -47,13 +58,13 @@ public:
 
     Gia_Man_t* getInterpolantMan() { return m_pMan; }
 
-    void visitLeaf(::Minisat::CRef cls, const ::Minisat::Clause& c)
+    void visitLeaf(CRef cls, const Clause& c)
     {
-    	::Minisat::Var v = var(c[0]);
+    	Var v = var(c[0]);
         for (int part = 1; part <= seqSize; part++)
         {
         	int label = Gia_ManConst1Lit();
-			const ::Minisat::Range& r = c.part();
+			const Range& r = c.part();
 			assert(r.min() == r.max());
 			if (r.min() <= part)
 				label = markLeaf(part, c);
@@ -62,19 +73,19 @@ public:
         }
     }
 
-    virtual int visitResolvent (::Minisat::Lit resolvent, ::Minisat::Lit p1, ::Minisat::CRef p2)
+    virtual int visitResolvent (Lit resolvent, Lit p1, CRef p2)
     {
-    	::Minisat::Var v = ::Minisat::var(resolvent);
-    	::Minisat::Var v1 = ::Minisat::var(p1);
+    	Var v = ::Minisat::var(resolvent);
+    	Var v1 = ::Minisat::var(p1);
 		for (int part=1; part <= seqSize; part++)
 		{
-			::Minisat::vec<int>& itpVec = itpForVar[part-1];
+			IntVec& itpVec = itpForVar[part-1];
 			int label1, label2;
 			assert(itpVec.size() > v1);
 			label1 = itpVec[v1];
 			if (label1 == -1) {
-				::Minisat::CRef r = m_Solver.getReason(v1);
-				const ::Minisat::Clause& c1 = m_Solver.getClause(r);
+				CRef r = m_Solver.getReason(v1);
+				const Clause& c1 = m_Solver.getClause(r);
 				assert(c1.part().min() == c1.part().max());
 				assert(c1.size() == 1);
 				visitLeaf(r, c1);
@@ -83,7 +94,7 @@ public:
 			assert(label1 != -1);
 			bool res = clauseToItp[part-1].has(p2, label2);
 			if (res == false) {
-				const ::Minisat::Clause& c2 = m_Solver.getClause(p2);
+				const Clause& c2 = m_Solver.getClause(p2);
 				assert(c2.part().min() == c2.part().max());
 				visitLeaf(p2, c2);
 				label2 = clauseToItp[part-1][p2];
@@ -95,10 +106,10 @@ public:
 		 return 0;
 	 }
 
-    virtual int visitChainResolvent (::Minisat::Lit parent)
+    virtual int visitChainResolvent (Lit parent)
     {
-    	::Minisat::Var v = ::Minisat::var(parent);
-    	::Minisat::CRef c = chainClauses[0];
+    	Var v = ::Minisat::var(parent);
+    	CRef c = chainClauses[0];
         int size = chainPivots.size();
         assert(size > 0);
         for (int part=1; part <= seqSize; part++)
@@ -109,14 +120,14 @@ public:
 				visitLeaf(c, m_Solver.getClause(c));
 				label = clauseToItp[part-1][c];
 			}
-            ::Minisat::vec<int>& itpVec = itpForVar[part-1];
+                        IntVec& itpVec = itpForVar[part-1];
             for (int i = 0; i < size; i++)
             {
-                ::Minisat::Var pivot = ::Minisat::var(chainPivots[i]);
+                Var pivot = ::Minisat::var(chainPivots[i]);
                 int l = itpVec[pivot];
                 if (l == -1) {
-                	::Minisat::CRef r = m_Solver.getReason(pivot);
-                	const ::Minisat::Clause& pC = m_Solver.getClause(r);
+                	CRef r = m_Solver.getReason(pivot);
+                	const Clause& pC = m_Solver.getClause(r);
 					assert(pC.part().min() == pC.part().max());
                 	assert(pC.size() == 1);
                 	visitLeaf(r, pC);
@@ -131,22 +142,22 @@ public:
         return 0;
     }
 
-    virtual int visitChainResolvent (::Minisat::CRef parent)
+    virtual int visitChainResolvent (CRef parent)
     {
         assert(chainPivots.size() > 0);
         assert(chainClauses.size() > 0);
         assert(chainPivots.size() >= chainClauses.size() ||
         		chainPivots.size() == chainClauses.size() - 1);
 
-        ::Minisat::CRef c = chainClauses[0];
+        CRef c = chainClauses[0];
         for (int part=1; part <= seqSize; part++)
         {
-            ::Minisat::CMap<int>& clsToItp = clauseToItp[part-1];
-            ::Minisat::vec<int>& itpVec = itpForVar[part-1];
+            IntCMap& clsToItp = clauseToItp[part-1];
+            IntVec& itpVec = itpForVar[part-1];
             int label;
             bool res = clsToItp.has(c, label);
             if (res == false) {
-            	const ::Minisat::Clause& cls = m_Solver.getClause(c);
+            	const Clause& cls = m_Solver.getClause(c);
 				assert(cls.part().min() == cls.part().max());
 				visitLeaf(c, cls);
 				label = clauseToItp[part-1][c];
@@ -156,12 +167,12 @@ public:
             int size = chainClauses.size();
             for (; i < size-1; i++)
             {
-                ::Minisat::Var pivot = ::Minisat::var(chainPivots[i]);
+                Var pivot = ::Minisat::var(chainPivots[i]);
                 int l;
-                ::Minisat::CRef r = chainClauses[i+1];
+                CRef r = chainClauses[i+1];
                 res = clsToItp.has(r, l);
                 if (res == false) {
-                	const ::Minisat::Clause& cls = m_Solver.getClause(r);
+                	const Clause& cls = m_Solver.getClause(r);
 					assert(cls.part().min() == cls.part().max());
 					visitLeaf(r, cls);
 					l = clauseToItp[part-1][r];
@@ -171,12 +182,12 @@ public:
             size = chainPivots.size();
             for (; i < size; i++)
             {
-            	::Minisat::Var pivot = ::Minisat::var(chainPivots[i]);
+            	Var pivot = ::Minisat::var(chainPivots[i]);
             	assert(itpVec.size() > pivot);
 				int l = itpVec[pivot];
 				if (l == -1) {
-					::Minisat::CRef r = m_Solver.getReason(pivot);
-					const ::Minisat::Clause& cls = m_Solver.getClause(r);
+					CRef r = m_Solver.getReason(pivot);
+					const Clause& cls = m_Solver.getClause(r);
 					assert(cls.part().min() == cls.part().max());
 					assert(cls.size() == 1);
 					visitLeaf(r, cls);
@@ -186,9 +197,9 @@ public:
 				label = getLabelByPivot(pivot, part, label, l);
             }
 
-            if (parent != ::Minisat::CRef_Undef) {
+            if (parent != Minisat::CRef_Undef) {
             	clsToItp.insert(parent, label);
-            	const ::Minisat::Clause& cP = m_Solver.getClause(parent);
+            	const Clause& cP = m_Solver.getClause(parent);
             	if (cP.size() == 1) itpForVar[part-1][var(cP[0])] = label;
             }
             else
@@ -199,14 +210,14 @@ public:
     }
 
 private:
-    int markLeaf(int part, const ::Minisat::Clause& c)
+    int markLeaf(int part, const Clause& c)
     {
         Gia_Obj_t* pLabel = Gia_ManConst0(m_pMan);
         int label = Gia_ObjToLit(m_pMan, pLabel);
         for (int i=0; i < c.size(); i++)
         {
-            ::Minisat::Var x = ::Minisat::var(c[i]);
-            ::Minisat::Range r = m_Solver.getVarRange(x);
+            Var x = ::Minisat::var(c[i]);
+            Range r = m_Solver.getVarRange(x);
             if (r.min() == part && r.max() > part)
             {
             	assert(r.min() <= r.max() + 1 && r.min() >= r.max() - 1);
@@ -227,9 +238,9 @@ private:
         return label;
     }
 
-    int getLabelByPivot(::Minisat::Var pivot, int part, int label1, int label2)
+    int getLabelByPivot(Var pivot, int part, int label1, int label2)
     {
-        ::Minisat::Range r = m_Solver.getVarRange(pivot);
+        Range r = m_Solver.getVarRange(pivot);
         if (label1 == label2 && label1 == Gia_ManConst0Lit()) return Gia_ManConst0Lit();
         if (label1 == label2 && label1 == Gia_ManConst1Lit()) return Gia_ManConst1Lit();
         if (label1 == label2) return label1;
@@ -240,14 +251,14 @@ private:
     }
 
 private:
-    const ::Minisat::Solver&               m_Solver;           // -- The SAT instance
+    const Solver&               m_Solver;           // -- The SAT instance
     Gia_Man_t*                             m_pMan;             // -- Manager for the interpolant
     int                                    m_NumOfVars;
     const vector<int>&                     m_VarToModelVarId;
 
     unsigned int                           seqSize;            // -- ItpSeq size, always greater than 0.
-    ::Minisat::vec< ::Minisat::vec<int> >  itpForVar;          // -- Itp labeling on the trail
-    ::Minisat::vec< ::Minisat::CMap<int> > clauseToItp;        // -- Clause to its Itp labeling
+    IntIntVec  itpForVar;          // -- Itp labeling on the trail
+    VecIntCMap clauseToItp;        // -- Clause to its Itp labeling
 };
 
 }
