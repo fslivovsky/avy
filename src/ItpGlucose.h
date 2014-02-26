@@ -99,7 +99,11 @@ namespace avy
     }
     
     void dumpCnf (std::string fname)
-    { m_pSat->toDimacs(const_cast<char*>(fname.c_str ()), ::Glucose::vec< ::Glucose::Lit>()); }
+    { 
+      
+      ::Glucose::vec< ::Glucose::Lit> v;
+      m_pSat->toDimacs(const_cast<char*>(fname.c_str ()), v); 
+    }
 
 
     /// raw access to the sat solver
