@@ -77,7 +77,7 @@ namespace avy
         if (r.min() <= part)
           label = markLeaf(part, c);
         clauseToItp[part-1].insert(cls, label);
-        if (c.size() == 1) itpForVar[part-1][v] = label;
+        if (c.size() == 1 && itpForVar[part-1][v] == -1) itpForVar[part-1][v] = label;
       }
     }
 
