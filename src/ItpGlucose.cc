@@ -18,7 +18,7 @@ namespace avy
                                          bool fMcM)
   {
     AVY_MEASURE_FN;
-    AVY_ASSERT (!isTrivial ());
+    //AVY_ASSERT (!isTrivial ());
     AVY_ASSERT (m_pSat != NULL);
     AVY_ASSERT (vSharedVars.size () >= m_nParts - 1);
     
