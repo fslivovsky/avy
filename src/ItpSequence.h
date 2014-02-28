@@ -66,19 +66,16 @@ namespace avy
 
     Gia_Man_t* getInterpolantMan() { return m_pMan; }
 
-    void visitLeaf(CRef cls, const Clause& c)
+    void visitLeaf(CRef cls, const Clause& c, int part)
     {
       Var v = var(c[0]);
-      for (int part = 1; part <= seqSize; part++)
-      {
-        int label = Gia_ManConst1Lit();
-        const Range& r = c.part();
-        assert(r.min() == r.max());
-        if (r.min() <= part)
-          label = markLeaf(part, c);
-        clauseToItp[part-1].insert(cls, label);
-        if (c.size() == 1 && itpForVar[part-1][v] == -1) itpForVar[part-1][v] = label;
-      }
+      int label = Gia_ManConst1Lit();
+	  const Range& r = c.part();
+	  //assert(r.min() == r.max());
+	  if (r.max() <= part)
+	    label = markLeaf(part, c);
+	  clauseToItp[part-1].insert(cls, label);
+	  if (c.size() == 1 && itpForVar[part-1][v] == -1) itpForVar[part-1][v] = label;
     }
 
     virtual int visitResolvent (Lit resolvent, Lit p1, CRef p2)
@@ -96,7 +93,7 @@ namespace avy
           const Clause& c1 = m_Solver.getClause(r);
           assert(c1.part().min() == c1.part().max());
           assert(c1.size() == 1);
-          visitLeaf(r, c1);
+          visitLeaf(r, c1, part);
           label1 = itpVec[v1];
         }
         assert(label1 != -1);
@@ -104,7 +101,7 @@ namespace avy
         if (res == false) {
           const Clause& c2 = m_Solver.getClause(p2);
           assert(c2.part().min() == c2.part().max());
-          visitLeaf(p2, c2);
+          visitLeaf(p2, c2, part);
           label2 = clauseToItp[part-1][p2];
         }
 
@@ -125,7 +122,7 @@ namespace avy
         int label;
         bool res = clauseToItp[part-1].has(c, label);
         if (res == false) {
-          visitLeaf(c, m_Solver.getClause(c));
+          visitLeaf(c, m_Solver.getClause(c), part);
           label = clauseToItp[part-1][c];
         }
         IntVec& itpVec = itpForVar[part-1];
@@ -138,7 +135,7 @@ namespace avy
             const Clause& pC = m_Solver.getClause(r);
             assert(pC.part().min() == pC.part().max());
             assert(pC.size() == 1);
-            visitLeaf(r, pC);
+            visitLeaf(r, pC, part);
             l = itpVec[pivot];
           }
           assert(l != -1);
@@ -160,6 +157,11 @@ namespace avy
       CRef c = this->chainClauses[0];
       for (int part=1; part <= seqSize; part++)
       {
+    	if (parent != PfTrait::CRef_Undef && m_Solver.getClause(parent).part().max() <= part)
+    	{
+    		visitLeaf(parent, m_Solver.getClause(parent), part);
+    		continue;
+    	}
         IntCMap& clsToItp = clauseToItp[part-1];
         IntVec& itpVec = itpForVar[part-1];
         int label;
@@ -167,7 +169,7 @@ namespace avy
         if (res == false) {
           const Clause& cls = m_Solver.getClause(c);
           assert(cls.part().min() == cls.part().max());
-          visitLeaf(c, cls);
+          visitLeaf(c, cls, part);
           label = clauseToItp[part-1][c];
         }
 
@@ -182,7 +184,7 @@ namespace avy
           if (res == false) {
             const Clause& cls = m_Solver.getClause(r);
             assert(cls.part().min() == cls.part().max());
-            visitLeaf(r, cls);
+            visitLeaf(r, cls, part);
             l = clauseToItp[part-1][r];
           }
           label = getLabelByPivot(pivot, part, label, l);
@@ -198,7 +200,7 @@ namespace avy
             const Clause& cls = m_Solver.getClause(r);
             assert(cls.part().min() == cls.part().max());
             assert(cls.size() == 1);
-            visitLeaf(r, cls);
+            visitLeaf(r, cls, part);
             l = itpVec[pivot];
           }
           assert(l != -1);
