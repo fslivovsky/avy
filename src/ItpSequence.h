@@ -228,8 +228,9 @@ namespace avy
         Range r = m_Solver.getVarRange(x);
         if (r.min() == part && r.max() > part)
         {
-          assert(r.min() <= r.max() + 1 && r.min() >= r.max() - 1);
-          //cout << "(min,max): (" << r.min() << "," << r.max() << ")\n";
+          //outs () << "(min,max): (" << r.min() << "," << r.max() << ")\n";
+          assert (r.max () - r.min () <= 1);
+          //assert(r.min() <= r.max() + 1 && r.min() >= r.max() - 1);
           assert(m_VarToModelVarId.size() > x);
           int varId = m_VarToModelVarId[x];
           assert(varId >= 0 && varId < m_NumOfVars);
