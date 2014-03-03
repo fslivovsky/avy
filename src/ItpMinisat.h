@@ -8,7 +8,7 @@
 #include "avy/Util/Global.h"
 #include "AigUtils.h"
 
-#include "core/Solver.h"
+#include "simp/SimpSolver.h"
 
 #include <vector>
 
@@ -23,7 +23,7 @@ namespace avy
   class ItpMinisat : boost::noncopyable
   {
   private:
-    ::Minisat::Solver *m_pSat;
+    ::Minisat::SimpSolver *m_pSat;
 
     /// true if last result was trivial
     bool m_Trivial;
@@ -54,7 +54,7 @@ namespace avy
       m_nParts = nParts;
       m_Trivial = false;
       m_State = boost::tribool (boost::indeterminate);
-      m_pSat = new ::Minisat::Solver();
+      m_pSat = new ::Minisat::SimpSolver();
       m_pSat->setCurrentPart(1);
     }
 
