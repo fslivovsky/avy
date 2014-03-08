@@ -63,6 +63,7 @@ namespace avy
     { 
       AVY_ASSERT (nPart > 0 && nPart <= m_nParts);
       m_pSat->setCurrentPart(nPart);
+      LOG ("minisat_dump", logs () << "c partition\n";);
     }
     
     void reserve (int nVars)
@@ -76,6 +77,9 @@ namespace avy
            << (::Minisat::sign (p) ? "-" : "")
            << (::Minisat::var (p)) << " ";);
       m_Trivial = !m_pSat->addClause (p);
+      LOG ("minisat_dump", 
+           logs () << (::Minisat::sign (p) ? "-" : "")
+           << (::Minisat::var (p) + 1) << " 0\n";);
       return m_Trivial;
     }
 
@@ -92,9 +96,14 @@ namespace avy
 
           LOG("sat", logs () << (::Minisat::sign (p) ? "-" : "")
               << (::Minisat::var (p)) << " ";);
+          LOG("minisat_dump", logs () << (::Minisat::sign (p) ? "-" : "")
+              << (::Minisat::var (p) + 1) << " ";);
+
         }
       LOG("sat", logs () << "\n" << std::flush;);
+      LOG("minisat_dump", logs () << " 0\n" << std::flush;);
       
+
       m_Trivial = !m_pSat->addClause (cls);
       return !m_Trivial;
     }
