@@ -37,6 +37,8 @@ namespace avy
     unsigned int seqSize;            // -- ItpSeq size, always greater than 0.
     IntIntVec  itpForVar;          // -- Itp labeling on the trail
     VecIntCMap clauseToItp;        // -- Clause to its Itp labeling
+
+    IntVector numOfShared;
   
   public:
     ItpSequence (Solver& s, int numOfVars, 
@@ -56,6 +58,8 @@ namespace avy
 
       for (int i=0; i < seqSize; i++)
         itpForVar[i].growTo(s.nVars(),-1);
+
+      numOfShared.resize(size,0);
     }
 
     virtual ~ItpSequence ()
@@ -64,7 +68,7 @@ namespace avy
       Gia_ManStop(m_pMan);
     }
 
-    Gia_Man_t* getInterpolantMan() { return m_pMan; }
+    Gia_Man_t* getInterpolantMan() {printShared(); return m_pMan; }
 
     void visitLeaf(CRef cls, const Clause& c, int part)
     {
@@ -224,6 +228,7 @@ namespace avy
     {
       Gia_Obj_t* pLabel = Gia_ManConst0(m_pMan);
       int label = Gia_ObjToLit(m_pMan, pLabel);
+      bool bAllAreShared = true;
       for (int i=0; i < c.size(); i++)
       {
         Var x = PfTrait::var(c[i]);
@@ -244,7 +249,10 @@ namespace avy
           label = Gia_ManHashOr(m_pMan, label, Gia_ObjToLit(m_pMan, pLeaf));
           pLabel = Gia_Lit2Obj(m_pMan, label);
         }
+        else bAllAreShared = false;
       }
+
+      if (bAllAreShared) {printf("YES!!\n"); numOfShared[part-1] = numOfShared[part-1] + 1; }
 
       return label;
     }
@@ -259,6 +267,14 @@ namespace avy
         return Gia_ManHashOr(m_pMan, label1, label2);
 
       return Gia_ManHashAnd(m_pMan, label1, label2);
+    }
+
+    void printShared()
+    {
+        for (int i=0; i < seqSize; i++)
+        {
+            printf("Element %d: %d\n", i, numOfShared[i]);
+        }
     }
    
   };
