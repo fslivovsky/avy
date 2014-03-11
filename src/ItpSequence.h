@@ -158,58 +158,6 @@ namespace avy
       assert(this->chainPivots.size() >= this->chainClauses.size() ||
              this->chainPivots.size() == this->chainClauses.size() - 1);
 
-      printPivotsRange();
-
-      // -----
-      if (this->chainPivots.size() == 2 &&
-    	  this->chainClauses.size() == 3) {
-    	  Var p1 = PfTrait::var(this->chainPivots[0]);
-    	  Var p2 = PfTrait::var(this->chainPivots[1]);
-    	  Range r1 = m_Solver.getVarRange(p1);
-    	  Range r2 = m_Solver.getVarRange(p2);
-    	  if (r2 < r1) {
-    		  const Clause& c  = m_Solver.getClause(this->chainClauses[0]);
-    		  const Clause& c1 = m_Solver.getClause(this->chainClauses[1]);
-    		  const Clause& c2 = m_Solver.getClause(this->chainClauses[2]);
-
-    		  bool existsInAnchor = false;
-    		  for (int i=0; i < c.size() && existsInAnchor == false; i++) {
-    			  if (PfTrait::var(c[i]) == p2)
-    				  existsInAnchor = true;
-    		  }
-    		  bool existsIn1 = false;
-			  for (int i=0; i < c1.size() && existsIn1 == false; i++) {
-				  if (PfTrait::var(c1[i]) == p2)
-					  existsIn1 = true;
-			  }
-
-			  if (existsInAnchor && !existsIn1) {
-				  assert(existsIn1 == false);
-				  Lit l = this->chainPivots[0];
-				  this->chainPivots[0] = this->chainPivots[1];
-				  this->chainPivots[1] = l;
-
-				  CRef ref = this->chainClauses[1];
-				  this->chainClauses[1] = this->chainClauses[2];
-				  this->chainClauses[2] = ref;
-				  printf("Doing...\n");
-			  }
-			  else if (existsIn1 && !existsInAnchor) {
-				  assert(existsInAnchor == false);
-				  Lit l = this->chainPivots[0];
-				  this->chainPivots[0] = this->chainPivots[1];
-				  this->chainPivots[1] = l;
-
-				  CRef ref = this->chainClauses[0];
-				  this->chainClauses[0] = this->chainClauses[2];
-				  this->chainClauses[2] = ref;
-				  printf("Doing...\n");
-			  }
-
-    	  }
-      }
-      // -----
-
       CRef c = this->chainClauses[0];
       for (int part=1; part <= seqSize; part++)
       {
@@ -327,16 +275,6 @@ namespace avy
         {
             printf("Element %d: %d\n", i, numOfShared[i]);
         }
-    }
-
-    void printPivotsRange()
-    {
-    	for (int i=0; i < this->chainPivots.size(); i++)
-    	{
-    		Range r = m_Solver.getVarRange(PfTrait::var(this->chainPivots[i]));
-    		printf("(%d,%d) ", r.min(), r.max());
-    	}
-    	printf("\n");
     }
    
   };
