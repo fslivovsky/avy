@@ -42,13 +42,9 @@ namespace avy
     boost::tribool solveWithCore (Sat &sat, unsigned nFrame);
     
 
-    Glucose m_Glucose;
-    Unroller<Glucose> m_GUnroller;
-    unsigned m_nPrevFrame;
-    boost::tribool incSolveWithCore (unsigned nFrame);
-
   public:
     AvyMain(std::string fname);
+    AvyMain (AigManPtr pAig);
     
     virtual ~AvyMain() ;
 

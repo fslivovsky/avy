@@ -15,7 +15,7 @@
 
 namespace avy
 {
-  using namespace abc;
+  using namespace ABC_NAMESPACE;
   
   typedef std::vector<lit> LitVector;
   
@@ -43,7 +43,7 @@ namespace avy
         case l_False: return false;
         case l_True: return true;
         case l_Undef: return boost::tribool (boost::indeterminate);
-        default: AVY_UNREACHABLE();
+        default: { AVY_UNREACHABLE(); return false; }
         }
     }
     

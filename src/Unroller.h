@@ -24,9 +24,9 @@ namespace avy
     unsigned m_nFrames;
 
     /// Inputs, by frame
-    std::vector<abc::Vec_Int_t*> m_vInputs;
+    std::vector<ABC_NAMESPACE::Vec_Int_t*> m_vInputs;
     /// Outputs, by frame
-    std::vector<abc::Vec_Int_t*> m_vOutputs;
+    std::vector<ABC_NAMESPACE::Vec_Int_t*> m_vOutputs;
 
     /// All assumptions
     std::vector<int> m_Assumps;
@@ -164,25 +164,25 @@ namespace avy
     }
     
     void addInput (int in) 
-    { abc::Vec_IntPush (m_vInputs.at (frame ()), in); }
+    { ABC_NAMESPACE::Vec_IntPush (m_vInputs.at (frame ()), in); }
 
     int getInput (unsigned nFrame, int nNum)
-    { return abc::Vec_IntEntry (m_vInputs.at (nFrame), nNum); }
+    { return ABC_NAMESPACE::Vec_IntEntry (m_vInputs.at (nFrame), nNum); }
   
-    abc::Vec_Int_t *getInputs (unsigned nFrame) { return m_vInputs.at (nFrame); }  
+    ABC_NAMESPACE::Vec_Int_t *getInputs (unsigned nFrame) { return m_vInputs.at (nFrame); }
 
     void addOutput (int out)
-    { abc::Vec_IntPush (m_vOutputs.at (frame ()), out); }
+    { ABC_NAMESPACE::Vec_IntPush (m_vOutputs.at (frame ()), out); }
 
     int getOutput (unsigned nFrame, int nNum)
-    { return abc::Vec_IntEntry (m_vOutputs.at (nFrame), nNum); }
+    { return ABC_NAMESPACE::Vec_IntEntry (m_vOutputs.at (nFrame), nNum); }
 
-    abc::Vec_Int_t *getOutputs (unsigned nFrame) { return m_vOutputs.at (nFrame); }
-    std::vector<abc::Vec_Int_t*> &getAllOutputs () { return m_vOutputs; }
+    ABC_NAMESPACE::Vec_Int_t *getOutputs (unsigned nFrame) { return m_vOutputs.at (nFrame); }
+    std::vector<ABC_NAMESPACE::Vec_Int_t*> &getAllOutputs () { return m_vOutputs; }
     
     void setFrozenOutputs(unsigned nFrame, bool v)
     {
-        abc::Vec_Int_t* outputs = m_vOutputs[nFrame];
+        ABC_NAMESPACE::Vec_Int_t* outputs = m_vOutputs[nFrame];
         int out;
         int i;
         Vec_IntForEachEntry( outputs, out, i )
@@ -194,7 +194,7 @@ namespace avy
     }
 
     /** Add clause to solver */
-    boost::tribool addClause (abc::lit* beg, abc::lit* end) 
+    boost::tribool addClause (ABC_NAMESPACE::lit* beg, ABC_NAMESPACE::lit* end)
     { return m_pSolver->addClause (beg, end); }
   
     boost::tribool addCnf (Cnf_Dat_t* pCnf)
@@ -211,7 +211,7 @@ namespace avy
       boost::tribool res(boost::indeterminate);
       
       if (!m_pEnabledAssumps) return res;
-      if (a >= m_pEnabledAssumps->size ()) return false;
+      if (a >= ((lit) m_pEnabledAssumps->size ())) return false;
       return m_pEnabledAssumps->test (a);
     }
     

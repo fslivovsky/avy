@@ -7,17 +7,17 @@
 #include "avy/Util/Stats.h"
 
 
-namespace abc
+namespace ABC_NAMESPACE
 {
   int * Pdr_ManSortByPriority( Pdr_Man_t * p, Pdr_Set_t * pCube );
   int Pdr_ManFindInvariantStart( Pdr_Man_t * p );
   Vec_Ptr_t * Pdr_ManCollectCubes( Pdr_Man_t * p, int kStart );
-  
+  int         Abc_FrameIsBridgeMode();
 }
   
 
 
-using namespace abc;
+using namespace ABC_NAMESPACE;
 
 namespace avy
 {
@@ -114,7 +114,7 @@ namespace avy
         Vec_VecPush (m_pPdr->vClauses, level, Pdr_SetDup (pCube));
         m_pPdr->nCubes++;
         
-        for (int i = 1; i <= level; ++i)
+        for (int i = 1; i <= (int) level; ++i)
           solverAddClause (i, pCube);
       }
   }
@@ -643,9 +643,7 @@ namespace avy
     
     int fPrintClauses = 0;
     Pdr_Set_t * pCube = NULL;
-    Aig_Obj_t * pObj;
-    int k, i, j, RetValue = -1;
-    Vec_Ptr_t *vVec;
+    int k, RetValue = -1;
     int nOutDigits = Abc_Base10Log( Saig_ManPoNum(p->pAig) );
     abctime clkStart = Abc_Clock(), clkOne = 0;
     p->timeToStop = p->pPars->nTimeOut ? p->pPars->nTimeOut * CLOCKS_PER_SEC + Abc_Clock(): 0;
@@ -866,7 +864,7 @@ namespace avy
     unsigned max = maxFrames () - 1;
     unsigned count = 0;
 
-    if (nMax >= 0 && nMax <= maxFrames ()) max = nMax;
+    if (nMax >= 0 && ((unsigned int) nMax) <= maxFrames ()) max = nMax;
     m_pPdr->iOutCur = 0;
     for (unsigned i = 0; i < max; ++i)
       {

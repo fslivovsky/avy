@@ -15,7 +15,7 @@
 
 namespace avy
 {
-  using namespace abc;
+  using namespace ABC_NAMESPACE;
   
   typedef std::vector<lit> LitVector;
   
@@ -45,6 +45,7 @@ namespace avy
         case l_Undef: return boost::tribool (boost::indeterminate);
         default: AVY_UNREACHABLE();
         }
+      return boost::tribool (boost::indeterminate);
     }
     
   public:
@@ -115,7 +116,7 @@ namespace avy
 
 
       lit *beg = NULL;
-      if (maxSize < 0 || maxSize > assumptions.size ()) maxSize = assumptions.size ();
+      if (maxSize < 0 || ((unsigned int) maxSize) > assumptions.size ()) maxSize = assumptions.size ();
       if (maxSize > 0) beg = &assumptions[0];
 
       int RetValue;

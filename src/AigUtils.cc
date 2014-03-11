@@ -6,13 +6,13 @@
 #include "avy/Util/AvyAssert.h"
 #include "avy/Util/Stats.h"
 
-namespace abc
+namespace ABC_NAMESPACE
 {
   Aig_Obj_t * Aig_Mux2( Aig_Man_t * p, Aig_Obj_t * pC, Aig_Obj_t * p1, Aig_Obj_t * p0 );
 }
 
 
-using namespace abc;
+using namespace ABC_NAMESPACE;
 namespace avy
 {
 
@@ -186,7 +186,7 @@ namespace avy
     return true;
   }
   
-  bool Aig_ManDbgCompare (abc::Aig_Man_t *pAig1, abc::Aig_Man_t *pAig2)
+  bool Aig_ManDbgCompare (ABC_NAMESPACE::Aig_Man_t *pAig1, ABC_NAMESPACE::Aig_Man_t *pAig2)
   {
     AVY_ASSERT (Aig_ManCiNum (pAig1) == Aig_ManCiNum (pAig2));
     AVY_ASSERT (Aig_ManCoNum (pAig1) == Aig_ManCoNum (pAig2));
@@ -404,7 +404,7 @@ namespace avy
 
   Aig_Man_t *Aig_CreateAllZero (unsigned nPiNum)
   {
-    int i;
+    unsigned int i;
     AVY_ASSERT (nPiNum > 0 );
     Aig_Obj_t ** ppInputs = ABC_ALLOC( Aig_Obj_t *, nPiNum );
     Aig_Man_t *p = Aig_ManStart( nPiNum );

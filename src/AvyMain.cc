@@ -15,12 +15,12 @@
 
 using namespace boost;
 using namespace std;
-using namespace abc;
+using namespace ABC_NAMESPACE;
 using namespace avy;
 
 
 
-namespace abc
+namespace ABC_NAMESPACE
 {
   extern Aig_Man_t * Abc_NtkToDar( Abc_Ntk_t * pNtk, int fExors, 
                                    int fRegisters );
@@ -32,7 +32,7 @@ static Aig_Man_t *loadAig (std::string fname)
     
   VERBOSE (2, vout () << "\tReading AIG from '" << fname << "'\n";);
   string cmd = "read " + fname;
-  Cmd_CommandExecute (pFrame, cmd.c_str ());
+  ABC_NAMESPACE::Cmd_CommandExecute (pFrame, cmd.c_str ());
     
   Abc_Ntk_t *pNtk = Abc_FrameReadNtk (pFrame);
     
@@ -44,8 +44,7 @@ namespace avy
 {
   AvyMain::AvyMain (std::string fname) : 
     m_fName (fname), m_Vc (0), m_Solver(2, 2), 
-    m_Unroller (m_Solver, true), m_pPdr(0) ,
-    m_Glucose(5000), m_GUnroller(m_Glucose, true), m_nPrevFrame(0)
+    m_Unroller (m_Solver, true), m_pPdr(0)
   {
     VERBOSE (2, vout () << "Starting ABC\n");
     Abc_Start ();
@@ -53,6 +52,15 @@ namespace avy
     m_pPdr = new Pdr (&*m_Aig);
   }
   
+  AvyMain::AvyMain (AigManPtr pAig) :
+    m_fName (std::string()), m_Aig(pAig), m_Vc (0), m_Solver(2, 2),
+    m_Unroller (m_Solver, true), m_pPdr(0)
+  {
+    VERBOSE (2, vout () << "Starting ABC\n");
+    Abc_Start ();
+    m_pPdr = new Pdr (&*m_Aig);
+  }
+
   AvyMain::~AvyMain() 
   { 
     if (m_pPdr) delete m_pPdr; 
@@ -99,7 +107,7 @@ namespace avy
         Stats::count("Frame");
         Stats::uset("Depth", nFrame);
 
-        if (nFrame >= gParams.pdr)
+        if (nFrame >= ((unsigned int)gParams.pdr))
           {
             int res = m_pPdr->solve ();
             VERBOSE (1, m_pPdr->statusLn (vout ()));
@@ -334,7 +342,7 @@ namespace avy
         solver.dumpCnf ("frame" + lexical_cast<string>(nFrame+1) + ".cnf"););
 
     LOG("dump_shared",
-        std::vector<abc::Vec_Int_t *> &vShared = unroller.getAllOutputs ();
+        std::vector<ABC_NAMESPACE::Vec_Int_t *> &vShared = unroller.getAllOutputs ();
         logs () << "Shared size: " << vShared.size () << "\n";
         for (unsigned i = 0; i < vShared.size (); ++i)
           {
@@ -443,7 +451,7 @@ namespace avy
     std::reverse (core.begin (), core.end ());
 
     Stats::resume ("unsat_core");
-    for (int i = 0; gParams.min_core && core.size () > 1 && i < core.size (); ++i)
+    for (unsigned int i = 0; gParams.min_core && core.size () > 1 && i < core.size (); ++i)
       {
         lit tmp = core [i];
         core[i] = core.back ();
@@ -465,113 +473,12 @@ namespace avy
     m_Core.reset ();
     for (unsigned i = 0; i < core.size (); ++i)
       {
-        int a = core [i];
+        unsigned int a = core [i];
         if (m_Core.size () <= a) m_Core.resize (a + 1);
         m_Core.set (a);
       }
     return false;
   }
-  
-boost::tribool AvyMain::incSolveWithCore (unsigned nFrame)
-{
-    cout << "HERE!\n";
-  for (; m_nPrevFrame <= nFrame; ++m_nPrevFrame)
-    {
-      m_Vc->addTr (m_GUnroller);
-      m_GUnroller.newFrame ();
-    }
-  m_Vc->addBad (m_GUnroller);
-  lit bad = m_GUnroller.getBadLit();
-  m_GUnroller.getAssumps().push_back(bad);
-
-  // -- freeze
-  BOOST_FOREACH (lit Lit, m_GUnroller.getAssumps ()) m_Glucose.setFrozen (lit_var (Lit), true);
-  m_GUnroller.setFrozenOutputs(nFrame, true);
-
-  tribool res;
-  if ((res = m_Glucose.solve (m_GUnroller.getAssumps ())) != false)
-    {
-      m_GUnroller.getAssumps().pop_back();
-      m_Glucose.setFrozen(lit_var(bad), false);
-      m_GUnroller.resetLastFrame();
-      m_GUnroller.setFrozenOutputs(nFrame, false);
-      return res;
-    }
-
-  if (gParams.min_suffix)
-    {
-      cout << "HERE!!!\n";
-      // -- minimize suffix
-      ScoppedStats _s_("min_suffix");
-      LitVector assumps;
-
-      assumps.reserve (m_GUnroller.getAssumps ().size ());
-      assumps.push_back(bad);
-      for (int i = m_GUnroller.frame (); i >= 0; --i)
-        {
-          boost::copy (m_GUnroller.getFrameAssumps (i), std::back_inserter (assumps));
-          res = m_Glucose.solve (assumps);
-          if (!res)
-            {
-              VERBOSE(2, if (i > 0) vout () << "Killed " << i << " of prefix\n";);
-              break;
-            }
-        }
-    }
-
-  m_GUnroller.getAssumps().pop_back();
-  m_Glucose.setFrozen(lit_var(bad), false);
-  int *tmpCore;
-  int coreSz = m_Glucose.core (&tmpCore);
-  int *pCore = new int[coreSz-1];
-  int j = 0;
-  for (int i = 0; i < coreSz; i++)
-    {
-      if (tmpCore[i] == lit_neg(bad) ) continue;
-      pCore[j++] = tmpCore[i];
-    }
-  assert(j == coreSz-1);
-  coreSz--;
-
-  VERBOSE(2, logs () << "Assumption size: " << m_GUnroller.getAssumps ().size ()
-          << " core size: " << coreSz << "\n";);
-
-  LitVector core (pCore, pCore + coreSz);
-  // -- negate
-  BOOST_FOREACH (lit &p, core) p = lit_neg (p);
-  std::reverse (core.begin (), core.end ());
-
-  Stats::resume ("unsat_core");
-  for (int i = 0; gParams.min_core && core.size () > 1 && i < core.size (); ++i)
-    {
-      lit tmp = core [i];
-      core[i] = core.back ();
-      if (!m_Glucose.solve (core, core.size () - 1))
-        {
-          core.pop_back ();
-          --i;
-        }
-      else
-        core[i] = tmp;
-    }
-  Stats::stop ("unsat_core");
-
-  VERBOSE(2, if (gParams.min_core)
-               logs () << "Core size: original: " << coreSz
-                       << " mincore: " << core.size () << "\n");
-
-
-  m_Core.reset ();
-  for (unsigned i = 0; i < core.size (); ++i)
-    {
-      int a = core [i];
-      if (m_Core.size () <= a) m_Core.resize (a + 1);
-      m_Core.set (a);
-    }
-  m_GUnroller.resetLastFrame();
-  m_GUnroller.setFrozenOutputs(nFrame, false);
-  return false;
-}
   
   bool AvyMain::validateItp (AigManPtr itp)
   {
@@ -580,7 +487,7 @@ boost::tribool AvyMain::incSolveWithCore (unsigned nFrame)
 
     unsigned coNum = Aig_ManCoNum (&*itp);
     outs() << "CoNum: " << coNum << "\n";
-    for (int i = 0; i <= coNum; ++i)
+    for (unsigned int i = 0; i <= coNum; ++i)
       {
         ItpSatSolver satSolver (2, 5000);
         Unroller<ItpSatSolver> unroller (satSolver);

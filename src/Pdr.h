@@ -9,7 +9,7 @@
 
 namespace avy
 {
-  using namespace abc;
+  using namespace ABC_NAMESPACE;
   using namespace boost;
   
   class Pdr
@@ -28,7 +28,7 @@ namespace avy
     void solverAddClause( int k, Pdr_Set_t * pCube );
     
     /**
-     * based on abc::Pdr_ManPushClauses 
+     * based on ABC_NAMESPACE::Pdr_ManPushClauses
      * 
      * \return 1 if an invariant is found, 0 if not, -1 on internal error
      */
@@ -43,6 +43,7 @@ namespace avy
         case -1: return boost::tribool (boost::indeterminate);
         }
     AVY_UNREACHABLE ();
+    return boost::tribool::false_value;
     }
     
     void Print (std::ostream &out);
@@ -56,7 +57,7 @@ namespace avy
 
     void setLimit (unsigned v) { m_pPdr->pPars->nFrameMax = v; }
     void setVerbose (bool v) { m_pPdr->pPars->fVerbose = v; }
-    bool isVerbose () { return m_pPdr->pPars->fVerbose; }
+    bool isVerbose () { return m_pPdr->pPars->fVerbose != 0; }
     
     void setSilent (bool v) { m_pPdr->pPars->fSilent = v; }
     
@@ -74,7 +75,7 @@ namespace avy
     void statusLn (std::ostream &out);
     
     /**
-     * based on abc::Pdr_ManSolveInt
+     * based on ABC_NAMESPACE::Pdr_ManSolveInt
      * 
      * \return 1 if an invariant is found, 0 if not, -1 on internal error
      */

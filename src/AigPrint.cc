@@ -1,6 +1,6 @@
 #include "AigPrint.h"
 #include "avy/Util/AvyAssert.h"
-using namespace abc;
+using namespace ABC_NAMESPACE;
 
 namespace avy
 {
@@ -99,7 +99,7 @@ namespace avy
   }
   
 
-  std::ostream &PrintAig (std::ostream &out, Aig_Man_t *pMan, abc::Aig_Obj_t *pObj)
+  std::ostream &PrintAig (std::ostream &out, Aig_Man_t *pMan, ABC_NAMESPACE::Aig_Obj_t *pObj)
   {
     AVY_ASSERT (!Aig_ObjIsCo (pObj));
     
@@ -108,7 +108,7 @@ namespace avy
     return out;
   }
 
-  std::ostream &PrintAigMan (std::ostream &out, abc::Aig_Man_t *pMan)
+  std::ostream &PrintAigMan (std::ostream &out, ABC_NAMESPACE::Aig_Man_t *pMan)
   {
     Aig_Obj_t *pObj;
     int i;
@@ -133,7 +133,7 @@ namespace avy
   
   
 
-  std::ostream &PrintPdrSet (std::ostream &out, abc::Pdr_Set_t *pCube)
+  std::ostream &PrintPdrSet (std::ostream &out, ABC_NAMESPACE::Pdr_Set_t *pCube)
   {
     for (int i = 0; i < pCube->nLits; ++i)
       {

@@ -5,7 +5,7 @@
 
 using namespace std;
 using namespace avy;
-using namespace abc;
+using namespace ABC_NAMESPACE;
 
 namespace avy
 {
