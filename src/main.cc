@@ -5,7 +5,6 @@
  *      Author: yakir
  */
 
-#include "ClsItpSeqMc.h"
 #include <iostream>
 #include <cstdlib>
 #include <vector>
@@ -151,8 +150,7 @@ int main(int argc, char* argv[])
     }
   else
     {
-      ClsItpSeqMc cism(fileName);
-      cism.prove();
+      assert(false);
     }
 
   Stats::PrintBrunch (outs ());
