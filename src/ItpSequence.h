@@ -68,7 +68,7 @@ namespace avy
       Gia_ManStop(m_pMan);
     }
 
-    Gia_Man_t* getInterpolantMan() {printShared(); return m_pMan; }
+    Gia_Man_t* getInterpolantMan() {/*printShared();*/ return m_pMan; }
 
     void visitLeaf(CRef cls, const Clause& c, int part)
     {
@@ -155,17 +155,16 @@ namespace avy
     {
       assert(this->chainPivots.size() > 0);
       assert(this->chainClauses.size() > 0);
-      assert(this->chainPivots.size() >= this->chainClauses.size() ||
-             this->chainPivots.size() == this->chainClauses.size() - 1);
+      assert(this->chainPivots.size() == this->chainClauses.size() - 1);
 
       CRef c = this->chainClauses[0];
       for (int part=1; part <= seqSize; part++)
       {
-    	if (parent != PfTrait::CRef_Undef && m_Solver.getClause(parent).part().max() <= part)
-    	{
-    		visitLeaf(parent, m_Solver.getClause(parent), part);
-    		continue;
-    	}
+        if (parent != PfTrait::CRef_Undef && m_Solver.getClause(parent).part().max() <= part)
+        {
+          visitLeaf(parent, m_Solver.getClause(parent), part);
+          continue;
+        }
         IntCMap& clsToItp = clauseToItp[part-1];
         IntVec& itpVec = itpForVar[part-1];
         int label;
@@ -184,31 +183,32 @@ namespace avy
           Var pivot = PfTrait::var(this->chainPivots[i]);
           int l;
           CRef r = this->chainClauses[i+1];
-          res = clsToItp.has(r, l);
-          if (res == false) {
-            const Clause& cls = m_Solver.getClause(r);
-            assert(cls.part().min() == cls.part().max());
-            visitLeaf(r, cls, part);
-            l = clauseToItp[part-1][r];
+          if (r != PfTrait::CRef_Undef)
+          {
+            res = clsToItp.has(r, l);
+            if (res == false) {
+              const Clause& cls = m_Solver.getClause(r);
+              assert(cls.part().min() == cls.part().max());
+              visitLeaf(r, cls, part);
+              l = clauseToItp[part-1][r];
+            }
+            label = getLabelByPivot(pivot, part, label, l);
           }
-          label = getLabelByPivot(pivot, part, label, l);
-        }
-        size = this->chainPivots.size();
-        for (; i < size; i++)
-        {
-          Var pivot = PfTrait::var(this->chainPivots[i]);
-          assert(itpVec.size() > pivot);
-          int l = itpVec[pivot];
-          if (l == -1) {
-            CRef r = m_Solver.getReason(pivot);
-            const Clause& cls = m_Solver.getClause(r);
-            assert(cls.part().min() == cls.part().max());
-            assert(cls.size() == 1);
-            visitLeaf(r, cls, part);
-            l = itpVec[pivot];
+          else
+          {
+            assert(itpVec.size() > pivot);
+            int l = itpVec[pivot];
+            if (l == -1) {
+              CRef r = m_Solver.getReason(pivot);
+              const Clause& cls = m_Solver.getClause(r);
+              assert(cls.part().min() == cls.part().max());
+              assert(cls.size() == 1);
+              visitLeaf(r, cls, part);
+              l = itpVec[pivot];
+            }
+            assert(l != -1);
+            label = getLabelByPivot(pivot, part, label, l);
           }
-          assert(l != -1);
-          label = getLabelByPivot(pivot, part, label, l);
         }
 
         if (parent != PfTrait::CRef_Undef) {
