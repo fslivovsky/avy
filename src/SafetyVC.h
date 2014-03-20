@@ -12,15 +12,16 @@
 #include <vector>
 namespace avy
 {
+  using namespace avy::abc;
   /// smart pointer for Cnf_Dat_t. 
-  typedef boost::shared_ptr<ABC_NAMESPACE::Cnf_Dat_t> CnfPtr;
+  typedef boost::shared_ptr<Cnf_Dat_t> CnfPtr;
   namespace 
   { 
     struct cnf_deleter
-    { void operator() (ABC_NAMESPACE::Cnf_Dat_t* p) { if (p) ABC_NAMESPACE::Cnf_DataFree (p); } };
+    { void operator() (Cnf_Dat_t* p) { if (p) Cnf_DataFree (p); } };
   }
   
-  inline CnfPtr cnfPtr (ABC_NAMESPACE::Cnf_Dat_t *p) { return CnfPtr (p, cnf_deleter()); }
+  inline CnfPtr cnfPtr (Cnf_Dat_t *p) { return CnfPtr (p, cnf_deleter()); }
 
   /// Lifts Cnf for the lifetime of the instance
   class ScoppedCnfLift 
@@ -69,11 +70,11 @@ namespace avy
     std::vector<Clauses> m_postCond;
 
     /// initialize given a circuit
-    void init (ABC_NAMESPACE::Aig_Man_t *pCircuit);
+    void init (Aig_Man_t *pCircuit);
 
   public:
     /// create a VC given from a circuit. Init is implicit.
-    SafetyVC(ABC_NAMESPACE::Aig_Man_t *pCircuit) { init (pCircuit); }
+    SafetyVC(Aig_Man_t *pCircuit) { init (pCircuit); }
     
 
     AigManPtr getTr () { return m_Tr; }
@@ -148,7 +149,7 @@ namespace avy
     
     template<typename S>
     boost::tribool addClauses (Unroller<S> &unroller, Clauses &clauses, 
-                               ABC_NAMESPACE::Vec_Int_t* vMap)
+                               Vec_Int_t* vMap)
     {
       boost::tribool res = true;
       Clause tmp;

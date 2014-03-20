@@ -15,16 +15,16 @@
 
 using namespace boost;
 using namespace std;
-using namespace ABC_NAMESPACE;
 using namespace avy;
+using namespace avy::abc;
 
 
 
 namespace ABC_NAMESPACE
 {
-  extern Aig_Man_t * Abc_NtkToDar( Abc_Ntk_t * pNtk, int fExors, 
-                                   int fRegisters );
+  extern Aig_Man_t * Abc_NtkToDar( Abc_Ntk_t * pNtk, int fExors, int fRegisters );
 }
+
 
 static Aig_Man_t *loadAig (std::string fname)
 {
@@ -32,7 +32,7 @@ static Aig_Man_t *loadAig (std::string fname)
     
   VERBOSE (2, vout () << "\tReading AIG from '" << fname << "'\n";);
   string cmd = "read " + fname;
-  ABC_NAMESPACE::Cmd_CommandExecute (pFrame, cmd.c_str ());
+  Cmd_CommandExecute (pFrame, cmd.c_str ());
     
   Abc_Ntk_t *pNtk = Abc_FrameReadNtk (pFrame);
     
@@ -342,7 +342,7 @@ namespace avy
         solver.dumpCnf ("frame" + lexical_cast<string>(nFrame+1) + ".cnf"););
 
     LOG("dump_shared",
-        std::vector<ABC_NAMESPACE::Vec_Int_t *> &vShared = unroller.getAllOutputs ();
+        std::vector<Vec_Int_t *> &vShared = unroller.getAllOutputs ();
         logs () << "Shared size: " << vShared.size () << "\n";
         for (unsigned i = 0; i < vShared.size (); ++i)
           {

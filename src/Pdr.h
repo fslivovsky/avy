@@ -1,6 +1,8 @@
 #ifndef _PDR_H_
 #define _PDR_H_
 
+#include "avy/AvyAbc.h"
+
 #include "proof/pdr/pdrInt.h"
 #include <iostream>
 
@@ -9,7 +11,7 @@
 
 namespace avy
 {
-  using namespace ABC_NAMESPACE;
+  using namespace avy::abc;
   using namespace boost;
   
   class Pdr
@@ -28,7 +30,7 @@ namespace avy
     void solverAddClause( int k, Pdr_Set_t * pCube );
     
     /**
-     * based on ABC_NAMESPACE::Pdr_ManPushClauses
+     * based on Pdr_ManPushClauses
      * 
      * \return 1 if an invariant is found, 0 if not, -1 on internal error
      */
@@ -75,7 +77,7 @@ namespace avy
     void statusLn (std::ostream &out);
     
     /**
-     * based on ABC_NAMESPACE::Pdr_ManSolveInt
+     * based on Pdr_ManSolveInt
      * 
      * \return 1 if an invariant is found, 0 if not, -1 on internal error
      */

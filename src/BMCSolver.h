@@ -27,7 +27,7 @@
 #include <iostream>
 #include <sstream>
 
-using namespace abc;
+using namespace avy::abc;
 using namespace std;
 
 // An interface to the ABC framework.

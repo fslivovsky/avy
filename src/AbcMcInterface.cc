@@ -16,7 +16,7 @@
 #include "base/main/main.h"
 #include "aig/ioa/ioa.h"
 
-using namespace abc;
+using namespace avy::abc;
 using namespace avy;
 
 #define DEBUG 0

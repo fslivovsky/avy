@@ -12,7 +12,7 @@ namespace ABC_NAMESPACE
 }
 
 
-using namespace ABC_NAMESPACE;
+using namespace avy::abc;
 namespace avy
 {
 
@@ -186,7 +186,7 @@ namespace avy
     return true;
   }
   
-  bool Aig_ManDbgCompare (ABC_NAMESPACE::Aig_Man_t *pAig1, ABC_NAMESPACE::Aig_Man_t *pAig2)
+  bool Aig_ManDbgCompare (Aig_Man_t *pAig1, Aig_Man_t *pAig2)
   {
     AVY_ASSERT (Aig_ManCiNum (pAig1) == Aig_ManCiNum (pAig2));
     AVY_ASSERT (Aig_ManCoNum (pAig1) == Aig_ManCoNum (pAig2));

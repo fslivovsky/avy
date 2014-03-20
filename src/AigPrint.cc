@@ -1,10 +1,12 @@
+#include "avy/AvyAbc.h"
 #include "AigPrint.h"
 #include "avy/Util/AvyAssert.h"
-using namespace ABC_NAMESPACE;
+
+
 
 namespace avy
 {
-
+  using namespace avy::abc;
   namespace 
   {
     void Aig_PrintVerilog ( std::ostream &out, 
@@ -99,7 +101,7 @@ namespace avy
   }
   
 
-  std::ostream &PrintAig (std::ostream &out, Aig_Man_t *pMan, ABC_NAMESPACE::Aig_Obj_t *pObj)
+  std::ostream &PrintAig (std::ostream &out, Aig_Man_t *pMan, Aig_Obj_t *pObj)
   {
     AVY_ASSERT (!Aig_ObjIsCo (pObj));
     
@@ -108,7 +110,7 @@ namespace avy
     return out;
   }
 
-  std::ostream &PrintAigMan (std::ostream &out, ABC_NAMESPACE::Aig_Man_t *pMan)
+  std::ostream &PrintAigMan (std::ostream &out, Aig_Man_t *pMan)
   {
     Aig_Obj_t *pObj;
     int i;
@@ -119,8 +121,7 @@ namespace avy
         out << "po" << i << " := ";
         PrintAig (out, pMan, Aig_ObjChild0 (pObj));
         out << "\n";
-      }
-    Saig_ManForEachLi (pMan, pObj, i)
+      }    Saig_ManForEachLi (pMan, pObj, i)
       {
         out << "li" << i << " := ";
         PrintAig (out, pMan, Aig_ObjChild0 (pObj));
@@ -133,7 +134,7 @@ namespace avy
   
   
 
-  std::ostream &PrintPdrSet (std::ostream &out, ABC_NAMESPACE::Pdr_Set_t *pCube)
+  std::ostream &PrintPdrSet (std::ostream &out, Pdr_Set_t *pCube)
   {
     for (int i = 0; i < pCube->nLits; ++i)
       {

@@ -14,7 +14,7 @@
 #include "aig/ioa/ioa.h"
 #include "AigPrint.h"
 #include "avy/Util/Stats.h"
-using namespace abc;
+using namespace avy::abc;
 
 #define DEBUG 0
 

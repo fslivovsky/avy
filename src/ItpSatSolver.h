@@ -15,7 +15,7 @@
 
 namespace avy
 {
-  using namespace ABC_NAMESPACE;
+  using namespace avy::abc;
   
   typedef std::vector<lit> LitVector;
   
