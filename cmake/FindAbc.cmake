@@ -2,6 +2,9 @@
 
 set(ABC_ROOT "" CACHE PATH "Root of ABC compiled source tree.")
 
+set(ABC_NAMESPACE "abc" CACHE STRING "Abc namespace to use.")
+
+
 find_program(ABC_ARCH_FLAGS NAMES arch_flags PATHS ${ABC_ROOT})
 if (ABC_ARCH_FLAGS)
   execute_process (COMMAND ${ABC_ARCH_FLAGS}
