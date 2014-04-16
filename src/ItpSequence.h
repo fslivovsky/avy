@@ -39,6 +39,8 @@ namespace avy
     VecIntCMap clauseToItp;        // -- Clause to its Itp labeling
 
     IntVector numOfShared;
+
+    std::vector<std::vector<int> > sharedLeaves;
   
   public:
     ItpSequence (Solver& s, int numOfVars, 
@@ -60,6 +62,7 @@ namespace avy
         itpForVar[i].growTo(s.nVars(),-1);
 
       numOfShared.resize(size,0);
+      sharedLeaves.resize(size);
     }
 
     virtual ~ItpSequence ()
@@ -68,7 +71,8 @@ namespace avy
       Gia_ManStop(m_pMan);
     }
 
-    Gia_Man_t* getInterpolantMan() {/*printShared();*/ return m_pMan; }
+    Gia_Man_t*                                    getInterpolantMan() {printShared(); return m_pMan; }
+    const std::vector<std::vector<int> >&  getSharedLeaves()   { return sharedLeaves; }
 
     void visitLeaf(CRef cls, const Clause& c, int part)
     {
@@ -217,7 +221,15 @@ namespace avy
           if (cP.size() == 1) itpForVar[part-1][var(cP[0])] = label;
         }
         else
+        {
+          const std::vector<int>& leaves = sharedLeaves[part-1];
+          for (int j=0; j < leaves.size(); j++)
+          {
+            int leaf = leaves[j];
+            label = Gia_ManHashAnd(m_pMan, label, leaf);
+          }
           Gia_ManAppendCo(m_pMan, label);
+        }
       }
       return 0;
 
@@ -252,7 +264,12 @@ namespace avy
         else bAllAreShared = false;
       }
 
-      if (bAllAreShared) {printf("YES!!\n"); numOfShared[part-1] = numOfShared[part-1] + 1; }
+      if (bAllAreShared)
+      {
+        sharedLeaves[part-1].push_back(label);
+        numOfShared[part-1] = numOfShared[part-1] + 1;
+        label = Gia_ManConst1Lit();
+      }
 
       return label;
     }
