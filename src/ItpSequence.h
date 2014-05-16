@@ -2,6 +2,7 @@
 #define _ITP_SEQUENCE_H_
 
 #include <vector>
+#include <set>
 #include "aig/gia/gia.h"
 
 namespace avy
@@ -41,7 +42,8 @@ namespace avy
     IntVector numOfShared;
 
     std::vector<std::vector<int> > sharedLeaves;
-  
+    std::vector<std::set<CRef> >   knownShared;
+    std::vector<std::set<Var> >   knownSharedUnits;
   public:
     ItpSequence (Solver& s, int numOfVars, 
                  const std::vector<int>& vars2vars, unsigned size) :
@@ -63,6 +65,7 @@ namespace avy
 
       numOfShared.resize(size,0);
       sharedLeaves.resize(size);
+      knownShared.resize(size);
     }
 
     virtual ~ItpSequence ()
@@ -74,14 +77,14 @@ namespace avy
     Gia_Man_t*                                    getInterpolantMan() {printShared(); return m_pMan; }
     const std::vector<std::vector<int> >&  getSharedLeaves()   { return sharedLeaves; }
 
-    void visitLeaf(CRef cls, const Clause& c, int part)
+    void visitLeaf(CRef cls, const Clause& c, int part, bool bTreatShared)
     {
       Var v = var(c[0]);
       int label = Gia_ManConst1Lit();
 	  const Range& r = c.part();
 	  //assert(r.min() == r.max());
 	  if (r.max() <= part)
-	    label = markLeaf(part, c);
+	    label = markLeaf(part, cls, c, bTreatShared);
 	  clauseToItp[part-1].insert(cls, label);
 	  if (c.size() == 1 && itpForVar[part-1][v] == -1) itpForVar[part-1][v] = label;
     }
@@ -101,7 +104,7 @@ namespace avy
           const Clause& c1 = m_Solver.getClause(r);
           assert(c1.part().min() == c1.part().max());
           assert(c1.size() == 1);
-          visitLeaf(r, c1, part);
+          visitLeaf(r, c1, part, false);
           label1 = itpVec[v1];
         }
         assert(label1 != -1);
@@ -109,7 +112,7 @@ namespace avy
         if (res == false) {
           const Clause& c2 = m_Solver.getClause(p2);
           assert(c2.part().min() == c2.part().max());
-          visitLeaf(p2, c2, part);
+          visitLeaf(p2, c2, part, false);
           label2 = clauseToItp[part-1][p2];
         }
 
@@ -130,7 +133,7 @@ namespace avy
         int label;
         bool res = clauseToItp[part-1].has(c, label);
         if (res == false) {
-          visitLeaf(c, m_Solver.getClause(c), part);
+          visitLeaf(c, m_Solver.getClause(c), part, false);
           label = clauseToItp[part-1][c];
         }
         IntVec& itpVec = itpForVar[part-1];
@@ -143,7 +146,7 @@ namespace avy
             const Clause& pC = m_Solver.getClause(r);
             assert(pC.part().min() == pC.part().max());
             assert(pC.size() == 1);
-            visitLeaf(r, pC, part);
+            visitLeaf(r, pC, part, false);
             l = itpVec[pivot];
           }
           assert(l != -1);
@@ -166,9 +169,50 @@ namespace avy
       {
         if (parent != PfTrait::CRef_Undef && m_Solver.getClause(parent).part().max() <= part)
         {
-          visitLeaf(parent, m_Solver.getClause(parent), part);
-          continue;
+            bool bTreatShared = false;
+            const Clause& cP = m_Solver.getClause(parent);
+            bool bShared = true;
+            for (int i=0; i < cP.size(); i++)
+            {
+                Var x = PfTrait::var(cP[i]);
+                Range r = m_Solver.getVarRange(x);
+                if (r.min() != part || r.max() <= part)
+                    bShared = false;
+            }
+              if (bShared)
+              {
+                  bTreatShared = true;
+                  for (int jj=0; jj < this->chainClauses.size() && bTreatShared; jj++) {
+                      CRef xx  = this->chainClauses[jj];
+                      if (xx == PfTrait::CRef_Undef ) { // For now, not sure how to handle this
+                          bTreatShared = false;
+                          break;
+                      }
+                      const Clause& c = m_Solver.getClause(xx);
+                      // If the minimum partition is the current one then
+                      // this clause is OK, no need to check
+                      if (c.part().min() >= part) continue;
+
+                      // If the max partition equals or greater than the current
+                      // one, and the minimum is less than the current partition
+                      // this clause is bad.
+                      if (c.part().max() >= part) bTreatShared = false;
+
+                      // Otherwise, this clause needs to be a known good shared clause.
+                      // If not, a bad clause
+                      if (knownShared[c.part().max()-1].find(xx) == knownShared[c.part().max()-1].end())
+                          bTreatShared = false;
+                  }
+
+                  if (bTreatShared) {
+                      knownShared[part-1].insert(parent);
+                  }
+              }
+
+              visitLeaf(parent, m_Solver.getClause(parent), part, bTreatShared);
+              continue;
         }
+
         IntCMap& clsToItp = clauseToItp[part-1];
         IntVec& itpVec = itpForVar[part-1];
         int label;
@@ -176,7 +220,7 @@ namespace avy
         if (res == false) {
           const Clause& cls = m_Solver.getClause(c);
           assert(cls.part().min() == cls.part().max());
-          visitLeaf(c, cls, part);
+          visitLeaf(c, cls, part, false);
           label = clauseToItp[part-1][c];
         }
 
@@ -193,7 +237,7 @@ namespace avy
             if (res == false) {
               const Clause& cls = m_Solver.getClause(r);
               assert(cls.part().min() == cls.part().max());
-              visitLeaf(r, cls, part);
+              visitLeaf(r, cls, part, false);
               l = clauseToItp[part-1][r];
             }
             label = getLabelByPivot(pivot, part, label, l);
@@ -207,7 +251,7 @@ namespace avy
               const Clause& cls = m_Solver.getClause(r);
               assert(cls.part().min() == cls.part().max());
               assert(cls.size() == 1);
-              visitLeaf(r, cls, part);
+              visitLeaf(r, cls, part, false);
               l = itpVec[pivot];
             }
             assert(l != -1);
@@ -236,7 +280,7 @@ namespace avy
     }
 
   private:
-    int markLeaf(int part, const Clause& c)
+    int markLeaf(int part, CRef cr, const Clause& c, bool bTreatShared)
     {
       Gia_Obj_t* pLabel = Gia_ManConst0(m_pMan);
       int label = Gia_ObjToLit(m_pMan, pLabel);
@@ -264,11 +308,12 @@ namespace avy
         else bAllAreShared = false;
       }
 
-      if (bAllAreShared)
+      if (bAllAreShared && bTreatShared == true)
       {
         sharedLeaves[part-1].push_back(label);
         numOfShared[part-1] = numOfShared[part-1] + 1;
         label = Gia_ManConst1Lit();
+        //if (c.part().min() == c.part().max()) knownShared[part-1].insert(cr);
       }
 
       return label;
