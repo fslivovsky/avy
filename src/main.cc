@@ -79,7 +79,10 @@ std::string parseCmdLine (int argc, char** argv)
      "Stick error output")
      ("itp-simplify",
       po::value<bool> (&gParams.itp_simplify)->default_value (true),
-      "Simplify the interpolant using synthesis");
+      "Simplify the interpolant using synthesis")
+    ("max-frame",
+     po::value<unsigned> (&gParams.maxFrame)->default_value (100000),
+     "Max BMC depth");
   
   
   po::options_description hidden("Hidden options");

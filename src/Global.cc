@@ -24,6 +24,7 @@ namespace avy
         << "\tkstep = " << p.kStep << "\n"
         << "\tstick-error = " << p.stick_error << "\n"
         << "\titp-simplify = " << p.itp_simplify << "\n"
+        << "\tmax-frame = " << p.maxFrame << "\n"
         << "END";
     return out;
   }

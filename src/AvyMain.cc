@@ -98,7 +98,7 @@ namespace avy
     SafetyVC vc (&*m_Aig);
     m_Vc = &vc;
 
-    unsigned nMaxFrames = 100000;
+    unsigned nMaxFrames = gParams.maxFrame;
     for (unsigned nFrame = 0; nFrame < nMaxFrames; nFrame+=gParams.kStep)
       {
         ScoppedStats loopStats (string(__FUNCTION__) + ".loop");
@@ -177,6 +177,7 @@ namespace avy
                 if (gParams.itp_simplify)
                 {
                     itp = aigPtr (Aig_ManSimplifyComb (&*itp));
+                    Stats::uset("SimpItp", Aig_ManAndNum(&*itp));
                     VERBOSE(2, Aig_ManPrintStats (&*itp));
                 }
 

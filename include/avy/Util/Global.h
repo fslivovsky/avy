@@ -70,6 +70,7 @@ namespace avy
     
     bool itp_simplify;
 
+    unsigned maxFrame;
   };
   
   std::ostream &operator<< (std::ostream& out, const AvyParams& p);
