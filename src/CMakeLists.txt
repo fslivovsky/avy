@@ -3,7 +3,20 @@ add_library (ClauseItpSeq STATIC
 add_library (AbcCpp Pdr.cc AigPrint.cc AigUtils.cc ItpSatSolver.cc ItpMinisat.cc ItpGlucose.cc)
 add_library (AvyDebug AvyDebug.cc)
 add_executable (main main.cc AvyMain.cc)
+
 target_link_libraries (main 
+  ClauseItpSeq 
+  AbcCpp
+  AvyDebug
+  ${ABC_LIBRARY} 
+  ${MINISAT_LIBRARY}
+  ${GLUCOSE_LIBRARY}
+  ${Boost_PROGRAM_OPTIONS_LIBRARY}
+  m dl pthread z
+  ${RT_LIB})
+
+add_executable (avybmc AvyBmc.cc)
+target_link_libraries (avybmc
   ClauseItpSeq 
   AbcCpp
   AvyDebug
