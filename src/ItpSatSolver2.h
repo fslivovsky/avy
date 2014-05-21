@@ -3,6 +3,7 @@
 
 #include "boost/noncopyable.hpp"
 #include "boost/logic/tribool.hpp"
+#include "boost/foreach.hpp"
 
 #include "avy/Util/AvyDebug.h"
 #include "avy/Util/Global.h"
@@ -98,6 +99,14 @@ namespace avy
       return !m_Trivial;
     }
     
+
+
+    void dumpCnf (std::string fname)
+    {
+      Sat_Solver2WriteDimacs (m_pSat, const_cast<char*>(fname.c_str ()), 
+                              NULL, NULL, 0);
+    }
+
     /// raw access to the sat solver
     sat_solver2* get () { return m_pSat; }
     

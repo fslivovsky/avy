@@ -61,6 +61,14 @@ namespace avy
       return !m_Trivial;
     }
     
+    void dumpCnf (std::string fname)
+    { 
+      
+      ::Glucose::vec< ::Glucose::Lit> v;
+      m_sat->toDimacs(const_cast<char*>(fname.c_str ()), v); 
+    }
+
+
     boost::tribool solve (std::vector<int> &assumptions, int maxSize = -1)
     {
       if (m_Trivial) return false;

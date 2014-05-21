@@ -64,6 +64,13 @@ namespace avy
       return !m_Trivial;
     }
     
+    void dumpCnf (std::string fname)
+    { 
+      ::Minisat::vec< ::Minisat::Lit> assumps;
+      m_sat->toDimacs(const_cast<char*>(fname.c_str ()), assumps);
+    }
+    
+
     boost::tribool solve (std::vector<int> &assumptions, int maxSize = -1)
     {
       if (m_Trivial) return false;
