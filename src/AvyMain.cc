@@ -109,6 +109,7 @@ namespace avy
 
         if (nFrame >= ((unsigned int)gParams.pdr))
           {
+            VERBOSE(2, m_pPdr->setVerbose (true));
             int res = m_pPdr->solve ();
             VERBOSE (1, m_pPdr->statusLn (vout ()));
             if (res == 1) 
