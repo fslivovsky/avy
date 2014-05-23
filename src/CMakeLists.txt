@@ -24,3 +24,12 @@ target_link_libraries (avybmc
   ${Boost_PROGRAM_OPTIONS_LIBRARY}
   m dl pthread z
   ${RT_LIB})
+
+if (AVY_STATIC_EXE)
+    set (CMAKE_EXE_LINKER_FLAGS "-static -static-libgcc -static-libstdc++")
+    set_target_properties (avy PROPERTIES LINK_SEARCH_START_STATIC ON)
+    set_target_properties (avy PROPERTIES LINK_SEARCH_END_STATIC ON)
+    set_target_properties (avybmc PROPERTIES LINK_SEARCH_START_STATIC ON)
+    set_target_properties (avybmc PROPERTIES LINK_SEARCH_END_STATIC ON)
+endif()
+

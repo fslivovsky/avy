@@ -14,6 +14,8 @@ set(CMAKE_MODULE_PATH
 
 add_definitions(-D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS)
 
+option(AVY_STATIC_EXE "Static executables." OFF)
+
 set (CUSTOM_BOOST_ROOT "" CACHE PATH "Path to custom boost installation.")
 if (CUSTOM_BOOST_ROOT)
   set (BOOST_ROOT ${CUSTOM_BOOST_ROOT})
