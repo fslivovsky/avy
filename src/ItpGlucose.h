@@ -130,6 +130,13 @@ namespace avy
     /// fMcM == true for McMillan, and false for McMillan'
     Aig_Man_t* getInterpolant (std::vector<Vec_Int_t*> &vSharedVars, int nNumOfVars, bool fMcM = true);
     
+    bool getVarVal(int v)
+    {
+      return false;
+      /*::Glucose::Var x = v;
+      ::Glucose::lbool val = m_pSat->modelValue(x);
+      return (val == ::Glucose::l_True) ? true : false;*/
+    }
   };
   
 }

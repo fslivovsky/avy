@@ -62,6 +62,9 @@ namespace avy
     
     bool validateItp (AigManPtr itp);
     boost::tribool solveWithCore (unsigned nFrame);
+
+    template<typename Sat>
+    void printCex(Sat& s, Unroller<Sat>& unroller, unsigned nFrame);
   };
 }
 

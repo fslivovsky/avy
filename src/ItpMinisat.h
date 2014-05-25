@@ -139,6 +139,14 @@ namespace avy
     /// fMcM == true for McMillan, and false for McMillan'
     Aig_Man_t* getInterpolant (std::vector<Vec_Int_t*> &vSharedVars, int nNumOfVars, bool fMcM = true);
     
+    bool getVarVal(int v)
+    {
+      return false;
+      /*::Minisat::Var x = v;
+      ::Minisat::lbool val = m_pSat->modelValue(x);
+      return (val == ::Minisat::l_True) ? true : false;*/
+    }
+
   };
   
 }
@@ -147,4 +155,4 @@ namespace avy
 #undef l_False
 #undef l_Undef
 
-#endif /* _ITPSATSOLVER_H_ */
+#endif /* _ITP_MINISAT_H_ */

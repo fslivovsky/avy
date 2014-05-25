@@ -138,6 +138,7 @@ namespace avy
             VERBOSE (0, 
                      vout () << "SAT from BMC at frame: " << nFrame << "\n";);
             Stats::set ("Result", "SAT");
+            printCex(solver, unroller, nFrame);
             return 1;
           }
         else if (!res)
@@ -324,7 +325,7 @@ namespace avy
     	else {
     		m_Vc->addTr (unroller);
     		solver.markPartition (i);
-			unroller.newFrame ();
+			  unroller.newFrame ();
     	}
 
       }
@@ -553,6 +554,21 @@ namespace avy
     outs () << " Done\n" << std::flush;
     return true;    
   }
+}
+
+template<typename Sat>
+void AvyMain::printCex(Sat& s, Unroller<Sat>& unroller, unsigned nFrame)
+{
+  outs() << "Printing CEX\n";
+  for (int i=0; i <= nFrame; i++) {
+    abc::Vec_Int_t* PIs = unroller.getPrimaryInputs(i);
+    int j, input;
+    Vec_IntForEachEntry(PIs, input, j) {
+      outs() << (s.getVarVal(input) ? "1" : "0");
+    }
+    outs() <<  "\n";
+  }
+
 }
 
 

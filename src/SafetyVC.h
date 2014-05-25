@@ -208,6 +208,10 @@ namespace avy
 
       unroller.addCnf (&*m_cnfTr0);
 
+      // -- register frame PIs
+      Saig_ManForEachPi (&*m_Tr0, pObj, i)
+        unroller.addPrimaryInput (m_cnfTr0->pVarNums [pObj->Id]);
+
       // -- register frame outputs
       Saig_ManForEachLi (&*m_Tr0, pObj, i)
         unroller.addOutput (m_cnfTr0->pVarNums [pObj->Id]);
@@ -229,9 +233,13 @@ namespace avy
                   "Unexpected outputs");        
       AVY_ASSERT (nFrame > 0);
       
-      // -- register inputs
+      // -- register frame PIs
       Aig_Obj_t *pObj;
       int i;
+      Saig_ManForEachPi (&*m_Tr, pObj, i)
+        unroller.addPrimaryInput (m_cnfTr->pVarNums [pObj->Id]);
+
+      // -- register inputs
       Saig_ManForEachLo (&*m_Tr, pObj, i)
         unroller.addInput (m_cnfTr->pVarNums [pObj->Id]);
 
@@ -271,8 +279,8 @@ namespace avy
       Aig_ManForEachCi (&*m_Bad, pCi, i)
         {
           // -- skip Ci that corresponds to Pi of Tr
-          if (i < Saig_ManPiNum (&*m_Tr0)) continue;
-          unroller.addInput (m_cnfBad->pVarNums [pCi->Id]);
+          if (i < Saig_ManPiNum (&*m_Tr0)) unroller.addPrimaryInput(m_cnfBad->pVarNums [pCi->Id]);//continue;
+          else unroller.addInput (m_cnfBad->pVarNums [pCi->Id]);
         }
 
       // -- glue
