@@ -238,6 +238,8 @@ def killall ():
 if __name__ == '__main__':
     # unbuffered output
     sys.stdout = os.fdopen (sys.stdout.fileno (), 'w', 0)
+    os.environ['PATH'] = '.' + os.pathsep + os.environ ['PATH']
+
     try:
         signal.signal (signal.SIGTERM, lambda x, y: killall())
         sys.exit (main (sys.argv))
