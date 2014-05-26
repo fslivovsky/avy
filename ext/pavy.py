@@ -21,6 +21,25 @@ running = list()    # list of running processes
 
 ###############################################################################
 
+
+class SolverCfg (object):
+    def __init__ (self, name, cmd, cpu=-1, mem=-1):
+        self._name = name
+        self._cmd = cmd
+        self._cpu = cpu
+        self._mem = mem
+        
+    @property
+    def name (self): return self._name
+    @property 
+    def cmd (self): return self._cmd
+    @property
+    def cpu (self): return self._cpu
+    @property
+    def mem (self): return self._mem
+    
+    
+
 def parseOpt (argv):
     from optparse import OptionParser
     
@@ -62,6 +81,18 @@ def isexec (fpath):
 
 def cat (in_file, out_file): out_file.write (in_file.read ())
 
+def which(program):
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if isexec (program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            exe_file = os.path.join(path, program)
+            if isexec (exe_file):
+                return exe_file
+    return None
+
 def runPP (workdir, in_name):     
     '''pre-processing '''
     print "[pavy] in_name = ", in_name
@@ -72,7 +103,7 @@ def runProc (args, fname, stdout, stderr, cpu=-1, mem=-1):
     '''Kicks off a specified exec (args) on input fname, with specified 
     stdout/stderr
     ''' 
-    args += " " + fname
+    args += [fname]
     if verbose: 
         print "[pavy] kicking off ", args
         
@@ -83,11 +114,22 @@ def runProc (args, fname, stdout, stderr, cpu=-1, mem=-1):
         if cpu > 0:
             resource.setrlimits (resource.RLIMIT_CPU, [cpu, cpu])
 
-    return sub.Popen (args.split(),
+    return sub.Popen (args,
                       stdout=open (stdout, 'w'),
                       stderr=open (stderr, 'w'),
                       preexec_fn=_set_limits)
     
+def getAvy ():
+    avy = which ("avy")
+    if avy is None: 
+        raise IOError ("Cannot find avy")
+    return avy
+def getAbc ():
+    abc = which ('abc')
+    if abc is None:
+        raise IOError ('Cannot find abc')
+    return abc
+
 def run (workdir, fname, cpu=-1, mem=-1):
     '''Run everything and wait for an answer'''
 
@@ -100,26 +142,25 @@ def run (workdir, fname, cpu=-1, mem=-1):
     pp_name = runPP (workdir, fname)
     print "[pavy] finished pp, output={f}".format(f=pp_name)
 
-    ### XXX Find avy and other necessary executables
-    
     ## names of configurations
-    conf_name = [] 
-    ### commands of the configurations
-    conf_cmd = list ()
-    ## Append configuration options
-    # conf_cmd.append ()
-    # conf_cmd.append ()
-
-
+    cfgs = list ()
+    cfgs.append (SolverCfg ('avy', 
+                            [getAvy (), '--verbose=2', '--reset-cover=1',
+                             '--shallow-push=1', '--tr0=1', '--min-suffix=1', '--glucose',
+                             '--minisat_itp=1']))
+    cfgs.append (SolverCfg ('avypdr',
+                            [getAvy (), '--verbose=2', '--pdr=0']))
+                            
     name = os.path.splitext (os.path.basename (pp_name))[0]
-    stdout = [os.path.join (workdir, name + '_avy{}.stdout'.format (i)) 
-              for i in range(len (conf_cmd))]
-    stderr = [os.path.join (workdir, name + '_avy{}.stderr'.format (i))
-              for i in range (len (conf_cmd))]
+    stdout = [os.path.join (workdir, cfgs[i].name + '_avy{}.stdout'.format (i)) 
+              for i in range(len (cfgs))]
+    stderr = [os.path.join (workdir, cfgs[i].name + '_avy{}.stderr'.format (i))
+              for i in range (len (cfgs))]
     
     global running
-    running.extend ([runProc (conf_cmd [i], pp_name, stdout[i], stderr [i])
-                     for i in range (len (conf_cmd))])
+    running.extend ([runProc (cfgs [i].cmd, pp_name, stdout[i], stderr [i], 
+                              cpu=cfgs[i].cpu, mem=cfgs[i].mem)
+                     for i in range (len (cfgs))])
 
     orig_pids = [p.pid for p in running]
     pids = [p.pid for p in running ]
@@ -158,10 +199,10 @@ def run (workdir, fname, cpu=-1, mem=-1):
         idx = orig_pids.index (pid)
         cat (open (stdout [idx]), sys.stdout)
         cat (open (stderr [idx]), sys.stderr)
-        print 'WINNER: ', avy [idx]
+        print 'WINNER: ', cfgs[idx].name
         print 'BRUNCH_STAT config {0}'.format (idx)
-        print 'BRUNCH_STAT config_name {0}'.format (conf_name [idx])
-        print 'BRUNCH_STAT Result ' + ('FALSE' if exit_code == 0 else 'TRUE')
+        print 'BRUNCH_STAT config_name {0}'.format (cfgs [idx].name)
+        print 'BRUNCH_STAT Result ' + ('UNSAT' if exit_code == 0 else 'SAT')
     else:  
         print "ALL INSTANCES FAILED"
         print 'Calling sys.exit with {}'.format (returnvalue // 256)
