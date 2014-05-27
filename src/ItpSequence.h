@@ -333,10 +333,9 @@ namespace avy
 
     void printShared()
     {
+      LOG ("shared",
         for (int i=0; i < seqSize; i++)
-        {
-            printf("Element %d: %d\n", i, numOfShared[i]);
-        }
+          outs () << "Element " << i << ": " << numOfShared [i] << "\n";);
     }
    
   };
