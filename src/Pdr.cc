@@ -810,6 +810,8 @@ namespace avy
     kThis = Vec_PtrSize(p->vSolvers);
     pSat  = Pdr_ManCreateSolver( p, kThis );
 
+    Stats::uset ("Invar", Vec_PtrSize(vCubes));
+    
     // add the clauses
     Vec_PtrForEachEntry( Pdr_Set_t *, vCubes, pCube, i )
     {
