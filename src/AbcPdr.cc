@@ -45,8 +45,9 @@ namespace avy
       std::string &fname = m_sFName;
       Abc_Frame_t *pAbc = Abc_FrameGetGlobalFrame ();
       VERBOSE (2, vout () << "\tReading AIG from '" << fname << "'\n";);
-      std::string cmd = "read " + fname;
+      std::string cmd = "&r " + fname;
       Cmd_CommandExecute (pAbc, cmd.c_str ());
+      Cmd_CommandExecute (pAbc, "&put");
       
       cmd = "pdr";
       VERBOSE (2, cmd += " -v";);
