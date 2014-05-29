@@ -254,6 +254,7 @@ namespace avy
         Aig_ObjCreateCo (&*prevMan, pPrev);
         pPrev = NULL;
 
+        Stats::resume ("doPdrTrace_part1");
         AigManPtr dupMan = aigPtr (Aig_ManDupSinglePo (&*itp, i, false));
         AigManPtr orMan = aigPtr (Aig_ManCreateMiter (&*dupMan, &*prevMan, 2));
         
@@ -262,6 +263,8 @@ namespace avy
 
         AigManPtr newTr = aigPtr (Aig_ManReplacePo (&*m_Aig, &*orMan, true));
         newTr = aigPtr (Aig_ManGiaDup (&*newTr));
+        Stats::stop ("doPdrTrace_part1");
+        Stats::resume ("doPdrTrace_part2");
 
         Pdr pdr (&*newTr);
         
@@ -278,7 +281,10 @@ namespace avy
         m_pPdr->getCoverCubes (i+1, pCubes);
         pdr.addCoverCubes (i == 0 ? 1 : 2, pCubes);
         Vec_PtrClear (pCubes);
-
+        Stats::stop ("doPdrTrace_part2");
+        
+        pdr.setVerbose (false);
+        pdr.setGenConfLimit (gParams.genConfLimit);
         pdr.solveSafe ();
         
         Vec_PtrClear (pCubes);
