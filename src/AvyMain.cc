@@ -244,6 +244,7 @@ namespace avy
     
     for (unsigned i = 0; i < itpSz; ++i)
       { 
+        m_pPdr->ensureFrames (i+1);
         // -- skip if true
         if (Aig_ObjFanin0 (Aig_ManCo (&*itp, i)) == Aig_ManConst1 (&*itp)) continue;
 

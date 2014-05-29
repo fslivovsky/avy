@@ -19,7 +19,6 @@ namespace avy
     Aig_Man_t *m_pAig;
     Pdr_Man_t *m_pPdr;
   
-    void ensureFrames (unsigned level);
     Aig_Obj_t* cubeToAig (Pdr_Set_t *pCube, Aig_Man_t *pAig);
 
     int blockCube (Pdr_Set_t *pCube);
@@ -72,6 +71,7 @@ namespace avy
     Aig_Obj_t *getCover (unsigned level, Aig_Man_t *pAig=0);
     Aig_Obj_t *getCoverDelta (unsigned level, Aig_Man_t *pAig=0);
 
+    void ensureFrames (unsigned level);
     unsigned maxFrames () { return Vec_PtrSize (m_pPdr->vSolvers); }
 
     void statusLn (std::ostream &out);
