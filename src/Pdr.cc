@@ -27,9 +27,6 @@ namespace avy
   {
     Pdr_Par_t *p = ABC_ALLOC (Pdr_Par_t, 1);
     Pdr_ManSetDefaultParams (p);
-    // -- I think this is safer
-    p->fShortest = 1;
-    p->fMonoCnf = 1;
     m_pPdr = Pdr_ManStart (m_pAig, p, NULL);
 
     setVerbose (false);

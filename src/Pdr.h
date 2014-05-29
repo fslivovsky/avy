@@ -59,6 +59,13 @@ namespace avy
     void setLimit (unsigned v) { m_pPdr->pPars->nFrameMax = v; }
     void setVerbose (bool v) { m_pPdr->pPars->fVerbose = v; }
     bool isVerbose () { return m_pPdr->pPars->fVerbose != 0; }
+    /** if true, load complete Cnf of the transition relation into the
+        solver.  if false, only load the clauses in the cone of
+        influence of the current CTI */
+    void setMonoCnf (bool v) { m_pPdr->pPars->fMonoCnf = v; }
+    bool isMonoCnf () { return m_pPdr->pPars->fMonoCnf != 0; }
+    void setShortestPath (bool v) { m_pPdr->pPars->fShortest = v; }
+    bool isShortestPath () { return m_pPdr->pPars->fShortest != 0; }
     
     void setSilent (bool v) { m_pPdr->pPars->fSilent = v; }
     
