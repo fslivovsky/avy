@@ -18,7 +18,9 @@ namespace avy
   {
     Aig_Man_t *m_pAig;
     Pdr_Man_t *m_pPdr;
-  
+    /// conflict limit in generalization
+    unsigned nGenConfLimit;
+    
     Aig_Obj_t* cubeToAig (Pdr_Set_t *pCube, Aig_Man_t *pAig);
 
     int blockCube (Pdr_Set_t *pCube);
@@ -56,6 +58,7 @@ namespace avy
     Pdr_Man_t *get () { return m_pPdr; }
     
 
+    void setGenConfLimit (unsigned v) { nGenConfLimit = v; }
     void setLimit (unsigned v) { m_pPdr->pPars->nFrameMax = v; }
     void setVerbose (bool v) { m_pPdr->pPars->fVerbose = v; }
     bool isVerbose () { return m_pPdr->pPars->fVerbose != 0; }

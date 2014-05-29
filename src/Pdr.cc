@@ -29,6 +29,7 @@ namespace avy
     Pdr_ManSetDefaultParams (p);
     m_pPdr = Pdr_ManStart (m_pAig, p, NULL);
 
+    setGenConfLimit (0);
     setVerbose (false);
     setSilent (true);
   }
@@ -263,7 +264,10 @@ namespace avy
               continue;
             // try removing this literal
             Lit = pCubeMin->Lits[i]; pCubeMin->Lits[i] = -1; 
-            RetValue = Pdr_ManCheckCube( p, k, pCubeMin, NULL, p->pPars->nConfLimit );
+            //RetValue = Pdr_ManCheckCube( p, k, pCubeMin, NULL, p->pPars->nConfLimit );
+            RetValue = Pdr_ManCheckCube( p, k, pCubeMin, NULL, nGenConfLimit);
+            // -- treat -1 as unsuccessful generalization
+            if (RetValue == -1) RetValue = 0;
             if ( RetValue == -1 )
               {
                 Pdr_SetDeref( pCubeMin );
