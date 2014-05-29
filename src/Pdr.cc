@@ -46,6 +46,7 @@ namespace avy
 
   void Pdr::ensureFrames (unsigned lvl)
   {
+    AVY_MEASURE_FN;
     for (unsigned i = Vec_PtrSize (m_pPdr->vSolvers); i <= lvl; ++i)
       Pdr_ManCreateSolver (m_pPdr, i);
   }
@@ -98,6 +99,7 @@ namespace avy
   
   void Pdr::addCoverCubes (unsigned level, Vec_Ptr_t *pCubes)
   {
+    AVY_MEASURE_FN;
     ensureFrames (level);
     
     int j;
@@ -205,6 +207,7 @@ namespace avy
 
   void Pdr::solverAddClause(int k, Pdr_Set_t * pCube )
   {
+    AVY_MEASURE_FN;
     LOG("pdr_verbose", 
         logs () << "Adding cube to frame " << k << "\n" << *pCube << "\n";);
     
@@ -223,6 +226,7 @@ namespace avy
   int Pdr::generalize (int k, Pdr_Set_t * pCube, 
                        Pdr_Set_t ** ppPred, Pdr_Set_t ** ppCubeMin)
   {
+    AVY_MEASURE_FN;
     Pdr_Man_t *p = m_pPdr;
     
     Pdr_Set_t * pCubeMin, * pCubeTmp = NULL;
@@ -496,6 +500,7 @@ namespace avy
 
   int Pdr::blockCube (Pdr_Set_t *pCube)
   {
+    AVY_MEASURE_FN;
     Pdr_Man_t *p = m_pPdr;
     
     Pdr_Obl_t * pThis;
@@ -641,6 +646,7 @@ namespace avy
    */
   int Pdr::solve (bool safe)
   {
+    ScoppedStats __stats__("Pdr_solve");
     Pdr_Man_t *p = m_pPdr;
     
     int fPrintClauses = 0;
