@@ -82,7 +82,9 @@ std::string parseCmdLine (int argc, char** argv)
       "Simplify the interpolant using synthesis")
     ("max-frame",
      po::value<unsigned> (&gParams.maxFrame)->default_value (100000),
-     "Max BMC depth");
+     "Max BMC depth")
+    ("gen-conf-limit",
+     po::value<unsigned> (&gParams.genConfLimit)->default_value (0));
   
   
   po::options_description hidden("Hidden options");
