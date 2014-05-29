@@ -407,6 +407,7 @@ namespace avy
   template <typename Sat>
   boost::tribool AvyMain::solveWithCore (Sat &sat, unsigned nFrame)
   {
+    AVY_MEASURE_FN;
     Unroller<Sat> unroller (sat, true);
 
     for (unsigned i = 0; i <= nFrame; ++i)
@@ -426,7 +427,7 @@ namespace avy
     if (gParams.min_suffix)
       {
         // -- minimize suffix
-        ScoppedStats _s_("min_suffix");
+        ScoppedStats _s_("solveWithCore_minSuffix");
         LitVector assumps;
         
         assumps.reserve (unroller.getAssumps ().size ());
@@ -445,7 +446,7 @@ namespace avy
     int *pCore;
     int coreSz = sat.core (&pCore);
     
-    VERBOSE(2, logs () << "Assumption size: " << unroller.getAssumps ().size ()  
+    VERBOSE(2, vout () << "Assumption size: " << unroller.getAssumps ().size ()  
             << " core size: " << coreSz << "\n";);
 
     LitVector core (pCore, pCore + coreSz);
