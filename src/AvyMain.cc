@@ -453,24 +453,25 @@ namespace avy
     BOOST_FOREACH (lit &p, core) p = lit_neg (p);
     std::reverse (core.begin (), core.end ());
 
-    Stats::resume ("unsat_core");
-    for (unsigned int i = 0; gParams.min_core && core.size () > 1 && i < core.size (); ++i)
+    if (gParams.min_core)
+    {
+      ScoppedStats __stats__("solveWithCore_minCore");
+      for (unsigned int i = 0; gParams.min_core && core.size () > 1 && i < core.size (); ++i)
       {
         lit tmp = core [i];
         core[i] = core.back ();
         if (!sat.solve (core, core.size () - 1))
-          {
-            core.pop_back ();
-            --i;
-          }
+        {
+          core.pop_back ();
+          --i;
+        }
         else
           core[i] = tmp;
       }
-    Stats::stop ("unsat_core");
 
-    VERBOSE(2, if (gParams.min_core)
-                 logs () << "Core size: original: " << coreSz 
-                         << " mincore: " << core.size () << "\n");
+      VERBOSE(2, vout () << "Core size: original: " << coreSz 
+              << " mincore: " << core.size () << "\n");
+    }
     
 
     m_Core.reset ();
