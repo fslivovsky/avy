@@ -2,6 +2,7 @@
 #define _GLUCOSE_H_
 
 #include "glucose/simp/SimpSolver.h"
+#include "avy/Util/Stats.h"
 
 namespace avy
 {
@@ -71,6 +72,7 @@ namespace avy
 
     boost::tribool solve (std::vector<int> &assumptions, int maxSize = -1)
     {
+      ScoppedStats __stats__("Glucose_solve");
       if (m_Trivial) return false;
 
       if (!m_sat->okay ()) return false;

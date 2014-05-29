@@ -6,6 +6,7 @@
 
 #include "avy/Util/AvyDebug.h"
 #include "avy/Util/Global.h"
+#include "avy/Util/Stats.h"
 #include "AigUtils.h"
 
 #include "simp/SimpSolver.h"
@@ -128,7 +129,11 @@ namespace avy
     //int core (int **out) { return sat_solver_final (m_pSat, out); }
     
     /// decide current context
-    boost::tribool solve () { return m_pSat->solve (); }
+    boost::tribool solve () 
+    { 
+      ScoppedStats __stats__("ItpMinisat_solve");
+      return m_pSat->solve (); 
+    }
 
     bool isTrivial () { return m_Trivial; }
     
