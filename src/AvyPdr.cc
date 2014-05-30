@@ -56,8 +56,8 @@ namespace avy
       
       Stats::uset ("Frames", pdr.maxFrames ());
       VERBOSE (1, vout () << "Result: " << std::boolalpha << res << "\n");
-      if (res) Stats::set ("Result", "SAT");
-      else if (!res) Stats::set ("Result", "UNSAT");
+      if (!res) Stats::set ("Result", "SAT");
+      else if (res) Stats::set ("Result", "UNSAT");
       
       VERBOSE(1, Stats::PrintBrunch (vout ()););
       return res;
