@@ -117,7 +117,7 @@ def runProc (args, fname, stdout, stderr, cpu=-1, mem=-1):
     ''' 
     args += [fname]
     if verbose: 
-        print "[pavy] kicking off ", args
+        print "[pavy] kicking off ", ' '.join (args)
         
     def _set_limits ():
         if mem > 0:
@@ -161,11 +161,24 @@ def run (workdir, fname, cpu=-1, mem=-1):
 
     ## names of configurations
     cfgs = list ()
-    cfgs.append (SolverCfg ('avy', 
-                            [getAvy (), '--verbose=2', '--reset-cover=1',
+    cfgs.append (SolverCfg ('avymin', 
+                            [getAvy (), '--verbose=2', '--reset-cover=1', '-a',
+                             '--kstep=1',
                              '--shallow-push=1', '--tr0=1', '--min-suffix=1', 
-                             '--glucose',
-                             '--minisat_itp=1']))
+                             '--glucose', '--glucose-inc-mode=1',
+                             '--sat-simp=0', '--minisat_itp=1']))
+    cfgs.append (SolverCfg ('avysimp', 
+                            [getAvy (), '--verbose=2', '--reset-cover=1', '-a',
+                             '--kstep=1',
+                             '--shallow-push=1', '--tr0=1', '--min-suffix=0', 
+                             '--glucose', '--glucose-inc-mode=1',
+                             '--sat-simp=1', '--minisat_itp=1']))
+    cfgs.append (SolverCfg ('avylong', 
+                            [getAvy (), '--verbose=2', '--reset-cover=1', '-a',
+                             '--kstep=2', '--stick-error=1',
+                             '--shallow-push=1', '--tr0=1', '--min-suffix=1', 
+                             '--glucose', '--glucose-inc-mode=1',
+                             '--sat-simp=1', '--minisat_itp=1']))
     cfgs.append (SolverCfg ('abcpdr',
                             [getAbcPdr(), '--verbose=2']))
                            
@@ -201,7 +214,7 @@ def run (workdir, fname, cpu=-1, mem=-1):
         
         
         # exit codes: 0 = UNSAFE, 1 = SAFE, 2 = UNKNOWN, 3 = validation error
-        if exit_code == 0 or exit_code == 1:
+        if sig == 0 and (exit_code == 0 or exit_code == 1):
             for p in pids:
                 try:
                     print "[pavy] trying to kill ", p
@@ -215,7 +228,7 @@ def run (workdir, fname, cpu=-1, mem=-1):
                     except OSError: pass
             break
     
-    if exit_code == 0 or exit_code == 1:
+    if sig == 0 and (exit_code == 0 or exit_code == 1):
         idx = orig_pids.index (pid)
         cat (open (stdout [idx]), sys.stdout)
         cat (open (stderr [idx]), sys.stderr)
