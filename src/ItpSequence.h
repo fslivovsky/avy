@@ -103,7 +103,7 @@ namespace avy
         if (label1 == -1) {
           CRef r = m_Solver.getReason(v1);
           const Clause& c1 = m_Solver.getClause(r);
-          assert(c1.part().min() == c1.part().max());
+          assert(c1.learnt() == false);
           assert(c1.size() == 1);
           visitLeaf(r, c1, part, false);
           label1 = itpVec[v1];
@@ -112,7 +112,7 @@ namespace avy
         bool res = clauseToItp[part-1].has(p2, label2);
         if (res == false) {
           const Clause& c2 = m_Solver.getClause(p2);
-          assert(c2.part().min() == c2.part().max());
+          assert(c2.learnt() == false);
           visitLeaf(p2, c2, part, false);
           label2 = clauseToItp[part-1][p2];
         }
