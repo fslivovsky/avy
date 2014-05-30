@@ -578,7 +578,7 @@ namespace avy
     // -- skip cex if no output file is given
     if (gParams.cexFileName.empty ()) return;
     
-    VERBOSE(2, vout () << "Generating CEX\n";);
+    VERBOSE(2, vout () << "Generating CEX: " << gParams.cexFileName << "\n";);
     ofstream out(gParams.cexFileName.c_str (), ofstream::out);
     out << "1\n" << "b0\n";
     int nRegs = Aig_ManRegNum(&*m_Aig);
@@ -595,11 +595,12 @@ namespace avy
     }
 
     // For some reason, aigsim needs another transition?
-    abc::Vec_Int_t* PIs = unroller.getPrimaryInputs(nFrame);
-    int j, input;
-    Vec_IntForEachEntry(PIs, input, j) 
-      out << "x";
-    out <<  "\n" << ".\n";
+    // abc::Vec_Int_t* PIs = unroller.getPrimaryInputs(nFrame);
+    // int j, input;
+    // Vec_IntForEachEntry(PIs, input, j) 
+    //   out << "x";
+    // out <<  "\n";
+    out << ".\n";
     out.close();
   }
 
