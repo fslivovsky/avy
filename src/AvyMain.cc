@@ -400,7 +400,7 @@ namespace avy
       }
     else if (gParams.glucose)
       {
-        Glucose sat (5000);
+        Glucose sat (5000, gParams.sat_simp, gParams.glucose_inc_mode);
         return solveWithCore (sat, nFrame);
         //return incSolveWithCore(nFrame);
       }

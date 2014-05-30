@@ -84,7 +84,13 @@ std::string parseCmdLine (int argc, char** argv)
      po::value<unsigned> (&gParams.maxFrame)->default_value (100000),
      "Max BMC depth")
     ("gen-conf-limit",
-     po::value<unsigned> (&gParams.genConfLimit)->default_value (0));
+     po::value<unsigned> (&gParams.genConfLimit)->default_value (0))
+    ("sat-simp", 
+     po::value<bool> (&gParams.sat_simp)->default_value (true)->implicit_value(true),
+     "Enable pre-processing for the non-interpolating SAT solver (if available)")
+    ("glucose-inc-mode",
+     po::value<bool> (&gParams.glucose_inc_mode)->default_value(false)->implicit_value(true),
+     "Enable Glucose incremental mode");
   
   
   po::options_description hidden("Hidden options");

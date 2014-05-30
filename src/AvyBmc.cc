@@ -191,8 +191,14 @@ static std::string parseCmdLine (int argc, char**argv)
      "File to dump CNF of the unrolling")
     ("bmc",
      po::value<bool> (&gDoBmc)->default_value(true)->implicit_value (true),
-     "Do BMC");
-  
+     "Do BMC")
+      ("sat-simp", 
+     po::value<bool> (&gParams.sat_simp)->default_value (true)->implicit_value(true),
+     "Enable pre-processing for the non-interpolating SAT solver (if available)")
+    ("glucose-inc-mode", 
+     po::value<bool> (&gParams.glucose_inc_mode)->default_value(false)->implicit_value(true),
+     "Enable Glucose incremental mode");
+
   
   po::options_description hidden("Hidden options");
   hidden.add_options()

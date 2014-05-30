@@ -62,6 +62,12 @@ namespace avy
     /** use minisat itp */
     bool minisat_itp;
 
+    /** enable pre-processing for the fist SAT-solver if available */
+    bool sat_simp;
+
+    /** enable glucose incremental mode */
+    bool glucose_inc_mode;
+    
     /** by how much to increase BMC in each iteration */
     unsigned kStep;
 
