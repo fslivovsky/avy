@@ -40,7 +40,8 @@ namespace avy
     
     
     SimpMinisatItpSeq itpSeqVisitor(*m_pSat, nNumOfVars, vVarToId, m_nParts-1);
-    m_pSat->validate();
+    bool bRes = m_pSat->validate();
+    assert(bRes == true);
     m_pSat->replay(itpSeqVisitor);
 
     Gia_Man_t* pManGia = Gia_ManRehash(itpSeqVisitor.getInterpolantMan(), 1);
