@@ -97,8 +97,20 @@ def runPP (workdir, in_name):
     '''pre-processing '''
     print "[pavy] in_name = ", in_name
 
-    ### return the name of the file after pre-processing
-    return in_name
+    out_name = os.path.basename (in_name)
+    out_name, ext = os.path.splitext (out_name)
+    out_name = os.path.join (workdir, out_name + '.pp' + ext)
+    
+    abc_args = [getAbc (),
+                '-c',
+                '&r {x} ; &lcorr ; &scorr; &fraig ; &w {y}'.format (x=in_name,
+                                                                    y=out_name)]
+    if verbose: print '[pavy]', ' '.join (abc_args)
+    
+    import subprocess as sub
+    sub.check_call (abc_args)
+    return out_name
+    
 def runProc (args, fname, stdout, stderr, cpu=-1, mem=-1):
     '''Kicks off a specified exec (args) on input fname, with specified 
     stdout/stderr
@@ -129,6 +141,11 @@ def getAbc ():
     if abc is None:
         raise IOError ('Cannot find abc')
     return abc
+def getAbcPdr ():
+    f = which ('abcpdr')
+    if f is None:
+        raise IOError ('Cannot find abcpdr')
+    return f
 
 def run (workdir, fname, cpu=-1, mem=-1):
     '''Run everything and wait for an answer'''
@@ -146,11 +163,12 @@ def run (workdir, fname, cpu=-1, mem=-1):
     cfgs = list ()
     cfgs.append (SolverCfg ('avy', 
                             [getAvy (), '--verbose=2', '--reset-cover=1',
-                             '--shallow-push=1', '--tr0=1', '--min-suffix=1', '--glucose',
+                             '--shallow-push=1', '--tr0=1', '--min-suffix=1', 
+                             '--glucose',
                              '--minisat_itp=1']))
-    cfgs.append (SolverCfg ('avypdr',
-                            [getAvy (), '--verbose=2', '--pdr=0']))
-                            
+    cfgs.append (SolverCfg ('abcpdr',
+                            [getAbcPdr(), '--verbose=2']))
+                           
     name = os.path.splitext (os.path.basename (pp_name))[0]
     stdout = [os.path.join (workdir, cfgs[i].name + '_avy{}.stdout'.format (i)) 
               for i in range(len (cfgs))]
@@ -176,12 +194,14 @@ def run (workdir, fname, cpu=-1, mem=-1):
             break
         (exit_code, sig) = (returnvalue // 256, returnvalue % 256) 
 
-        print "[pavy] finished pid %d with code %d and signal %d" % (pid, exit_code, sig)
+        print "[pavy] finished pid %d with code %d and signal %d" % \
+            (pid, exit_code, sig)
 
         pids.remove (pid)
         
-        # exit codes: 0 = UNSAFE, 1 = SAFE, 2 = UNKNOWN
-        if returnvalue == 0:
+        
+        # exit codes: 0 = UNSAFE, 1 = SAFE, 2 = UNKNOWN, 3 = validation error
+        if exit_code == 0 or exit_code == 1:
             for p in pids:
                 try:
                     print "[pavy] trying to kill ", p
@@ -195,7 +215,7 @@ def run (workdir, fname, cpu=-1, mem=-1):
                     except OSError: pass
             break
     
-    if returnvalue == 0:
+    if exit_code == 0 or exit_code == 1:
         idx = orig_pids.index (pid)
         cat (open (stdout [idx]), sys.stdout)
         cat (open (stderr [idx]), sys.stderr)
