@@ -210,7 +210,9 @@ namespace avy
 
       // -- register frame PIs
       Saig_ManForEachPi (&*m_Tr0, pObj, i)
-        unroller.addPrimaryInput (m_cnfTr0->pVarNums [pObj->Id]);
+        // Need to skip the first input
+        if (i > 0)
+          unroller.addPrimaryInput (m_cnfTr0->pVarNums [pObj->Id]);
 
       // -- register frame outputs
       Saig_ManForEachLi (&*m_Tr0, pObj, i)
@@ -279,7 +281,12 @@ namespace avy
       Aig_ManForEachCi (&*m_Bad, pCi, i)
         {
           // -- skip Ci that corresponds to Pi of Tr
-          if (i < Saig_ManPiNum (&*m_Tr0)) unroller.addPrimaryInput(m_cnfBad->pVarNums [pCi->Id]);//continue;
+          if (i < Saig_ManPiNum (&*m_Tr0))
+          {
+            // Need to skip the first input
+            if (i > 0)
+              unroller.addPrimaryInput(m_cnfBad->pVarNums [pCi->Id]);
+          }
           else unroller.addInput (m_cnfBad->pVarNums [pCi->Id]);
         }
 

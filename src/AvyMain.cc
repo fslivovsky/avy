@@ -13,6 +13,8 @@
 
 #include "simp/SimpSolver.h"
 
+#include <fstream>
+
 using namespace boost;
 using namespace std;
 using namespace avy;
@@ -138,7 +140,7 @@ namespace avy
             VERBOSE (0, 
                      vout () << "SAT from BMC at frame: " << nFrame << "\n";);
             Stats::set ("Result", "SAT");
-            printCex(solver, unroller, nFrame);
+            //printCex(solver, unroller, nFrame);
             return 1;
           }
         else if (!res)
@@ -421,7 +423,11 @@ namespace avy
     BOOST_FOREACH (lit Lit, unroller.getAssumps ()) sat.setFrozen (lit_var (Lit), true);
 
     tribool res;
-    if ((res = sat.solve (unroller.getAssumps ())) != false) return res;
+    if ((res = sat.solve (unroller.getAssumps ())) != false)
+    {
+      printCex(sat, unroller, nFrame);
+      return res;
+    }
 
     if (gParams.min_suffix)
       {
@@ -560,15 +566,30 @@ template<typename Sat>
 void AvyMain::printCex(Sat& s, Unroller<Sat>& unroller, unsigned nFrame)
 {
   outs() << "Printing CEX\n";
+  ofstream o("witness.cex", ofstream::out);
+  o << "1\n" << "b0\n";
+  int nRegs = Aig_ManRegNum(&*m_Aig);
+  for (int i=0; i < nRegs; i++)
+    o << "0";
+  o << "\n";
   for (int i=0; i <= nFrame; i++) {
     abc::Vec_Int_t* PIs = unroller.getPrimaryInputs(i);
     int j, input;
     Vec_IntForEachEntry(PIs, input, j) {
-      outs() << (s.getVarVal(input) ? "1" : "0");
+      o << (s.getVarVal(input) ? "1" : "0");
     }
-    outs() <<  "\n";
+    o <<  "\n";
   }
 
+  // For some reason, aigsim needs another transition?
+  abc::Vec_Int_t* PIs = unroller.getPrimaryInputs(nFrame);
+  int j, input;
+  Vec_IntForEachEntry(PIs, input, j) {
+    o << "x";
+  }
+  o <<  "\n";
+  o << ".\n";
+  o.close();
 }
 
 

@@ -107,8 +107,13 @@ namespace avy
     
     void setFrozen (int v, bool p) { m_sat->setFrozen (v, p); }
     
-    
-    
+    bool getVarVal(int v)
+    {
+      return false;
+      /*::Glucose::Var x = v;
+      ::Glucose::lbool val = m_pSat->modelValue(x);
+      return (val == ::Glucose::l_True) ? true : false;*/
+    }
 
   };
     
