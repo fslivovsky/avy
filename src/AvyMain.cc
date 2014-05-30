@@ -297,6 +297,8 @@ namespace avy
         int kMin = gParams.shallow_push ? i+1 : 1;
         int kMax = 0;
         
+        // create place for pushing
+        m_pPdr->ensureFrames (i+2);
         if (m_pPdr->push (kMin, kMax)) return true;
         
         VERBOSE(1, m_pPdr->statusLn (vout ()););

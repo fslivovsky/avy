@@ -745,8 +745,13 @@ namespace avy
             Abc_Print( 1, "*** Clauses after frame %d:\n", k );
             Pdr_ManPrintClauses( p, 0 );
           }
-        // push clauses into this timeframe
-        RetValue = pushClauses ();
+      
+        if (safe)
+          RetValue = 0;
+        else
+          // push clauses into this timeframe
+          RetValue = pushClauses ();
+          
         if ( RetValue == -1 )
           {
             if ( p->pPars->fVerbose )
