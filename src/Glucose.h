@@ -10,11 +10,14 @@ namespace avy
   {
     ::Glucose::SimpSolver *m_sat;
     bool m_Trivial;
+    bool m_Simplifier;
+    bool m_Incremental;
 
     std::vector<int> m_core;
     
   public:
-    Glucose (unsigned nVars) : m_sat(NULL), m_Trivial(false)
+    Glucose (unsigned nVars, bool simp = true, bool inc = false) :
+      m_sat(NULL), m_Trivial(false), m_Simplifier (simp), m_Incremental (inc)
     { reset (nVars); }
 
     virtual ~Glucose () { if (m_sat) delete m_sat; }
@@ -24,7 +27,9 @@ namespace avy
       m_core.clear ();
       if (m_sat) delete m_sat;
       m_sat = new ::Glucose::SimpSolver ();
+      
       m_sat->proofLogging(false);
+      m_sat->setIncrementalMode ();
       reserve (nVars);
     }
 
@@ -89,7 +94,7 @@ namespace avy
           LOG ("sat", logs () << "ASM: " << (::Glucose::sign (p) ? "-" : "") 
                << (::Glucose::var (p)) << " " << "\n";);
         }
-      return m_sat->solve (massmp);
+      return m_sat->solve (massmp, m_Simplifier, !m_Simplifier);
     }
     
     int core (int **out)
@@ -107,7 +112,11 @@ namespace avy
     
     bool isTrivial () { return m_Trivial; }
     
-    void setFrozen (int v, bool p) { m_sat->setFrozen (v, p); }
+    void setFrozen (int v, bool p) 
+    { 
+      m_sat->setFrozen (v, p); 
+      m_sat->setSelector (v, p);
+    }
     
     
     
