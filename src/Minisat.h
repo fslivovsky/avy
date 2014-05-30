@@ -109,7 +109,13 @@ namespace avy
     
     void setFrozen (int v, bool p) { m_sat->setFrozen (v, p); }
     
-    
+    bool getVarVal(int v)
+    {
+      return false;
+      /*::Minisat::Var x = v;
+      ::Minisat::lbool val = m_pSat->modelValue(x);
+      return (val == ::Minisat::l_True) ? true : false;*/
+    }
     
     
   };

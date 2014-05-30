@@ -166,6 +166,11 @@ namespace avy
 
     void setFrozen (int v, bool b) { }
     
+    bool getVarVal(int v)
+    {
+      int val = sat_solver_get_var_value(m_pSat, v);
+      return (val == l_True) ? true : false;
+    }
   };
   
 }

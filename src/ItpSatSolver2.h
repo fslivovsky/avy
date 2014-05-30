@@ -158,6 +158,11 @@ namespace avy
     bool isTrivial () { return m_Trivial; }
     
     void setFrozen (int v, bool b) {}
+    bool getVarVal(int v)
+    {
+      int val = sat_solver2_var_value(m_pSat, v);
+      return (val == l_True) ? true : false;
+    }
 
     /// Compute an interpolant. User provides the list of shared variables
     /// Variables can only be shared between adjacent partitions.

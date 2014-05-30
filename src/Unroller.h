@@ -24,6 +24,8 @@ namespace avy
     unsigned m_nVars;
     unsigned m_nFrames;
 
+    /// Primary Inputs, by frame
+    std::vector<avy::abc::Vec_Int_t*> m_vPrimaryInputs;
     /// Inputs, by frame
     std::vector<avy::abc::Vec_Int_t*> m_vInputs;
     /// Outputs, by frame
@@ -77,6 +79,9 @@ namespace avy
     /** Reset everything */
     void reset (SatSolver *solver)
     {
+      BOOST_FOREACH (Vec_Int_t *vVec, m_vPrimaryInputs)
+        Vec_IntFree (vVec);
+      m_vPrimaryInputs.clear ();
       BOOST_FOREACH (Vec_Int_t *vVec, m_vInputs)
         Vec_IntFree (vVec);
       m_vInputs.clear ();
@@ -158,13 +163,22 @@ namespace avy
     void newFrame ()
     {
       m_nFrames++;
+      m_vPrimaryInputs.push_back (Vec_IntAlloc (16));
       m_vInputs.push_back (Vec_IntAlloc (16));
       m_vOutputs.push_back (Vec_IntAlloc (16));
 
       m_FrameAssump.push_back (m_Assumps.size ());
     }
     
-    void addInput (int in) 
+    void addPrimaryInput (int in)
+    { avy::abc::Vec_IntPush (m_vPrimaryInputs.at (frame ()), in); }
+
+    int getPrimaryInput (unsigned nFrame, int nNum)
+    { return avy::abc::Vec_IntEntry (m_vPrimaryInputs.at (nFrame), nNum); }
+
+    avy::abc::Vec_Int_t *getPrimaryInputs (unsigned nFrame) { return m_vPrimaryInputs.at (nFrame); }
+
+    void addInput (int in)
     { avy::abc::Vec_IntPush (m_vInputs.at (frame ()), in); }
 
     int getInput (unsigned nFrame, int nNum)
