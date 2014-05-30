@@ -15,6 +15,15 @@ namespace avy
 
     std::vector<int> m_core;
     
+    
+    boost::tribool tobool (::Glucose::lbool v)
+    {
+      boost::tribool r (boost::indeterminate);
+      if (v == ::Glucose::lbool ((uint8_t)0)) r = true;
+      else if (v == ::Glucose::lbool ((uint8_t)1)) r = false;
+      return r;
+    }
+    
   public:
     Glucose (unsigned nVars, bool simp = true, bool inc = false) :
       m_sat(NULL), m_Trivial(false), m_Simplifier (simp), m_Incremental (inc)
@@ -118,12 +127,10 @@ namespace avy
       m_sat->setSelector (v, p);
     }
     
-    bool getVarVal(int v)
+    boost::tribool getVarVal(int v)
     {
-      return false;
-      /*::Glucose::Var x = v;
-      ::Glucose::lbool val = m_pSat->modelValue(x);
-      return (val == ::Glucose::l_True) ? true : false;*/
+      ::Glucose::Var x = v;
+      return tobool (m_sat->modelValue(x));
     }
 
   };
