@@ -571,38 +571,39 @@ namespace avy
     outs () << " Done\n" << std::flush;
     return true;    
   }
-}
 
-template<typename Sat>
-void AvyMain::printCex(Sat& s, Unroller<Sat>& unroller, unsigned nFrame)
-{
-  outs() << "Printing CEX\n";
-  ofstream o("witness.cex", ofstream::out);
-  o << "1\n" << "b0\n";
-  int nRegs = Aig_ManRegNum(&*m_Aig);
-  for (int i=0; i < nRegs; i++)
-    o << "0";
-  o << "\n";
-  for (int i=0; i <= nFrame; i++) {
-    abc::Vec_Int_t* PIs = unroller.getPrimaryInputs(i);
-    int j, input;
-    Vec_IntForEachEntry(PIs, input, j) {
-      o << (s.getVarVal(input) ? "1" : "0");
+  template<typename Sat>
+  void AvyMain::printCex(Sat& s, Unroller<Sat>& unroller, unsigned nFrame)
+  {
+    // -- skip cex if no output file is given
+    if (gParams.cexFileName.empty ()) return;
+    
+    VERBOSE(2, vout () << "Generating CEX\n";);
+    ofstream out(gParams.cexFileName.c_str (), ofstream::out);
+    out << "1\n" << "b0\n";
+    int nRegs = Aig_ManRegNum(&*m_Aig);
+    for (int i=0; i < nRegs; i++)
+      out << "0";
+    out << "\n";
+    for (int i=0; i <= nFrame; i++) 
+    {
+      abc::Vec_Int_t* PIs = unroller.getPrimaryInputs (i);
+      int j, input;
+      Vec_IntForEachEntry(PIs, input, j) 
+        out << (s.getVarVal(input) ? "1" : "0");
+      out <<  "\n";
     }
-    o <<  "\n";
+
+    // For some reason, aigsim needs another transition?
+    abc::Vec_Int_t* PIs = unroller.getPrimaryInputs(nFrame);
+    int j, input;
+    Vec_IntForEachEntry(PIs, input, j) 
+      out << "x";
+    out <<  "\n" << ".\n";
+    out.close();
   }
 
-  // For some reason, aigsim needs another transition?
-  abc::Vec_Int_t* PIs = unroller.getPrimaryInputs(nFrame);
-  int j, input;
-  Vec_IntForEachEntry(PIs, input, j) {
-    o << "x";
-  }
-  o <<  "\n";
-  o << ".\n";
-  o.close();
 }
-
 
 
 

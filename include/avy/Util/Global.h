@@ -13,6 +13,9 @@ namespace avy
   {
     std::string fName;
     
+    /** name of counterexample file */
+    std::string cexFileName;
+    
     /**Interpolantion sequence to use
        0 McMillan, 1 McMillan' */
     unsigned itp;
