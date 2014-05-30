@@ -1,4 +1,5 @@
 #include <string>
+#include <fstream>
 
 #include "boost/noncopyable.hpp"
 #include "boost/logic/tribool.hpp"
@@ -65,6 +66,32 @@ namespace avy
       if (res) Stats::set ("Result", "SAT");
       else if (!res) Stats::set ("Result", "UNSAT");
       
+      if (res && !gParams.cexFileName.empty ())
+      {    
+        VERBOSE(1, vout () << "Generating counterexample: " 
+                << gParams.cexFileName << "\n";);
+        
+        std::ofstream out(gParams.cexFileName.c_str (), std::ofstream::out);
+        out << "1\n" << "b0\n";
+
+        Abc_Ntk_t* pNtk = Abc_FrameReadNtk (pAbc);
+        Abc_Cex_t *pCex = Abc_FrameReadCex (pAbc);
+        
+        Abc_Obj_t *pObj;
+        int i;
+        Abc_NtkForEachLatch (pNtk, pObj, i)
+          out << (Abc_LatchIsInit0 (pObj) ? "0" : "1");
+        
+        for (i = pCex->nRegs; i < pCex->nBits; ++i)
+        {
+          if ((i-pCex->nRegs) % pCex->nPis == 0) out << '\n';
+          out << (Abc_InfoHasBit(pCex->pData, i) ? "1" : "0");
+        }
+        out << "\n.\n";
+        out.close ();
+      }
+      
+      
       VERBOSE(1, Stats::PrintBrunch (vout ()););
       return res;
     }
@@ -78,7 +105,10 @@ static std::string parseCmdLine (int argc, char**argv)
     ("help", "print help message")
     ("log,L", po::value< std::vector<std::string> >(), "log levels to enable")
     ("verbose,v", po::value<unsigned> (&gParams.verbosity)->default_value(0),
-     "Verbosity level: 0 means silent");
+     "Verbosity level: 0 means silent")
+    ("cex",
+     po::value<std::string> (&gParams.cexFileName)->default_value (""),
+     "Location to output counter-example");
 
 
   po::options_description hidden("Hidden options");
