@@ -18,8 +18,9 @@ namespace avy
   {
     Aig_Man_t *m_pAig;
     Pdr_Man_t *m_pPdr;
-  
-    void ensureFrames (unsigned level);
+    /// conflict limit in generalization
+    unsigned nGenConfLimit;
+    
     Aig_Obj_t* cubeToAig (Pdr_Set_t *pCube, Aig_Man_t *pAig);
 
     int blockCube (Pdr_Set_t *pCube);
@@ -57,9 +58,17 @@ namespace avy
     Pdr_Man_t *get () { return m_pPdr; }
     
 
+    void setGenConfLimit (unsigned v) { nGenConfLimit = v; }
     void setLimit (unsigned v) { m_pPdr->pPars->nFrameMax = v; }
     void setVerbose (bool v) { m_pPdr->pPars->fVerbose = v; }
     bool isVerbose () { return m_pPdr->pPars->fVerbose != 0; }
+    /** if true, load complete Cnf of the transition relation into the
+        solver.  if false, only load the clauses in the cone of
+        influence of the current CTI */
+    void setMonoCnf (bool v) { m_pPdr->pPars->fMonoCnf = v; }
+    bool isMonoCnf () { return m_pPdr->pPars->fMonoCnf != 0; }
+    void setShortestPath (bool v) { m_pPdr->pPars->fShortest = v; }
+    bool isShortestPath () { return m_pPdr->pPars->fShortest != 0; }
     
     void setSilent (bool v) { m_pPdr->pPars->fSilent = v; }
     
@@ -72,6 +81,7 @@ namespace avy
     Aig_Obj_t *getCover (unsigned level, Aig_Man_t *pAig=0);
     Aig_Obj_t *getCoverDelta (unsigned level, Aig_Man_t *pAig=0);
 
+    void ensureFrames (unsigned level);
     unsigned maxFrames () { return Vec_PtrSize (m_pPdr->vSolvers); }
 
     void statusLn (std::ostream &out);

@@ -71,6 +71,10 @@ namespace avy
     bool itp_simplify;
 
     unsigned maxFrame;
+
+    
+    /// maximum number of conflict during cube generalization
+    unsigned genConfLimit;
   };
   
   std::ostream &operator<< (std::ostream& out, const AvyParams& p);

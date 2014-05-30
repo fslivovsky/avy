@@ -247,6 +247,7 @@ namespace avy
     
     for (unsigned i = 0; i < itpSz; ++i)
       { 
+        m_pPdr->ensureFrames (i+1);
         // -- skip if true
         if (Aig_ObjFanin0 (Aig_ManCo (&*itp, i)) == Aig_ManConst1 (&*itp)) continue;
 
@@ -256,6 +257,7 @@ namespace avy
         Aig_ObjCreateCo (&*prevMan, pPrev);
         pPrev = NULL;
 
+        Stats::resume ("doPdrTrace_part1");
         AigManPtr dupMan = aigPtr (Aig_ManDupSinglePo (&*itp, i, false));
         AigManPtr orMan = aigPtr (Aig_ManCreateMiter (&*dupMan, &*prevMan, 2));
         
@@ -264,6 +266,8 @@ namespace avy
 
         AigManPtr newTr = aigPtr (Aig_ManReplacePo (&*m_Aig, &*orMan, true));
         newTr = aigPtr (Aig_ManGiaDup (&*newTr));
+        Stats::stop ("doPdrTrace_part1");
+        Stats::resume ("doPdrTrace_part2");
 
         Pdr pdr (&*newTr);
         
@@ -280,7 +284,10 @@ namespace avy
         m_pPdr->getCoverCubes (i+1, pCubes);
         pdr.addCoverCubes (i == 0 ? 1 : 2, pCubes);
         Vec_PtrClear (pCubes);
-
+        Stats::stop ("doPdrTrace_part2");
+        
+        pdr.setVerbose (false);
+        pdr.setGenConfLimit (gParams.genConfLimit);
         pdr.solveSafe ();
         
         Vec_PtrClear (pCubes);
@@ -293,6 +300,8 @@ namespace avy
         int kMin = gParams.shallow_push ? i+1 : 1;
         int kMax = 0;
         
+        // create place for pushing
+        m_pPdr->ensureFrames (i+2);
         if (m_pPdr->push (kMin, kMax)) return true;
         
         VERBOSE(1, m_pPdr->statusLn (vout ()););
@@ -409,6 +418,7 @@ namespace avy
   template <typename Sat>
   boost::tribool AvyMain::solveWithCore (Sat &sat, unsigned nFrame)
   {
+    AVY_MEASURE_FN;
     Unroller<Sat> unroller (sat, true);
 
     for (unsigned i = 0; i <= nFrame; ++i)
@@ -432,7 +442,7 @@ namespace avy
     if (gParams.min_suffix)
       {
         // -- minimize suffix
-        ScoppedStats _s_("min_suffix");
+        ScoppedStats _s_("solveWithCore_minSuffix");
         LitVector assumps;
         
         assumps.reserve (unroller.getAssumps ().size ());
@@ -451,7 +461,7 @@ namespace avy
     int *pCore;
     int coreSz = sat.core (&pCore);
     
-    VERBOSE(2, logs () << "Assumption size: " << unroller.getAssumps ().size ()  
+    VERBOSE(2, vout () << "Assumption size: " << unroller.getAssumps ().size ()  
             << " core size: " << coreSz << "\n";);
 
     LitVector core (pCore, pCore + coreSz);
@@ -459,24 +469,25 @@ namespace avy
     BOOST_FOREACH (lit &p, core) p = lit_neg (p);
     std::reverse (core.begin (), core.end ());
 
-    Stats::resume ("unsat_core");
-    for (unsigned int i = 0; gParams.min_core && core.size () > 1 && i < core.size (); ++i)
+    if (gParams.min_core)
+    {
+      ScoppedStats __stats__("solveWithCore_minCore");
+      for (unsigned int i = 0; gParams.min_core && core.size () > 1 && i < core.size (); ++i)
       {
         lit tmp = core [i];
         core[i] = core.back ();
         if (!sat.solve (core, core.size () - 1))
-          {
-            core.pop_back ();
-            --i;
-          }
+        {
+          core.pop_back ();
+          --i;
+        }
         else
           core[i] = tmp;
       }
-    Stats::stop ("unsat_core");
 
-    VERBOSE(2, if (gParams.min_core)
-                 logs () << "Core size: original: " << coreSz 
-                         << " mincore: " << core.size () << "\n");
+      VERBOSE(2, vout () << "Core size: original: " << coreSz 
+              << " mincore: " << core.size () << "\n");
+    }
     
 
     m_Core.reset ();

@@ -56,6 +56,7 @@ namespace avy
       , itpForVar(size)
     {
       m_pMan = Gia_ManStart(numOfVars);
+      m_pMan->pName = Abc_UtilStrsav (const_cast<char*>("itp"));
       Gia_ManHashStart(m_pMan);
       for (unsigned i=0; i < numOfVars; i++)
         Gia_ManAppendCi(m_pMan);
@@ -333,10 +334,9 @@ namespace avy
 
     void printShared()
     {
+      LOG ("shared",
         for (int i=0; i < seqSize; i++)
-        {
-            printf("Element %d: %d\n", i, numOfShared[i]);
-        }
+          outs () << "Element " << i << ": " << numOfShared [i] << "\n";);
     }
    
   };

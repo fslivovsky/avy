@@ -27,11 +27,9 @@ namespace avy
   {
     Pdr_Par_t *p = ABC_ALLOC (Pdr_Par_t, 1);
     Pdr_ManSetDefaultParams (p);
-    // -- I think this is safer
-    p->fShortest = 1;
-    p->fMonoCnf = 1;
     m_pPdr = Pdr_ManStart (m_pAig, p, NULL);
 
+    setGenConfLimit (0);
     setVerbose (false);
     setSilent (true);
   }
@@ -48,6 +46,7 @@ namespace avy
 
   void Pdr::ensureFrames (unsigned lvl)
   {
+    AVY_MEASURE_FN;
     for (unsigned i = Vec_PtrSize (m_pPdr->vSolvers); i <= lvl; ++i)
       Pdr_ManCreateSolver (m_pPdr, i);
   }
@@ -100,6 +99,7 @@ namespace avy
   
   void Pdr::addCoverCubes (unsigned level, Vec_Ptr_t *pCubes)
   {
+    AVY_MEASURE_FN;
     ensureFrames (level);
     
     int j;
@@ -207,6 +207,7 @@ namespace avy
 
   void Pdr::solverAddClause(int k, Pdr_Set_t * pCube )
   {
+    AVY_MEASURE_FN;
     LOG("pdr_verbose", 
         logs () << "Adding cube to frame " << k << "\n" << *pCube << "\n";);
     
@@ -225,6 +226,7 @@ namespace avy
   int Pdr::generalize (int k, Pdr_Set_t * pCube, 
                        Pdr_Set_t ** ppPred, Pdr_Set_t ** ppCubeMin)
   {
+    AVY_MEASURE_FN;
     Pdr_Man_t *p = m_pPdr;
     
     Pdr_Set_t * pCubeMin, * pCubeTmp = NULL;
@@ -266,7 +268,10 @@ namespace avy
               continue;
             // try removing this literal
             Lit = pCubeMin->Lits[i]; pCubeMin->Lits[i] = -1; 
-            RetValue = Pdr_ManCheckCube( p, k, pCubeMin, NULL, p->pPars->nConfLimit );
+            //RetValue = Pdr_ManCheckCube( p, k, pCubeMin, NULL, p->pPars->nConfLimit );
+            RetValue = Pdr_ManCheckCube( p, k, pCubeMin, NULL, nGenConfLimit);
+            // -- treat -1 as unsuccessful generalization
+            if (RetValue == -1) RetValue = 0;
             if ( RetValue == -1 )
               {
                 Pdr_SetDeref( pCubeMin );
@@ -495,6 +500,7 @@ namespace avy
 
   int Pdr::blockCube (Pdr_Set_t *pCube)
   {
+    AVY_MEASURE_FN;
     Pdr_Man_t *p = m_pPdr;
     
     Pdr_Obl_t * pThis;
@@ -640,6 +646,7 @@ namespace avy
    */
   int Pdr::solve (bool safe)
   {
+    ScoppedStats __stats__("Pdr_solve");
     Pdr_Man_t *p = m_pPdr;
     
     int fPrintClauses = 0;
@@ -738,8 +745,13 @@ namespace avy
             Abc_Print( 1, "*** Clauses after frame %d:\n", k );
             Pdr_ManPrintClauses( p, 0 );
           }
-        // push clauses into this timeframe
-        RetValue = pushClauses ();
+      
+        if (safe)
+          RetValue = 0;
+        else
+          // push clauses into this timeframe
+          RetValue = pushClauses ();
+          
         if ( RetValue == -1 )
           {
             if ( p->pPars->fVerbose )
@@ -810,6 +822,8 @@ namespace avy
     kThis = Vec_PtrSize(p->vSolvers);
     pSat  = Pdr_ManCreateSolver( p, kThis );
 
+    Stats::uset ("Invar", Vec_PtrSize(vCubes));
+    
     // add the clauses
     Vec_PtrForEachEntry( Pdr_Set_t *, vCubes, pCube, i )
     {
