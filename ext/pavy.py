@@ -183,9 +183,9 @@ def run (workdir, fname, cpu=-1, mem=-1):
                             [getAbcPdr(), '--verbose=2']))
                            
     name = os.path.splitext (os.path.basename (pp_name))[0]
-    stdout = [os.path.join (workdir, cfgs[i].name + '_avy{}.stdout'.format (i)) 
+    stdout = [os.path.join (workdir, cfgs[i].name + '_avy{0}.stdout'.format (i)) 
               for i in range(len (cfgs))]
-    stderr = [os.path.join (workdir, cfgs[i].name + '_avy{}.stderr'.format (i))
+    stderr = [os.path.join (workdir, cfgs[i].name + '_avy{0}.stderr'.format (i))
               for i in range (len (cfgs))]
     
     global running
@@ -238,7 +238,7 @@ def run (workdir, fname, cpu=-1, mem=-1):
         print 'BRUNCH_STAT Result ' + ('UNSAT' if exit_code == 0 else 'SAT')
     else:  
         print "ALL INSTANCES FAILED"
-        print 'Calling sys.exit with {}'.format (returnvalue // 256)
+        print 'Calling sys.exit with {0}'.format (returnvalue // 256)
         print 'BRUNCH_STAT Result UNKNOWN'
         sys.exit (returnvalue // 256)
 
