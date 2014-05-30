@@ -595,11 +595,11 @@ namespace avy
     }
 
     // For some reason, aigsim needs another transition?
-    // abc::Vec_Int_t* PIs = unroller.getPrimaryInputs(nFrame);
-    // int j, input;
-    // Vec_IntForEachEntry(PIs, input, j) 
-    //   out << "x";
-    // out <<  "\n";
+    abc::Vec_Int_t* PIs = unroller.getPrimaryInputs(nFrame);
+    int j, input;
+    Vec_IntForEachEntry(PIs, input, j) 
+      out << "0";
+    out <<  "\n";
     out << ".\n";
     out.close();
   }
