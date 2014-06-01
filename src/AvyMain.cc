@@ -10,7 +10,7 @@
 
 #include "Unroller.h"
 #include "boost/range/algorithm/copy.hpp"
-
+#include "boost/scoped_ptr.hpp"
 #include "simp/SimpSolver.h"
 
 #include <fstream>
@@ -579,10 +579,18 @@ namespace avy
     if (gParams.cexFileName.empty ()) return;
     
     VERBOSE(2, vout () << "Generating CEX: " << gParams.cexFileName << "\n";);
-    std::ofstream fout (gParams.cexFileName.c_str (), ofstream::out);
+    boost::scoped_ptr<std::ofstream> pFout;
+    std::ostream *pOut;
+    
+    if (gParams.cexFileName == "-")
+      pOut = &outs ();
+    else
+    {
+      pFout.reset (new std::ofstream (gParams.cexFileName.c_str (), 
+                                      ofstream::out));
+      pOut = pFout.get ();
+    }
 
-    std::ostream *pOut = &fout;
-    if (gParams.cexFileName == "-") pOut = &outs ();
     std::ostream &out = *pOut;
     out << "1\n" << "b0\n";
     int nRegs = Aig_ManRegNum(&*m_Aig);

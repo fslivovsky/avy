@@ -2,6 +2,7 @@
 #include <fstream>
 
 #include "boost/noncopyable.hpp"
+#include "boost/scoped_ptr.hpp"
 #include "boost/logic/tribool.hpp"
 #include "boost/logic/tribool_io.hpp"
 #include "boost/program_options.hpp"
@@ -69,11 +70,20 @@ namespace avy
 
       if (!gParams.cexFileName.empty ())
       {
-        std::ofstream fout(gParams.cexFileName.c_str (), std::ofstream::out);
 
-        std::ostream *pOut = &fout;
-        if (gParams.cexFileName == "-") pOut = &outs ();
+        std::ostream *pOut;
+        boost::scoped_ptr<std::ofstream> pFout;
+        
+        if (gParams.cexFileName == "-")
+          pOut = &outs ();
+        else
+        {
+          pFout.reset (new std::ofstream (gParams.cexFileName.c_str (),
+                                          std::ofstream::out));
+          pOut = pFout.get ();
+        }
         std::ostream &out = *pOut;
+        
         
         if (res)
         {    
