@@ -92,7 +92,7 @@ namespace avy
   tribool AvyBmc::run (unsigned uDepth)
   {
     Stats::set ("Result", "UNKNOWN");
-    Stats::PrintBrunch (outs ());
+    VERBOSE (1, Stats::PrintBrunch (outs ()););
     tribool res;
     if (gParams.sat1)
       {
@@ -115,7 +115,7 @@ namespace avy
         res = bmc (sat, uDepth);
       }
     
-    Stats::PrintBrunch (outs ());
+    VERBOSE (1, Stats::PrintBrunch (outs ()););
     return res;
     
   }

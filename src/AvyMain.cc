@@ -95,8 +95,12 @@ namespace avy
   int AvyMain::run (Sat& solver, Unroller<Sat>& unroller)
   {
 
-    if (gParams.kStep > 1 && !gParams.stutter)
-      outs () << "Warning: using kStep>1 without stuttering is unsound\n";
+    VERBOSE (1, 
+             if (gParams.kStep > 1 && 
+                 (!gParams.stutter || !gParams.stick_error))
+               vout () << "Warning: using kStep>1 without stuttering " 
+                       << "or stick-error is unsound\n";);
+    
     SafetyVC vc (&*m_Aig);
     m_Vc = &vc;
 
@@ -105,7 +109,7 @@ namespace avy
       {
         ScoppedStats loopStats (string(__FUNCTION__) + ".loop");
         Stats::set ("Result", "UNKNOWN");
-        Stats::PrintBrunch (outs ());
+        VERBOSE (1, Stats::PrintBrunch (vout ()););
         Stats::count("Frame");
         Stats::uset("Depth", nFrame);
 
@@ -116,20 +120,21 @@ namespace avy
             VERBOSE (1, m_pPdr->statusLn (vout ()));
             if (res == 1) 
               {
-                outs () << "SAFE\n";
+                //vout () << "SAFE\n";
+                outs () << "0\n\b0\n.\n";
                 Stats::set("Result", "UNSAT");
                 return m_pPdr->validateInvariant () ? 0 : 3;
               }
             else if (res == 0)
               {
-                outs () << "CEX\n";
+                outs () << "1\n\b0\n.\n";
                 Stats::set ("Result", "SAT");
                 return 1;
               }
             else
               {
                 Stats::set ("Result", "UNKNOWN");
-                outs () << "UNKNOWN\n";
+                vout () << "UNKNOWN\n";
                 return 2;
               }
           }
@@ -137,7 +142,7 @@ namespace avy
         tribool res = doBmc (nFrame, solver, unroller);
         if (res)
           {
-            VERBOSE (0, 
+            VERBOSE (1, 
                      vout () << "SAT from BMC at frame: " << nFrame << "\n";);
             Stats::set ("Result", "SAT");
             //printCex(solver, unroller, nFrame);
@@ -145,7 +150,7 @@ namespace avy
           }
         else if (!res)
           {
-            VERBOSE(0, 
+            VERBOSE(1, 
                     vout () << "UNSAT from BMC at frame: " << nFrame << "\n";);
             if (solver.isTrivial () && typeid(solver) == typeid(ItpSatSolver))
               {
@@ -189,7 +194,7 @@ namespace avy
 
                 if (doPdrTrace (itp)) 
                   {
-                    VERBOSE (0, vout () << "SAFE\n");
+                    outs () << "0\nb0\n.\n";
                     VERBOSE(1, m_pPdr->statusLn (vout ()););
                     Stats::set ("Result", "UNSAT");
                     return m_pPdr->validateInvariant () ? 0 : 3;
@@ -199,7 +204,7 @@ namespace avy
           }
         else 
           {
-            VERBOSE (0, vout () << "UNKNOWN from BMC at frame: " 
+            VERBOSE (1, vout () << "UNKNOWN from BMC at frame: " 
                      << nFrame << "\n";);
             return 2;
           }
@@ -368,11 +373,6 @@ namespace avy
               logs () << nVar << " ";
             logs () << "\n";
           });
-
-    logs () << "Assumptions: " << unroller.getAssumps ().size () << "\n";
-    BOOST_FOREACH (int a, unroller.getAssumps ())
-      logs () << a << " ";
-    logs () << "\n";
     
     // -- do not expect assumptions yet
     AVY_ASSERT (unroller.getAssumps ().empty ());
@@ -502,11 +502,11 @@ namespace avy
   
   bool AvyMain::validateItp (AigManPtr itp)
   {
-    outs () << "Validating ITP: ";
+    VERBOSE (1, vout () << "Validating ITP: ";);
     CnfPtr cnfItp = cnfPtr (Cnf_Derive (&*itp, Aig_ManCoNum (&*itp)));
 
     unsigned coNum = Aig_ManCoNum (&*itp);
-    outs() << "CoNum: " << coNum << "\n";
+    VERBOSE (1, vout() << "CoNum: " << coNum << "\n";);
     for (unsigned int i = 0; i <= coNum; ++i)
       {
         ItpSatSolver satSolver (2, 5000);
@@ -561,14 +561,14 @@ namespace avy
         
         if (satSolver.solve (unroller.getAssumps ()) != false) 
           {
-            outs () << "\nFailed validation at i: " << i << "\n";
+            VERBOSE (1, vout () << "\nFailed validation at i: " << i << "\n";);
             return false;
           }
         else
-          outs () << "." << std::flush;
+          VERBOSE (1, vout () << "." << std::flush;);
       }
     
-    outs () << " Done\n" << std::flush;
+    VERBOSE (1, vout () << " Done\n" << std::flush;);
     return true;    
   }
 
@@ -579,7 +579,11 @@ namespace avy
     if (gParams.cexFileName.empty ()) return;
     
     VERBOSE(2, vout () << "Generating CEX: " << gParams.cexFileName << "\n";);
-    ofstream out(gParams.cexFileName.c_str (), ofstream::out);
+    std::ofstream fout (gParams.cexFileName.c_str (), ofstream::out);
+
+    std::ostream *pOut = &fout;
+    if (gParams.cexFileName == "-") pOut = &outs ();
+    std::ostream &out = *pOut;
     out << "1\n" << "b0\n";
     int nRegs = Aig_ManRegNum(&*m_Aig);
     for (int i=0; i < nRegs; i++)
@@ -601,19 +605,8 @@ namespace avy
       out << "0";
     out <<  "\n";
     out << ".\n";
-    out.close();
+    out << std::flush;
+    
   }
 
 }
-
-
-
-
-
-
-
-
-
-
-
-

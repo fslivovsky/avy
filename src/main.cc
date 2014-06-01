@@ -167,7 +167,7 @@ int main(int argc, char* argv[])
       assert(false);
     }
 
-  Stats::PrintBrunch (outs ());
+  VERBOSE (1, Stats::PrintBrunch (outs ()););
   return ret;
 }
 

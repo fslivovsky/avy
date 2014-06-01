@@ -166,21 +166,21 @@ def run (workdir, fname, cpu=-1, mem=-1):
                              '--kstep=1',
                              '--shallow-push=1', '--tr0=1', '--min-suffix=1', 
                              '--glucose', '--glucose-inc-mode=1',
-                             '--sat-simp=0', '--minisat_itp=1']))
+                             '--sat-simp=0', '--minisat_itp=1', '--cex=-']))
     cfgs.append (SolverCfg ('avysimp', 
                             [getAvy (), '--verbose=2', '--reset-cover=1', '-a',
                              '--kstep=1',
                              '--shallow-push=1', '--tr0=1', '--min-suffix=0', 
                              '--glucose', '--glucose-inc-mode=1',
-                             '--sat-simp=1', '--minisat_itp=1']))
+                             '--sat-simp=1', '--minisat_itp=1', '--cex=-']))
     cfgs.append (SolverCfg ('avylong', 
                             [getAvy (), '--verbose=2', '--reset-cover=1', '-a',
                              '--kstep=2', '--stick-error=1',
                              '--shallow-push=1', '--tr0=1', '--min-suffix=1', 
                              '--glucose', '--glucose-inc-mode=1',
-                             '--sat-simp=1', '--minisat_itp=1']))
+                             '--sat-simp=1', '--minisat_itp=1', '--cex=-']))
     cfgs.append (SolverCfg ('abcpdr',
-                            [getAbcPdr(), '--verbose=2']))
+                            [getAbcPdr(), '--verbose=2', '--cex=-']))
                            
     name = os.path.splitext (os.path.basename (pp_name))[0]
     stdout = [os.path.join (workdir, cfgs[i].name + '_avy{0}.stdout'.format (i)) 

@@ -52,6 +52,7 @@ namespace avy
       
       cmd = "pdr";
       VERBOSE (2, cmd += " -v";);
+      cmd += " -z";
       Cmd_CommandExecute (pAbc, cmd.c_str ());
       
       int status = Abc_FrameReadProbStatus (pAbc);
@@ -65,13 +66,20 @@ namespace avy
       VERBOSE (1, vout () << "Result: " << std::boolalpha << res << "\n");
       if (res) Stats::set ("Result", "SAT");
       else if (!res) Stats::set ("Result", "UNSAT");
-      
-      if (res && !gParams.cexFileName.empty ())
-      {    
+
+      if (!gParams.cexFileName.empty ())
+      {
+        std::ofstream fout(gParams.cexFileName.c_str (), std::ofstream::out);
+
+        std::ostream *pOut = &fout;
+        if (gParams.cexFileName == "-") pOut = &outs ();
+        std::ostream &out = *pOut;
+        
+        if (res)
+        {    
         VERBOSE(1, vout () << "Generating counterexample: " 
                 << gParams.cexFileName << "\n";);
         
-        std::ofstream out(gParams.cexFileName.c_str (), std::ofstream::out);
         out << "1\n" << "b0\n";
 
         Abc_Ntk_t* pNtk = Abc_FrameReadNtk (pAbc);
@@ -88,8 +96,10 @@ namespace avy
           out << (Abc_InfoHasBit(pCex->pData, i) ? "1" : "0");
         }
         out << "\n.\n";
-        out.close ();
+        }
+        else if (!res) out << "0\nb0\n.\n";
       }
+      
       
       
       VERBOSE(1, Stats::PrintBrunch (vout ()););
