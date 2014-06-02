@@ -15,8 +15,19 @@ namespace avy
     AVY_ASSERT (Saig_ManPoNum(pCircuit) - Saig_ManConstrNum(pCircuit) == 1);
     AVY_ASSERT (Saig_ManConstrNum(pCircuit) == 0);
 
+    // XXX HACK
+    // XXX For combinatorial circuits, enable stick_error transformation that adds a latch
+    // XXX This converts a combinatorial circuit into a trivial sequential one
+    // XXX
+    if (Saig_ManRegNum (pCircuit) == 0 && !gParams.stick_error) 
+    {
+      VERBOSE (2, vout () << "Combinatorial circuit. Enabling stick_error\n";);
+      gParams.stick_error = 1;
+    }
+    
     // -- save circuit
     m_Circuit = aigPtr (Aig_ManDupSimple (pCircuit));
+
 
     AigManPtr aig;
     AigManPtr stuckErrorAig;
