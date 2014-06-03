@@ -311,8 +311,10 @@ namespace avy
         
         VERBOSE(1, m_pPdr->statusLn (vout ()););
       }
-    
-    if (gParams.shallow_push && m_pPdr->push ()) return true;
+
+    if ((gParams.shallow_push ||
+        Aig_ObjFanin0 (Aig_ManCo (&*itp, itpSz - 1)) == Aig_ManConst1 (&*itp))
+        && m_pPdr->push ()) return true;
 
     AVY_ASSERT (m_pPdr->validateTrace ());
     return boost::tribool (boost::indeterminate);
