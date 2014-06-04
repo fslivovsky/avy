@@ -355,7 +355,6 @@ namespace avy
     // create the PIs
     Aig_ManCleanData( p );
     Aig_ManConst1(p)->pData = Aig_ManConst1(pNew);
-    Aig_Obj_t* pStutterPi = Aig_ObjCreateCi (pNew);
     Aig_ManForEachCi( p, pObj, i )
       pObj->pData = Aig_ObjCreateCi( pNew );
 
