@@ -596,6 +596,9 @@ namespace avy
     std::ostream &out = *pOut;
     out << "1\n" << "b0\n";
     int nRegs = Aig_ManRegNum(&*m_Aig);
+    // HACK: stick_error adds an extra latch
+    if (gParams.stick_error) nRegs--;
+    
     for (int i=0; i < nRegs; i++)
       out << "0";
     out << "\n";
