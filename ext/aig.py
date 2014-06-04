@@ -78,14 +78,18 @@ def adjust_cex (in_cex, cex_aig, orig_aig, out_cex):
     # all cex_aig latches are initialized    
     assert (len (init.strip ()) == cex_aig.regSz)
     
-    # the initial value of the extra inputs is the initial value
-    # of the latches
-    init = next (in_cex).strip ()
-    # additional inputs are the initial values of the dc latches
-    dc = iter(init[orig_aig.inSz:])
+    if adjust:
+        # the initial value of the extra inputs is the initial value
+        # of the latches
+        init = next (in_cex).strip ()
+        # additional inputs are the initial values of the dc latches
+        dc = iter(init[orig_aig.inSz:])
+        
     for i in range (0, orig_aig.regSz):
         v = orig_aig.init [i]
-        if v == 2: v = next (dc)
+        if v == 2: 
+            assert (adjust) 
+            v = next (dc)
         out_cex.write (str (v))
     out_cex.write ('\n')
 
