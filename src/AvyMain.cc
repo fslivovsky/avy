@@ -97,7 +97,7 @@ namespace avy
 
     VERBOSE (1, 
              if (gParams.kStep > 1 && 
-                 (!gParams.stutter || !gParams.stick_error))
+                 !gParams.stutter && !gParams.stick_error)
                vout () << "Warning: using kStep>1 without stuttering " 
                        << "or stick-error is unsound\n";);
     
