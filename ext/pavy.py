@@ -10,7 +10,7 @@ import subprocess as sub
 import threading
 import signal
 import time
-
+import resource
 
 #
 # globals ...
@@ -51,6 +51,9 @@ def parseOpt (argv):
     parser.add_option ("--temp-dir", dest="temp_dir",
                        help="Temporary directory",
                        default=None)
+    parser.add_option ('--pp-cpu', dest='pp_cpu',
+                       help='CPU time limit (seconds) for pre-processing',
+                       type=int, default=120)
     # parser.add_option ('--cpu', type='int', dest='cpu',
     #                    help='CPU time limit (seconds) TEMP: has no effect', 
     #                    default=-1)
@@ -93,9 +96,9 @@ def which(program):
                 return exe_file
     return None
 
-def runPP (workdir, in_name):     
+def runPP (workdir, in_name, cpu=-1):     
     '''pre-processing '''
-    print "[pavy] in_name = ", in_name
+    if verbose: print "[pavy] in_name = ", in_name
 
     out_name = os.path.basename (in_name)
     out_name, ext = os.path.splitext (out_name)
@@ -106,9 +109,26 @@ def runPP (workdir, in_name):
                 '&r {x} ; &lcorr ; &scorr; &fraig ; &w {y}'.format (x=in_name,
                                                                     y=out_name)]
     if verbose: print '[pavy]', ' '.join (abc_args)
-    
-    import subprocess as sub
-    sub.check_call (abc_args)
+
+
+    def _set_limits ():
+        if cpu > 0:
+            resource.setrlimit (resource.RLIMIT_CPU, [cpu, cpu])
+   
+    try:
+        sub.check_call (abc_args, preexec_fn=_set_limits)
+    except sub.CalledProcessError as e:
+        if verbose:
+            print '[pavy] pre-processing failed with', e
+
+        abc_args = [getAbc (), '-c', 
+                    '&r {x} ; &w {y}'.format(x=in_name,y=out_name)]
+        try:
+            if verbose: print '[pavy] trivial pre-processing'
+            sub.check_call (abc_args)
+        except sub.CalledProcessError as e2:
+            if verbose: print '[pavy] trivial pre-processing failed with', e2
+            out_name = in_name
     return out_name
     
 def runProc (args, fname, stdout, stderr, cpu=-1, mem=-1):
@@ -122,9 +142,9 @@ def runProc (args, fname, stdout, stderr, cpu=-1, mem=-1):
     def _set_limits ():
         if mem > 0:
             mem_b = mem * 1024 * 1024
-            resource.setrlimits (resource.RLIMIT_AS, [mem_bytes, mem_bytes])
+            resource.setrlimit (resource.RLIMIT_AS, [mem_bytes, mem_bytes])
         if cpu > 0:
-            resource.setrlimits (resource.RLIMIT_CPU, [cpu, cpu])
+            resource.setrlimit (resource.RLIMIT_CPU, [cpu, cpu])
 
     return sub.Popen (args,
                       stdout=open (stdout, 'w'),
@@ -147,7 +167,7 @@ def getAbcPdr ():
         raise IOError ('Cannot find abcpdr')
     return f
 
-def run (workdir, fname, cpu=-1, mem=-1):
+def run (workdir, fname, pp_cpu=-1, cpu=-1, mem=-1):
     '''Run everything and wait for an answer'''
 
     print "[pavy] starting run with fname={f}".format(f=fname)
@@ -156,7 +176,7 @@ def run (workdir, fname, cpu=-1, mem=-1):
     sys.stdout.flush ()
 
     print "[pavy] running pp" 
-    pp_name = runPP (workdir, fname)
+    pp_name = runPP (workdir, fname, cpu=pp_cpu)
     print "[pavy] finished pp, output={f}".format(f=pp_name)
 
     ## names of configurations
@@ -270,7 +290,7 @@ def main (argv):
     workdir = createWorkDir (opt.temp_dir, opt.save_temps)
     returnvalue = 0
     for fname in args:
-        returnvalue = run(workdir, fname=fname)
+        returnvalue = run(workdir, fname=fname, pp_cpu=opt.pp_cpu)
     return returnvalue
 
 def killall ():
