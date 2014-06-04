@@ -72,23 +72,22 @@ def adjust_cex (in_cex, cex_aig, orig_aig, out_cex):
     adjust = (orig_aig.inSz < cex_aig.inSz)
     extra_inputs = cex_aig.inSz - orig_aig.inSz
     
+    # eat old initial state. We will re-build it using latches in the
+    # original ntk
     init = next (in_cex)
     # all cex_aig latches are initialized    
     assert (len (init.strip ()) == cex_aig.regSz)
     
-    if not adjust: 
-        out_cex.write (init)
-    else:
-        # the initial value of the extra inputs is the initial value
-        # of the latches
-        init = next (in_cex).strip ()
-        # additional inputs are the initial values of the dc latches
-        dc = iter(init[orig_aig.inSz:])
-        for i in range (0, orig_aig.regSz):
-            v = orig_aig.init [i]
-            if v == 2: v = next (dc)
-            out_cex.write (str (v))
-        out_cex.write ('\n')
+    # the initial value of the extra inputs is the initial value
+    # of the latches
+    init = next (in_cex).strip ()
+    # additional inputs are the initial values of the dc latches
+    dc = iter(init[orig_aig.inSz:])
+    for i in range (0, orig_aig.regSz):
+        v = orig_aig.init [i]
+        if v == 2: v = next (dc)
+        out_cex.write (str (v))
+    out_cex.write ('\n')
 
     for line in in_cex:
         if not adjust or len(line.strip ()) <> cex_aig.inSz:
