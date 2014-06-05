@@ -170,6 +170,9 @@ namespace avy
       m_FrameAssump.push_back (m_Assumps.size ());
     }
     
+    unsigned frames () { return m_nFrames; }
+    
+    
     void addPrimaryInput (int in)
     { avy::abc::Vec_IntPush (m_vPrimaryInputs.at (frame ()), in); }
 
