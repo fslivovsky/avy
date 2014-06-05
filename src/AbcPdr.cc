@@ -54,7 +54,10 @@ namespace avy
       cmd = "pdr";
       VERBOSE (2, cmd += " -v";);
       cmd += " -z";
+      
+      Stats::resume ("run.loop");
       Cmd_CommandExecute (pAbc, cmd.c_str ());
+      Stats::stop ("run.loop");
       
       int status = Abc_FrameReadProbStatus (pAbc);
       boost::tribool res (boost::indeterminate);
@@ -62,7 +65,7 @@ namespace avy
       else if (status == 1) res = false;
       
       int nFrames = Abc_FrameReadBmcFrames (pAbc);
-      Stats::uset ("Frames", nFrames < 0 ? 0 : nFrames);
+      Stats::uset ("Depth", nFrames < 0 ? 0 : nFrames);
       
       VERBOSE (1, vout () << "Result: " << std::boolalpha << res << "\n");
       if (res) Stats::set ("Result", "SAT");
