@@ -23,6 +23,8 @@ namespace avy
         << "\tglucose = " << p.glucose << "\n"
         << "\tminisat_itp = " << p.minisat_itp << "\n"
         << "\tglucose_itp = " << p.glucose_itp << "\n"
+        << "\tsat_simp = " << p.sat_simp << "\n"
+        << "\tproof_reorder = " << p.proof_reorder << "\n"
         << "\tgen-conf-limit = " << p.genConfLimit << "\n"
         << "\tkstep = " << p.kStep << "\n"
         << "\tstick-error = " << p.stick_error << "\n"

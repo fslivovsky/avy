@@ -88,6 +88,9 @@ std::string parseCmdLine (int argc, char** argv)
     ("sat-simp", 
      po::value<bool> (&gParams.sat_simp)->default_value (true)->implicit_value(true),
      "Enable pre-processing for the non-interpolating SAT solver (if available)")
+    ("proof-reorder",
+     po::value<bool> (&gParams.proof_reorder)->default_value (false)->implicit_value(true),
+     "Enable proof reordering for the interpolating SAT solver (if available)")
     ("glucose-inc-mode",
      po::value<bool> (&gParams.glucose_inc_mode)->default_value(false)->implicit_value(true),
      "Enable Glucose incremental mode")

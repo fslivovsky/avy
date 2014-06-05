@@ -56,6 +56,7 @@ namespace avy
       m_Trivial = false;
       m_State = boost::tribool (boost::indeterminate);
       m_pSat = new ::Minisat::SimpSolver();
+      m_pSat->reorderProof(gParams.proof_reorder);
       m_pSat->setCurrentPart(1);
     }
 
@@ -151,7 +152,6 @@ namespace avy
       ::Minisat::lbool val = m_pSat->modelValue(x);
       return (val == ::Minisat::l_True) ? true : false;*/
     }
-
   };
   
 }

@@ -68,6 +68,9 @@ namespace avy
     /** enable pre-processing for the fist SAT-solver if available */
     bool sat_simp;
 
+    /** enable proof reordering for the second SAT-solver if available */
+    bool proof_reorder;
+
     /** enable glucose incremental mode */
     bool glucose_inc_mode;
     
