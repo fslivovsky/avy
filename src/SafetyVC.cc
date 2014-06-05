@@ -43,7 +43,7 @@ namespace avy
             // Add one extra reg to the INPUT circuit
             Aig_ObjCreateCi (pCircuit);
             Aig_ObjCreateCo (pCircuit, Aig_ManConst0 (pCircuit));
-            pCircuit->nRegs++;
+            Aig_ManSetRegNum (pCircuit, pCircuit->nRegs + 1);
             m_Circuit = aigPtr (Aig_ManDupSimple (pCircuit));
           }
         else
