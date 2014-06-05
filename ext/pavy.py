@@ -271,6 +271,7 @@ def run (workdir, fname, pp_cpu=-1, cpu=-1, mem=-1):
         idx = orig_pids.index (pid)
         cat (open (stdout [idx]), sys.stdout)
         cat (open (stderr [idx]), sys.stderr)
+        if verbose: print '[pavy] Witness begin'
         if exit_code == 1:
             aig.adjust_cex (in_cex=open (cex [idx]),
                             cex_aig=aig.parse (open (pp_name)),
@@ -279,6 +280,8 @@ def run (workdir, fname, pp_cpu=-1, cpu=-1, mem=-1):
         elif exit_code == 0:
             # print the unsat witness
             print '0\nb0\n.'
+            
+        if verbose: print '[pavy] Witness end'    
             
         print 'WINNER: ', cfgs[idx].name
         print 'BRUNCH_STAT config {0}'.format (idx)
