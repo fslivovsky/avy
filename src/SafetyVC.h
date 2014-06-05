@@ -210,14 +210,12 @@ namespace avy
 
       // -- register frame PIs
       Saig_ManForEachPi (&*m_Tr0, pObj, i)
-        // Need to skip the first input
-        if (i > 0)
-          unroller.addPrimaryInput (m_cnfTr0->pVarNums [pObj->Id]);
+        unroller.addPrimaryInput (m_cnfTr0->pVarNums [pObj->Id]);
 
       // -- register frame outputs
       Saig_ManForEachLi (&*m_Tr0, pObj, i)
         unroller.addOutput (m_cnfTr0->pVarNums [pObj->Id]);
-
+      
     }
 
 
@@ -276,18 +274,14 @@ namespace avy
                   "Unexpected outputs");
       
       // -- register inputs
-      Aig_Obj_t *pCi;
+      Aig_Obj_t *pObj;
       int i;
-      Aig_ManForEachCi (&*m_Bad, pCi, i)
+      Aig_ManForEachCi (&*m_Bad, pObj, i)
         {
           // -- skip Ci that corresponds to Pi of Tr
           if (i < Saig_ManPiNum (&*m_Tr0))
-          {
-            // Need to skip the first input
-            if (i > 0)
-              unroller.addPrimaryInput(m_cnfBad->pVarNums [pCi->Id]);
-          }
-          else unroller.addInput (m_cnfBad->pVarNums [pCi->Id]);
+            unroller.addPrimaryInput(m_cnfBad->pVarNums [pObj->Id]);
+          else unroller.addInput (m_cnfBad->pVarNums [pObj->Id]);
         }
 
       // -- glue
