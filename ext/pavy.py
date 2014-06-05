@@ -11,7 +11,9 @@ import threading
 import signal
 import time
 import resource
+import itertools
 
+import aig
 #
 # globals ...
 #
@@ -38,6 +40,7 @@ class SolverCfg (object):
     @property
     def mem (self): return self._mem
     
+    def append_arg (self, arg): self._cmd.append (arg)
     
 
 def parseOpt (argv):
@@ -181,49 +184,48 @@ def run (workdir, fname, pp_cpu=-1, cpu=-1, mem=-1):
 
     ## names of configurations
     cfgs = list ()
-    cfgs.append (SolverCfg ('avymin', 
-                            [getAvy (), '--verbose=2', '--reset-cover=1', '-a',
-                             '--kstep=1',
-                             '--shallow-push=1', '--tr0=1', '--min-suffix=1', 
-                             '--glucose', '--glucose-inc-mode=1',
-                             '--sat-simp=0', '--minisat_itp=1', '--cex=-']))
     cfgs.append (SolverCfg ('avysimp', 
                             [getAvy (), '--verbose=2', '--reset-cover=1', '-a',
                              '--kstep=1',
                              '--shallow-push=1', '--tr0=1', '--min-suffix=0', 
                              '--glucose', '--glucose-inc-mode=1',
-                             '--sat-simp=1', '--minisat_itp=1', '--cex=-']))
+                             '--sat-simp=1', '--minisat_itp=1']))
     cfgs.append (SolverCfg ('avylong', 
                             [getAvy (), '--verbose=2', '--reset-cover=1', '-a',
                              '--kstep=2', '--stick-error=1',
                              '--shallow-push=1', '--tr0=1', '--min-suffix=1', 
                              '--glucose', '--glucose-inc-mode=1',
-                             '--sat-simp=1', '--minisat_itp=1', '--cex=-']))
+                             '--sat-simp=1', '--minisat_itp=1']))
     cfgs.append (SolverCfg ('avylonglong', 
                             [getAvy (), '--verbose=2', '--reset-cover=1', '-a',
                              '--kstep=4', '--stick-error=1',
                              '--shallow-push=1', '--tr0=1', '--min-suffix=1', 
                              '--glucose', '--glucose-inc-mode=1',
-                             '--sat-simp=1', '--minisat_itp=1', '--cex=-']))
+                             '--sat-simp=1', '--minisat_itp=1']))
     cfgs.append (SolverCfg ('abcpdr',
-                            [getAbcPdr(), '--verbose=2', '--cex=-']))
+                            [getAbcPdr(), '--verbose=2']))
     cfgs.append (SolverCfg ('avymus', 
                             [getAvy (), '--verbose=2', '--reset-cover=1',
                              '--kstep=1',
                              '--shallow-push=1', '--tr0=1', '--min-suffix=0', 
                              '--glucose', '--glucose-inc-mode=1', '--min-core=1',
-                             '--minisat_itp=1', '--cex=-']))
+                             '--minisat_itp=1']))
     cfgs.append (SolverCfg ('avyabsmus', 
                             [getAvy (), '--verbose=2', '--reset-cover=1', '-a',
                              '--kstep=1',
                              '--shallow-push=1', '--tr0=1', '--min-suffix=0', 
                              '--glucose', '--glucose-inc-mode=1', '--min-core=1',
-                             '--minisat_itp=1', '--cex=-']))                  
+                             '--minisat_itp=1']))                  
     name = os.path.splitext (os.path.basename (pp_name))[0]
     stdout = [os.path.join (workdir, cfgs[i].name + '_avy{0}.stdout'.format (i)) 
               for i in range(len (cfgs))]
     stderr = [os.path.join (workdir, cfgs[i].name + '_avy{0}.stderr'.format (i))
               for i in range (len (cfgs))]
+    cex = [os.path.join (workdir, cfgs[i].name + '_avy{0}.cex'.format (i)) 
+              for i in range(len (cfgs))]
+    
+    for i, c in zip (itertools.count(), cfgs): 
+       c.append_arg ('--cex={0}'.format (cex [i]))
     
     global running
     running.extend ([runProc (cfgs [i].cmd, pp_name, stdout[i], stderr [i], 
@@ -269,6 +271,15 @@ def run (workdir, fname, pp_cpu=-1, cpu=-1, mem=-1):
         idx = orig_pids.index (pid)
         cat (open (stdout [idx]), sys.stdout)
         cat (open (stderr [idx]), sys.stderr)
+        if exit_code == 1:
+            aig.adjust_cex (in_cex=open (cex [idx]),
+                            cex_aig=aig.parse (open (pp_name)),
+                            orig_aig=aig.parse (open (fname)),
+                            out_cex=sys.stdout)
+        elif exit_code == 0:
+            # print the unsat witness
+            print '0\nb0\n.'
+            
         print 'WINNER: ', cfgs[idx].name
         print 'BRUNCH_STAT config {0}'.format (idx)
         print 'BRUNCH_STAT config_name {0}'.format (cfgs [idx].name)
