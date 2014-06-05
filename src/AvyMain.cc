@@ -51,7 +51,7 @@ namespace avy
     VERBOSE (2, vout () << "Starting ABC\n");
     Abc_Start ();
     m_Aig = aigPtr (loadAig (fname));
-    m_pPdr = new Pdr (&*m_Aig);
+    //m_pPdr = new Pdr (&*m_Aig);
   }
   
   AvyMain::AvyMain (AigManPtr pAig) :
@@ -60,7 +60,7 @@ namespace avy
   {
     VERBOSE (2, vout () << "Starting ABC\n");
     Abc_Start ();
-    m_pPdr = new Pdr (&*m_Aig);
+    //m_pPdr = new Pdr (&*m_Aig);
   }
 
   AvyMain::~AvyMain() 
@@ -103,7 +103,8 @@ namespace avy
     
     SafetyVC vc (&*m_Aig);
     m_Vc = &vc;
-
+    m_pPdr = new Pdr (&*m_Aig);
+ 
     unsigned nMaxFrames = gParams.maxFrame;
     for (unsigned nFrame = 0; nFrame < nMaxFrames; nFrame+=gParams.kStep)
       {
