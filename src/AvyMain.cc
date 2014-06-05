@@ -629,7 +629,7 @@ namespace avy
         out << (s.getVarVal(input) ? "1" : "0");
       }
       out <<  "\n";
-      if (gParams.stick_error)
+      if (gParams.stick_error && i + 1 < unroller.frames ())
       {
         abc::Vec_Int_t *vOuts = unroller.getOutputs (i);
         int output = Vec_IntEntry (vOuts, Vec_IntSize (vOuts) - 1);
