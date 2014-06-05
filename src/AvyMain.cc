@@ -437,7 +437,7 @@ namespace avy
     tribool res;
     if ((res = sat.solve (unroller.getAssumps ())) != false)
     {
-      printCex(sat, unroller, nFrame);
+      printCex(sat, unroller);
       return res;
     }
 
@@ -575,10 +575,13 @@ namespace avy
   }
 
   template<typename Sat>
-  void AvyMain::printCex(Sat& s, Unroller<Sat>& unroller, unsigned nFrame)
+  void AvyMain::printCex(Sat& s, Unroller<Sat>& unroller)
   {
     // -- skip cex if no output file is given
     if (gParams.cexFileName.empty ()) return;
+    
+    AVY_ASSERT (!gParams.stutter);
+    AVY_ASSERT (gParams.tr0);
     
     VERBOSE(2, vout () << "Generating CEX: " << gParams.cexFileName << "\n";);
     boost::scoped_ptr<std::ofstream> pFout;
@@ -599,24 +602,45 @@ namespace avy
     // HACK: stick_error adds an extra latch
     if (gParams.stick_error) nRegs--;
     
-    for (int i=0; i < nRegs; i++)
-      out << "0";
+    for (int i=0; i < nRegs; i++) out << "0";
     out << "\n";
-    for (int i=0; i <= nFrame; i++) 
+    
+    for (int i=0; i < unroller.frames (); i++) 
     {
       abc::Vec_Int_t* PIs = unroller.getPrimaryInputs (i);
+      
       int j, input;
-      Vec_IntForEachEntry(PIs, input, j) 
+      
+      // -- in the first frame, first PI is the reset signal
+      if (i == 0)
+      {
+        input = Vec_IntEntry (PIs, 0);
+        // reset PI is on, current frame does not count
+        if (s.getVarVal(input)) continue;
+      }
+      
+      Vec_IntForEachEntry(PIs, input, j)
+      {
+        // -- skipping the first input of the first and last
+        // -- frames. It is used for reset and is not part of the
+        // -- original circuit.
+        if (j == 0 && (i == 0 || i + 1 == unroller.frames ())) continue;
         out << (s.getVarVal(input) ? "1" : "0");
+      }
       out <<  "\n";
+      if (gParams.stick_error)
+      {
+        abc::Vec_Int_t *vOuts = unroller.getOutputs (i);
+        int output = Vec_IntEntry (vOuts, Vec_IntSize (vOuts) - 1);
+        if (s.getVarVal (output))
+        {
+          VERBOSE(2, vout () << "Early CEX termination is untested!!!\n");
+          // -- reached an early end of the counter-example
+          break;
+        }
+      }
     }
 
-    // For some reason, aigsim needs another transition?
-    abc::Vec_Int_t* PIs = unroller.getPrimaryInputs(nFrame);
-    int j, input;
-    Vec_IntForEachEntry(PIs, input, j) 
-      out << "0";
-    out <<  "\n";
     out << ".\n";
     out << std::flush;
     
