@@ -42,11 +42,67 @@ class SolverCfg (object):
     
     def append_arg (self, arg): self._cmd.append (arg)
     
+    def __str__ (self):
+        return '[' + self.name + '] ' + ' '.join (self.cmd)
+
+
+def profiles ():
+    
+    profs = dict ()    
+    def reg_profile (cfg): profs [cfg.name] = cfg
+
+    reg_profile (SolverCfg ('avymin', 
+                            [getAvy (), '--reset-cover=1', '-a',
+                             '--kstep=1',
+                             '--shallow-push=1', '--tr0=1', '--min-suffix=1', 
+                             '--glucose', '--glucose-inc-mode=1',
+                             '--sat-simp=0', '--minisat_itp=1']))
+    reg_profile (SolverCfg ('avysimp', 
+                            [getAvy (), '--reset-cover=1', '-a',
+                             '--kstep=1',
+                             '--shallow-push=1', '--tr0=1', '--min-suffix=0', 
+                            '--glucose', '--glucose-inc-mode=1',
+                             '--sat-simp=1', '--minisat_itp=1']))
+    reg_profile (SolverCfg ('avylong', 
+                            [getAvy (), '--reset-cover=1', '-a',
+                             '--kstep=2', '--stick-error=1',
+                             '--shallow-push=1', '--tr0=1', '--min-suffix=1', 
+                             '--glucose', '--glucose-inc-mode=1',
+                             '--sat-simp=1', '--minisat_itp=1']))
+    reg_profile (SolverCfg ('avylonglong', 
+                            [getAvy (), '--reset-cover=1', '-a',
+                             '--kstep=4', '--stick-error=1',
+                             '--shallow-push=1', '--tr0=1', '--min-suffix=1', 
+                             '--glucose', '--glucose-inc-mode=1',
+                             '--sat-simp=1', '--minisat_itp=1']))
+    reg_profile (SolverCfg ('abcpdr', [getAbcPdr()]))
+    reg_profile (SolverCfg ('avymus', 
+                            [getAvy (), '--reset-cover=1',
+                             '--kstep=1',
+                             '--shallow-push=1', '--tr0=1', '--min-suffix=0', 
+                             '--glucose', '--glucose-inc-mode=1', '--min-core=1',
+                             '--minisat_itp=1']))
+    reg_profile (SolverCfg ('avyabsmus', 
+                            [getAvy (), '--reset-cover=1', '-a',
+                             '--kstep=1',
+                             '--shallow-push=1', '--tr0=1', '--min-suffix=0', 
+                             '--glucose', '--glucose-inc-mode=1', '--min-core=1',
+                             '--minisat_itp=1']))                  
+    return profs
+
+def list_profiles (option, opt_str, value, parser):
+    for p in profiles ().itervalues (): print str(p)
+    sys.exit (0)
 
 def parseOpt (argv):
     from optparse import OptionParser
     
     parser = OptionParser ()
+    parser.add_option ('--list-profiles', action="callback",
+                       callback=list_profiles,
+                       help='List all available profiles')
+    parser.add_option ('-p', '--profiles', type=str, 
+                       default='avymin:avysimp:avylong:avylonglong:abcpdr:avymus:avyabsmus')
     parser.add_option ("--save-temps", dest="save_temps",
                        help="Do not delete temporary files",
                        action="store_true",
@@ -57,6 +113,7 @@ def parseOpt (argv):
     parser.add_option ('--pp-cpu', dest='pp_cpu',
                        help='CPU time limit (seconds) for pre-processing',
                        type=int, default=120)
+    parser.add_option ('--cex', type=str, default='-')
     # parser.add_option ('--cpu', type='int', dest='cpu',
     #                    help='CPU time limit (seconds) TEMP: has no effect', 
     #                    default=-1)
@@ -170,8 +227,14 @@ def getAbcPdr ():
         raise IOError ('Cannot find abcpdr')
     return f
 
-def run (workdir, fname, pp_cpu=-1, cpu=-1, mem=-1):
+def run (workdir, fname, profs, cex_name='-', pp_cpu=-1, cpu=-1, mem=-1):
     '''Run everything and wait for an answer'''
+
+    if len (profs) == 0: return
+
+    def of (n):
+        if n == '-': return sys.stdout
+        else: return open (n, 'wb')
 
     print "[pavy] starting run with fname={f}".format(f=fname)
     
@@ -183,39 +246,11 @@ def run (workdir, fname, pp_cpu=-1, cpu=-1, mem=-1):
     print "[pavy] finished pp, output={f}".format(f=pp_name)
 
     ## names of configurations
-    cfgs = list ()
-    cfgs.append (SolverCfg ('avysimp', 
-                            [getAvy (), '--verbose=2', '--reset-cover=1', '-a',
-                             '--kstep=1',
-                             '--shallow-push=1', '--tr0=1', '--min-suffix=0', 
-                             '--glucose', '--glucose-inc-mode=1',
-                             '--sat-simp=1', '--minisat_itp=1']))
-    cfgs.append (SolverCfg ('avylong', 
-                            [getAvy (), '--verbose=2', '--reset-cover=1', '-a',
-                             '--kstep=2', '--stick-error=1',
-                             '--shallow-push=1', '--tr0=1', '--min-suffix=1', 
-                             '--glucose', '--glucose-inc-mode=1',
-                             '--sat-simp=1', '--minisat_itp=1']))
-    cfgs.append (SolverCfg ('avylonglong', 
-                            [getAvy (), '--verbose=2', '--reset-cover=1', '-a',
-                             '--kstep=4', '--stick-error=1',
-                             '--shallow-push=1', '--tr0=1', '--min-suffix=1', 
-                             '--glucose', '--glucose-inc-mode=1',
-                             '--sat-simp=1', '--minisat_itp=1']))
-    cfgs.append (SolverCfg ('abcpdr',
-                            [getAbcPdr(), '--verbose=2']))
-    cfgs.append (SolverCfg ('avymus', 
-                            [getAvy (), '--verbose=2', '--reset-cover=1',
-                             '--kstep=1',
-                             '--shallow-push=1', '--tr0=1', '--min-suffix=0', 
-                             '--glucose', '--glucose-inc-mode=1', '--min-core=1',
-                             '--minisat_itp=1']))
-    cfgs.append (SolverCfg ('avyabsmus', 
-                            [getAvy (), '--verbose=2', '--reset-cover=1', '-a',
-                             '--kstep=1',
-                             '--shallow-push=1', '--tr0=1', '--min-suffix=0', 
-                             '--glucose', '--glucose-inc-mode=1', '--min-core=1',
-                             '--minisat_itp=1']))                  
+    p = profiles ()
+    cfgs = [p[x] for x in profs]
+    if verbose: 
+        for c in cfgs: c.append_arg ('--verbose=2')
+
     name = os.path.splitext (os.path.basename (pp_name))[0]
     stdout = [os.path.join (workdir, cfgs[i].name + '_avy{0}.stdout'.format (i)) 
               for i in range(len (cfgs))]
@@ -276,7 +311,7 @@ def run (workdir, fname, pp_cpu=-1, cpu=-1, mem=-1):
             aig.adjust_cex (in_cex=open (cex [idx]),
                             cex_aig=aig.parse (open (pp_name)),
                             orig_aig=aig.parse (open (fname)),
-                            out_cex=sys.stdout)
+                            out_cex=of(cex_name))
         elif exit_code == 0:
             # print the unsat witness
             print '0\nb0\n.'
@@ -304,7 +339,8 @@ def main (argv):
     workdir = createWorkDir (opt.temp_dir, opt.save_temps)
     returnvalue = 0
     for fname in args:
-        returnvalue = run(workdir, fname=fname, pp_cpu=opt.pp_cpu)
+        returnvalue = run(workdir, fname=fname, profs=opt.profiles.split (':'), 
+                          cex_name = opt.cex, pp_cpu=opt.pp_cpu)
     return returnvalue
 
 def killall ():
