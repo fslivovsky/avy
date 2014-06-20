@@ -28,8 +28,11 @@ namespace avy
     typedef ::Glucose::Clause Clause;
     typedef ::Glucose::vec<int> IntVec;
     typedef ::Glucose::vec<IntVec> IntIntVec;
+    typedef ::Glucose::vec<IntIntVec> VecIntIntVec;
     typedef ::Glucose::CMap<int> IntCMap;
+    typedef ::Glucose::CMap<IntVec> CMapIntVec;
     typedef ::Glucose::vec<IntCMap> VecIntCMap;
+    typedef ::Glucose::vec<CMapIntVec> VecCMapIntVec;
     typedef ::Glucose::Range Range;
 
     enum { CRef_Undef = ::Glucose::CRef_Undef };

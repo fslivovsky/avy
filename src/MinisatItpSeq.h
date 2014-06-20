@@ -9,6 +9,7 @@
 #define MINISAT_ITP_SEQ_H_
 
 #include "ItpSequence.h"
+#include "ApproxItp.h"
 #include <vector>
 #include "aig/gia/gia.h"
 // -- hack, needed by SimpSolver
@@ -35,8 +36,11 @@ namespace avy
     typedef ::Minisat::Clause Clause;
     typedef ::Minisat::vec<int> IntVec;
     typedef ::Minisat::vec<IntVec> IntIntVec;
+    typedef ::Minisat::vec<IntIntVec> VecIntIntVec;
     typedef ::Minisat::CMap<int> IntCMap;
+    typedef ::Minisat::CMap<IntVec> CMapIntVec;
     typedef ::Minisat::vec<IntCMap> VecIntCMap;
+    typedef ::Minisat::vec<CMapIntVec> VecCMapIntVec;
     typedef ::Minisat::Range Range;
 
     enum { CRef_Undef = ::Minisat::CRef_Undef };
@@ -59,8 +63,11 @@ namespace avy
     typedef ::Minisat::Clause Clause;
     typedef ::Minisat::vec<int> IntVec;
     typedef ::Minisat::vec<IntVec> IntIntVec;
+    typedef ::Minisat::vec<IntIntVec> VecIntIntVec;
     typedef ::Minisat::CMap<int> IntCMap;
+    typedef ::Minisat::CMap<IntVec> CMapIntVec;
     typedef ::Minisat::vec<IntCMap> VecIntCMap;
+    typedef ::Minisat::vec<CMapIntVec> VecCMapIntVec;
     typedef ::Minisat::Range Range;
 
     enum { CRef_Undef = ::Minisat::CRef_Undef };
