@@ -271,6 +271,7 @@ def run (workdir, fname, profs, cex_name='-', pp_cpu=-1, cpu=-1, mem=-1):
     pids = [p.pid for p in running ]
     pid = -1
     exit_code = 2
+    sig = -1
     returnvalue = -1
     while len (pids) != 0:
         print "[pavy] running: %r" % pids
@@ -323,8 +324,19 @@ def run (workdir, fname, profs, cex_name='-', pp_cpu=-1, cpu=-1, mem=-1):
         print 'BRUNCH_STAT config_name {0}'.format (cfgs [idx].name)
         print 'BRUNCH_STAT Result ' + ('UNSAT' if exit_code == 0 else 'SAT')
     else:  
+        if verbose:
+            for idx, std, err in zip (itertools.count (), stdout, stderr):
+                print >> sys.stdout, '[pavy] LOG BEGIN', cfgs[idx].name 
+                cat (open (std), sys.stdout)
+                print >> sys.stdout, '[pavy] LOG END', cfgs[idx].name 
+                print >> sys.stderr, '[pavy] LOG BEGIN', cfgs[idx].name 
+                cat (open (err), sys.stderr)
+                print >> sys.stderr, '[pavy] LOG END', cfgs[idx].name 
+                
         print "ALL INSTANCES FAILED"
         print 'Calling sys.exit with {0}'.format (returnvalue // 256)
+        print 'BRUNCH_STAT config -1'
+        print 'BRUNCH_STAT config_name None'
         print 'BRUNCH_STAT Result UNKNOWN'
         sys.exit (returnvalue // 256)
 
