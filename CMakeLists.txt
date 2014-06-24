@@ -13,6 +13,7 @@ set(CMAKE_MODULE_PATH
   )
 
 add_definitions(-D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS)
+add_definitions ("-std=c++11")
 
 option(AVY_STATIC_EXE "Static executables." OFF)
 
@@ -77,3 +78,4 @@ include_directories(
   )
 
 add_subdirectory(src)
+
