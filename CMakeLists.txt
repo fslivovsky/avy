@@ -29,6 +29,10 @@ IF (Boost_FOUND)
   include_directories (${Boost_INCLUDE_DIRS})
 endif ()
 
+# prefer linking with static libraries
+set(CMAKE_FIND_LIBRARY_SUFFIXES ".a" ${CMAKE_FIND_LIBRARY_SUFFIXES})
+
+
 
 # check for rt lib. Not needed on OSX.
 find_library(RT_LIB NAMES rt)
@@ -36,9 +40,6 @@ if (NOT RT_LIB)
   set(RT_LIB "")
 endif()
 mark_as_advanced(RT_LIB)
-
-# prefer linking with static libraries
-set(CMAKE_FIND_LIBRARY_SUFFIXES ".a" ${CMAKE_FIND_LIBRARY_SUFFIXES})
 
 find_package(Abc REQUIRED)
 if (ABC_FOUND)
