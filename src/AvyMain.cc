@@ -73,7 +73,7 @@ namespace avy
   {
       if (gParams.minisat_itp)
         {
-          ItpMinisat solver(2,2);
+          ItpMinisat solver(2,2, gParams.itp_simp);
           Unroller<ItpMinisat> unroller(solver, true);
           return run(solver, unroller);
         }
@@ -110,7 +110,7 @@ namespace avy
       {
         ScoppedStats loopStats (string(__FUNCTION__) + ".loop");
         Stats::set ("Result", "UNKNOWN");
-        VERBOSE (1, Stats::PrintBrunch (vout ()););
+        VERBOSE (2, Stats::PrintBrunch (vout ()););
         Stats::count("Frame");
         Stats::uset("Depth", nFrame);
 
@@ -183,6 +183,7 @@ namespace avy
                   aigPtr (solver.getInterpolant (unroller.getAllOutputs (),
                                                  Saig_ManRegNum(&*m_Aig)));
 
+		Stats::uset ("OrigItp", Aig_ManAndNum (&*itp));
                 // -- simplify
                 if (gParams.itp_simplify)
                 {
@@ -190,6 +191,7 @@ namespace avy
                     Stats::uset("SimpItp", Aig_ManAndNum(&*itp));
                     VERBOSE(2, Aig_ManPrintStats (&*itp));
                 }
+	        VERBOSE (3, Stats::PrintBrunch (vout ()););
 
                 AVY_ASSERT (validateItp (itp));
 
