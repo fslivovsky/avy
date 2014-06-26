@@ -28,7 +28,8 @@ namespace avy
 
     /// true if last result was trivial
     bool m_Trivial;
-
+    bool m_Simplifier;
+    
     /// number of partitions
     unsigned m_nParts;
 
@@ -38,7 +39,8 @@ namespace avy
     
   public:
     /// create a solver with nParts partitions and nVars variables
-    ItpMinisat (unsigned nParts, unsigned nVars) : m_pSat (0)
+    ItpMinisat (unsigned nParts, unsigned nVars, bool simp = true) : 
+      m_pSat (0), m_Simplifier(simp)
     { reset (nParts, nVars); }
     
     ~ItpMinisat ()
@@ -133,7 +135,7 @@ namespace avy
     boost::tribool solve () 
     { 
       ScoppedStats __stats__("ItpMinisat_solve");
-      return m_pSat->solve (); 
+      return m_pSat->solve (m_Simplifier, !m_Simplifier); 
     }
 
     bool isTrivial () { return m_Trivial; }
