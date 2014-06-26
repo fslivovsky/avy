@@ -24,6 +24,7 @@ namespace avy
         << "\tminisat_itp = " << p.minisat_itp << "\n"
         << "\tglucose_itp = " << p.glucose_itp << "\n"
         << "\tsat_simp = " << p.sat_simp << "\n"
+	<< "\titp_simp = " << p.itp_simp << "\n"
         << "\tproof_reorder = " << p.proof_reorder << "\n"
         << "\tgen-conf-limit = " << p.genConfLimit << "\n"
         << "\tkstep = " << p.kStep << "\n"
