@@ -45,8 +45,7 @@ static Aig_Man_t *loadAig (std::string fname)
 namespace avy
 {
   AvyMain::AvyMain (std::string fname) : 
-    m_fName (fname), m_Vc (0), m_Solver(2, 2), 
-    m_Unroller (m_Solver, true), m_pPdr(0)
+    m_fName (fname), m_Vc (0), m_pPdr(0)
   {
     VERBOSE (2, vout () << "Starting ABC\n");
     Abc_Start ();
@@ -55,8 +54,7 @@ namespace avy
   }
   
   AvyMain::AvyMain (AigManPtr pAig) :
-    m_fName (std::string()), m_Aig(pAig), m_Vc (0), m_Solver(2, 2),
-    m_Unroller (m_Solver, true), m_pPdr(0)
+    m_fName (std::string()), m_Aig(pAig), m_Vc (0), m_pPdr(0)
   {
     VERBOSE (2, vout () << "Starting ABC\n");
     Abc_Start ();
@@ -85,9 +83,7 @@ namespace avy
         }
       else
         {
-          ItpSatSolver solver(2,2);
-          Unroller<ItpSatSolver> unroller(solver, true);
-          return run(solver, unroller);
+          assert(false);
         }
   }
 
@@ -153,56 +149,32 @@ namespace avy
           {
             VERBOSE(1, 
                     vout () << "UNSAT from BMC at frame: " << nFrame << "\n";);
-            if (solver.isTrivial () && typeid(solver) == typeid(ItpSatSolver))
+
+            vector<int> vVarToId;
+            AigManPtr itp =
+              aigPtr (solver.getInterpolant (unroller.getAllOutputs (),
+                                             Saig_ManRegNum(&*m_Aig)));
+
+            Stats::uset ("OrigItp", Aig_ManAndNum (&*itp));
+            // -- simplify
+            if (gParams.itp_simplify)
+            {
+                itp = aigPtr (Aig_ManSimplifyComb (&*itp));
+                Stats::uset("SimpItp", Aig_ManAndNum(&*itp));
+                VERBOSE(2, Aig_ManPrintStats (&*itp));
+            }
+            VERBOSE (3, Stats::PrintBrunch (vout ()););
+
+            AVY_ASSERT (validateItp (itp));
+
+            if (doPdrTrace (itp))
               {
-                Stats::count("Trivial");
-                m_pPdr->setLimit (unroller.frame () + 1);
-                int nPdrRes = m_pPdr->solve ();
-                // -- Check if a CEX exists
-                if (nPdrRes == 0)
-                  {
-                    // A CEX. Let BMC find it...
-                    continue;
-                  }
-                if (nPdrRes == 1)
-                  {
-                    VERBOSE (1, m_pPdr->statusLn (vout ()););
-                    Stats::set ("Result", "UNSAT");
-                    return m_pPdr->validateInvariant () ? 0 : 3;
-                  }
-                m_pPdr->setLimit (100000);
-                // logs () << *m_pPdr << "\n";
-                // PrintAig (logs (), &*m_Aig, m_pPdr->getCover (1, &*m_Aig));
-                // logs () << "\n";
-                AVY_ASSERT (m_pPdr->validateTrace ());
+                outs () << "0\nb0\n.\n";
+                VERBOSE(1, m_pPdr->statusLn (vout ()););
+                Stats::set ("Result", "UNSAT");
+                return m_pPdr->validateInvariant () ? 0 : 3;
               }
-            else
-              {
-                vector<int> vVarToId;
-                AigManPtr itp = 
-                  aigPtr (solver.getInterpolant (unroller.getAllOutputs (),
-                                                 Saig_ManRegNum(&*m_Aig)));
 
-		Stats::uset ("OrigItp", Aig_ManAndNum (&*itp));
-                // -- simplify
-                if (gParams.itp_simplify)
-                {
-                    itp = aigPtr (Aig_ManSimplifyComb (&*itp));
-                    Stats::uset("SimpItp", Aig_ManAndNum(&*itp));
-                    VERBOSE(2, Aig_ManPrintStats (&*itp));
-                }
-	        VERBOSE (3, Stats::PrintBrunch (vout ()););
-
-                AVY_ASSERT (validateItp (itp));
-
-                if (doPdrTrace (itp)) 
-                  {
-                    outs () << "0\nb0\n.\n";
-                    VERBOSE(1, m_pPdr->statusLn (vout ()););
-                    Stats::set ("Result", "UNSAT");
-                    return m_pPdr->validateInvariant () ? 0 : 3;
-                  }
-              }
             doStrengthenVC ();
           }
         else 
@@ -396,17 +368,7 @@ namespace avy
 
   boost::tribool AvyMain::solveWithCore (unsigned nFrame)
   {
-    if (gParams.sat1)
-      {
-        ItpSatSolver sat (2, 2);
-        return solveWithCore (sat, nFrame);
-      }
-    else if (gParams.minisat)
-      {
-        Minisat sat (5000);
-        return solveWithCore (sat, nFrame);
-      }
-    else if (gParams.glucose)
+    if (gParams.glucose)
       {
         Glucose sat (5000, gParams.sat_simp, gParams.glucose_inc_mode);
         return solveWithCore (sat, nFrame);
@@ -414,10 +376,9 @@ namespace avy
       }
     else
       {
-        ItpSatSolver2 sat (2);
+        Minisat sat (5000);
         return solveWithCore (sat, nFrame);
       }
-
   }
   
   template <typename Sat>
@@ -514,8 +475,8 @@ namespace avy
     VERBOSE (1, vout() << "CoNum: " << coNum << "\n";);
     for (unsigned int i = 0; i <= coNum; ++i)
       {
-        ItpSatSolver satSolver (2, 5000);
-        Unroller<ItpSatSolver> unroller (satSolver);
+        Glucose satSolver (2, 5000);
+        Unroller<Glucose> unroller (satSolver);
 
         // -- fast forward the unroller to the right frame
         while (i >= 2 && unroller.frame () < i-1) unroller.newFrame  ();

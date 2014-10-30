@@ -1,8 +1,13 @@
 #ifndef _SAFETYVC_H_
 #define _SAFETYVC_H_
 
+
+//#include "boost/noncopyable.hpp"
+//#include "boost/logic/tribool.hpp"
+#include "avy/Util/AvyDebug.h"
+#include "avy/Util/Global.h"
+
 #include "AigUtils.h"
-#include "ItpSatSolver.h"
 #include "sat/cnf/cnf.h"
 #include "aig/saig/saig.h"
 

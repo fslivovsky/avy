@@ -1,7 +1,10 @@
 #ifndef _MINISAT_H_
 #define _MINISAT_H_
 
+#include "avy/Util/AvyDebug.h"
+#include "avy/Util/Global.h"
 #include "simp/SimpSolver.h"
+#include "avy/AvyAbc.h"
 
 namespace avy
 {

@@ -1,6 +1,6 @@
 add_library (ClauseItpSeq STATIC 
   Global.cc SafetyVC.cc Stats.cc)
-add_library (AbcCpp Pdr.cc AigPrint.cc AigUtils.cc ItpSatSolver.cc ItpMinisat.cc ItpGlucose.cc)
+add_library (AbcCpp Pdr.cc AigPrint.cc AigUtils.cc ItpMinisat.cc ItpGlucose.cc)
 add_library (AvyDebug AvyDebug.cc)
 
 set (EXT_LIBRARIES ${ABC_LIBRARY} ${MINISAT_LIBRARY} ${GLUCOSE_LIBRARY})

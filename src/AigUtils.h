@@ -4,12 +4,16 @@
 #include "avy/AvyAbc.h"
 
 #include "aig/aig/aig.h"
+#include "sat/bsat/satSolver.h"
 #include "boost/shared_ptr.hpp"
+
+#include <vector>
 
 namespace avy
 {
   using namespace avy::abc;
   
+  typedef std::vector<lit> LitVector;
   typedef boost::shared_ptr<Aig_Man_t> AigManPtr;
   
   namespace 

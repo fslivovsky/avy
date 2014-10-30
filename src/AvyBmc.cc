@@ -8,12 +8,11 @@
 namespace po = boost::program_options;
 
 #include "AigUtils.h"
-#include "ItpSatSolver.h"
-#include "ItpSatSolver2.h"
 #include "Minisat.h"
 #include "Glucose.h"
 
 
+#include "avy/Util/AvyDebug.h"
 #include "avy/Util/Global.h"
 #include "SafetyVC.h"
 #include "AigPrint.h"
@@ -94,24 +93,14 @@ namespace avy
     Stats::set ("Result", "UNKNOWN");
     VERBOSE (1, Stats::PrintBrunch (outs ()););
     tribool res;
-    if (gParams.sat1)
-      {
-        ItpSatSolver sat (2, 2);
-        res = bmc (sat, uDepth);
-      }
-    else if (gParams.minisat)
-      {
-        Minisat sat (5000);
-        res = bmc (sat, uDepth);
-      }
-    else if (gParams.glucose)
+    if (gParams.glucose)
       {
         Glucose sat (5000);
         res = bmc (sat, uDepth);
       }
     else
       {
-        ItpSatSolver2 sat (2);
+        Minisat sat (5000);
         res = bmc (sat, uDepth);
       }
     

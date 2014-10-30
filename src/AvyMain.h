@@ -3,8 +3,6 @@
 
 #include "AigUtils.h"
 #include "SafetyVC.h"
-#include "ItpSatSolver.h"
-#include "ItpSatSolver2.h"
 #include "Minisat.h"
 #include "Glucose.h"
 #include "Pdr.h"
@@ -30,10 +28,6 @@ namespace avy
     /** reference to the current VC */
     SafetyVC *m_Vc;
     
-    /** refernece to the current Sat solver */
-    ItpSatSolver m_Solver;
-    Unroller<ItpSatSolver> m_Unroller;
-
     Pdr *m_pPdr;
     
     dynamic_bitset<> m_Core;
