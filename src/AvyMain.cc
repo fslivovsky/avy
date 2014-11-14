@@ -77,7 +77,7 @@ namespace avy
         }
       else if (gParams.glucose_itp)
         {
-    	  ItpGlucose solver(2,2);
+    	  ItpGlucose solver(2,2, gParams.itp_simp);
     	  Unroller<ItpGlucose> unroller(solver, true);
     	  return run(solver, unroller);
         }

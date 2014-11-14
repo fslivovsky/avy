@@ -14,7 +14,8 @@ namespace avy
   /// Compute an interpolant. User provides the list of shared variables
   /// Variables can only be shared between adjacent partitions.
   /// fMcM == true for McMillan, and false for McMillan'
-  Aig_Man_t* ItpGlucose::getInterpolant (std::vector<Vec_Int_t*> &vSharedVars, int nNumOfVars,
+  Aig_Man_t* ItpGlucose::getInterpolant (std::vector<Vec_Int_t*> &vSharedVars,
+		                                 int nNumOfVars,
                                          bool fMcM)
   {
     AVY_MEASURE_FN;
@@ -39,7 +40,7 @@ namespace avy
     
     
     GlucoseItpSeq itpSeqVisitor(*m_pSat, nNumOfVars, vVarToId, m_nParts-1);
-    m_pSat->validate();
+    AVY_VERIFY(m_pSat->validate());
     m_pSat->replay(itpSeqVisitor);
 
     Gia_Man_t* pManGia = Gia_ManRehash(itpSeqVisitor.getInterpolantMan(), 1);

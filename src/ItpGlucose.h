@@ -6,9 +6,10 @@
 
 #include "avy/Util/AvyDebug.h"
 #include "avy/Util/Global.h"
+#include "avy/Util/Stats.h"
 #include "AigUtils.h"
 
-#include "glucose/core/Solver.h"
+#include "glucose/simp/SimpSolver.h"
 
 #include <vector>
 
@@ -21,10 +22,11 @@ namespace avy
   class ItpGlucose : boost::noncopyable
   {
   private:
-    ::Glucose::Solver *m_pSat;
+    ::Glucose::SimpSolver *m_pSat;
 
     /// true if last result was trivial
     bool m_Trivial;
+    bool m_Simplifier;
 
     /// number of partitions
     unsigned m_nParts;
@@ -35,7 +37,8 @@ namespace avy
     
   public:
     /// create a solver with nParts partitions and nVars variables
-    ItpGlucose (unsigned nParts, unsigned nVars) : m_pSat (0)
+    ItpGlucose (unsigned nParts, unsigned nVars, bool simp = true) :
+        m_pSat (0), m_Simplifier(simp)
     { reset (nParts, nVars); }
     
     ~ItpGlucose ()
@@ -52,16 +55,17 @@ namespace avy
       m_nParts = nParts;
       m_Trivial = false;
       m_State = boost::tribool (boost::indeterminate);
-      m_pSat = new ::Glucose::Solver();
-      m_pSat->ccmin_mode = 0;
+      m_pSat = new ::Glucose::SimpSolver();
+      m_pSat->reorderProof(gParams.proof_reorder);
       m_pSat->setCurrentPart(1);
     }
 
     /// Mark currently unmarked clauses as belonging to partition nPart
     void markPartition (unsigned nPart)
     { 
-      AVY_ASSERT (nPart > 0 && nPart <= m_nParts);
-      m_pSat->setCurrentPart(nPart);
+        AVY_ASSERT (nPart > 0 && nPart <= m_nParts);
+        m_pSat->setCurrentPart(nPart);
+	    LOG ("glucose_dump", logs () << "c partition\n";);
     }
     
     void reserve (int nVars)
@@ -91,8 +95,11 @@ namespace avy
 
           LOG("sat", logs () << (::Glucose::sign (p) ? "-" : "")
               << (::Glucose::var (p)) << " ";);
+          LOG("glucose_dump", logs () << (::Glucose::sign (p) ? "-" : "")
+              << (::Glucose::var (p) + 1) << " ";);
         }
       LOG("sat", logs () << "\n" << std::flush;);
+      LOG("glucose_dump", logs () << " 0\n" << std::flush;);
       
       m_Trivial = !m_pSat->addClause (cls);
       return !m_Trivial;
@@ -100,7 +107,6 @@ namespace avy
     
     void dumpCnf (std::string fname)
     { 
-      
       ::Glucose::vec< ::Glucose::Lit> v;
       m_pSat->toDimacs(const_cast<char*>(fname.c_str ()), v); 
     }
@@ -119,8 +125,11 @@ namespace avy
     //int core (int **out) { return sat_solver_final (m_pSat, out); }
     
     /// decide current context
-    boost::tribool solve () { return m_pSat->solve (); }
-
+    boost::tribool solve ()
+    {
+        ScoppedStats __stats__("ItpGlucose_solve");
+        return m_pSat->solve (m_Simplifier, !m_Simplifier);
+    }
     bool isTrivial () { return m_Trivial; }
     
     void setFrozen (int v, bool p) { }//m_pSat->setFrozen (v, p); }

@@ -11,7 +11,7 @@
 #include "ItpSequence.h"
 #include <vector>
 #include "glucose/core/ProofVisitor.h"
-#include "glucose/core/Solver.h"
+#include "glucose/simp/SimpSolver.h"
 #include "aig/gia/gia.h"
 
 
@@ -42,6 +42,7 @@ namespace avy
   };
   
   typedef ItpSequence< ::Glucose::Solver> GlucoseItpSeq;
+  typedef ItpSequence< ::Glucose::SimpSolver> SimpGlucoseItpSeq;
 }
 
 
