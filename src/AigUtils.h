@@ -4,8 +4,10 @@
 #include "avy/AvyAbc.h"
 
 #include "aig/aig/aig.h"
+#include "aig/gia/gia.h"
 #include "sat/bsat/satSolver.h"
 #include "boost/shared_ptr.hpp"
+#include "boost/logic/tribool.hpp"
 
 #include <vector>
 
@@ -87,6 +89,9 @@ namespace avy
    */
   Aig_Man_t *Aig_CreateAllZero (unsigned nPiNum);
  
+  Aig_Man_t *Aig_DupWithVals( Aig_Man_t * p, std::vector<boost::tribool> &vals);
+
+  Gia_Man_t *Aig_DupWithVals( Gia_Man_t * p, std::vector<boost::tribool> &vals);
 }
 
 

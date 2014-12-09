@@ -415,4 +415,150 @@ namespace avy
   }
   
   
+  Aig_Man_t *Aig_DupWithVals( Aig_Man_t * p, std::vector<boost::tribool> &vals)
+  {
+	Aig_Man_t * pNew;
+	Aig_Obj_t * pObj, * pObjNew;
+	int i;
+	assert( p->pManTime == NULL );
+	assert(vals.size() == Aig_ManRegNum(p));
+	// create the new manager
+	pNew = Aig_ManStart( Aig_ManObjNumMax(p) );
+	pNew->pName = Abc_UtilStrsav( p->pName );
+	pNew->pSpec = Abc_UtilStrsav( p->pSpec );
+	pNew->nAsserts = p->nAsserts;
+	pNew->nConstrs = p->nConstrs;
+	//pNew->nBarBufs = p->nBarBufs;
+	if ( p->vFlopNums )
+		pNew->vFlopNums = Vec_IntDup( p->vFlopNums );
+	// create the PIs
+	Aig_ManCleanData( p );
+	Aig_ManConst1(p)->pData = Aig_ManConst1(pNew);
+	unsigned nPiNum = Aig_ManCiNum(p)-Aig_ManRegNum(p);
+	Aig_ManForEachCi( p, pObj, i )
+	{
+		if ( i >= nPiNum)
+		{
+			boost::tribool val = vals[i-nPiNum];
+			if (val != boost::indeterminate)
+				pObjNew = val == true ? Aig_ManConst1(pNew) : Aig_ManConst0(pNew);
+		}
+		else
+		{
+			pObjNew = Aig_ObjCreateCi( pNew );
+			pObjNew->Level = pObj->Level;
+		}
+		pObj->pData = pObjNew;
+	}
+	// duplicate internal nodes
+	Aig_ManForEachObj( p, pObj, i )
+		if ( Aig_ObjIsBuf(pObj) )
+		{
+			pObjNew = Aig_ObjChild0Copy(pObj);
+			pObj->pData = pObjNew;
+		}
+		else if ( Aig_ObjIsNode(pObj) )
+		{
+			pObjNew = Aig_And( pNew, Aig_ObjChild0Copy(pObj), Aig_ObjChild1Copy(pObj) );
+			pObj->pData = pObjNew;
+		}
+	// add the POs
+	Aig_ManForEachCo( p, pObj, i )
+	{
+		pObjNew = Aig_ObjCreateCo( pNew, Aig_ObjChild0Copy(pObj) );
+		pObj->pData = pObjNew;
+	}
+//    assert( Aig_ManBufNum(p) != 0 || Aig_ManNodeNum(p) == Aig_ManNodeNum(pNew) );
+	Aig_ManCleanup( pNew );
+	Aig_ManSetRegNum( pNew, Aig_ManRegNum(p) );
+	// check the resulting network
+	if ( !Aig_ManCheck(pNew) )
+		return NULL;
+	return pNew;
+  }
+
+  Gia_Man_t* Aig_DupWithVals (Gia_Man_t* p, std::vector<boost::tribool>& vals)
+  {
+      Gia_Man_t * pNew;
+      Gia_Obj_t * pObj;
+      int i;
+      pNew = Gia_ManStart( Gia_ManObjNum(p) );
+      Gia_ManHashStart(pNew);
+      pNew->pName = Abc_UtilStrsav( p->pName );
+      pNew->pSpec = Abc_UtilStrsav( p->pSpec );
+      Gia_ManConst0(p)->Value = 0;
+      unsigned nPiNum = Gia_ManPiNum(p);
+      Gia_ManForEachCi( p, pObj, i )
+      {
+    	  if ( i >= nPiNum)
+          {
+			boost::tribool val = vals[i-nPiNum];
+			if (val != boost::indeterminate)
+				pObj->Value = val == true ? Gia_ManConst1Lit() : Gia_ManConst0Lit();
+		  }
+		  else
+		  {
+			pObj->Value = Gia_ManAppendCi(pNew);
+		  }
+      }
+
+      Gia_ManForEachAnd( p, pObj, i )
+          pObj->Value = Gia_ManHashAnd( pNew, Gia_ObjFanin0Copy(pObj), Gia_ObjFanin1Copy(pObj) );
+      Gia_ManForEachCo( p, pObj, i )
+          pObj->Value = Gia_ManAppendCo( pNew, Gia_ObjFanin0Copy(pObj) );
+      Gia_ManDupRemapEquiv( pNew, p );
+      Gia_ManSetRegNum( pNew, Gia_ManRegNum(p) );
+      assert( Gia_ManIsNormalized(pNew) );
+      return pNew;
+  }
+
+  void Aig_TernarySimulate( Gia_Man_t * p, unsigned nFrames, std::vector<std::vector<boost::tribool> >& frameVals )
+  {
+	  unsigned startSize = frameVals.size();
+	  if (frameVals.size() >= nFrames)
+		  return;
+	  frameVals.resize(nFrames+1);
+      int nStateWords = Abc_BitWordNum( 2*Gia_ManCoNum(p) );
+      Gia_Obj_t * pObj, * pObjRo;
+      int i;
+      Gia_ManConst0(p)->Value = GIA_ZER;
+      Gia_ManForEachPi( p, pObj, i )
+          pObj->Value = GIA_UND;
+      if (startSize == 0)
+      {
+    	  Gia_ManForEachRi( p, pObj, i )
+          	  pObj->Value = GIA_ZER;
+      }
+      else
+      {
+    	  Gia_ManForEachRi( p, pObj, i )
+    		if (frameVals[startSize-1][i] == boost::indeterminate)
+    		  pObj->Value = GIA_UND;
+    		else
+		   	  pObj->Value = frameVals[startSize-1][i] == true ? GIA_ONE : GIA_ZER;
+      }
+
+      for (unsigned f = startSize; ; f++ )
+      {
+          // if frames are given, break at frames
+          if ( nFrames && f == nFrames )
+              break;
+          // aassign CI values
+          Gia_ManForEachRiRo( p, pObj, pObjRo, i )
+              pObjRo->Value = pObj->Value;
+          Gia_ManForEachAnd( p, pObj, i )
+              pObj->Value = Gia_XsimAndCond( Gia_ObjFanin0(pObj)->Value, Gia_ObjFaninC0(pObj), Gia_ObjFanin1(pObj)->Value, Gia_ObjFaninC1(pObj) );
+          // compute and save CO values
+          std::vector<boost::tribool>& vals = frameVals[f];
+          assert(vals.size() == 0);
+          Gia_ManForEachCo( p, pObj, i )
+          {
+              pObj->Value = Gia_XsimNotCond( Gia_ObjFanin0(pObj)->Value, Gia_ObjFaninC0(pObj) );
+              boost::tribool v = boost::indeterminate;
+              if (pObj->Value != GIA_UND)
+            	v = (pObj->Value == GIA_ZER) ? false : true;
+            	  vals.push_back(v);
+          }
+      }
+  }
 }
