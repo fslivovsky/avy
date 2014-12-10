@@ -440,8 +440,10 @@ namespace avy
 		if ( i >= nPiNum)
 		{
 			boost::tribool val = vals[i-nPiNum];
-			if (val != boost::indeterminate)
-				pObjNew = val == true ? Aig_ManConst1(pNew) : Aig_ManConst0(pNew);
+			if (val)
+				pObjNew = Aig_ManConst1(pNew);
+			else if (!val)
+				pObjNew = Aig_ManConst0(pNew);
 		}
 		else
 		{
@@ -493,8 +495,10 @@ namespace avy
     	  if ( i >= nPiNum)
           {
 			boost::tribool val = vals[i-nPiNum];
-			if (val != boost::indeterminate)
-				pObj->Value = val == true ? Gia_ManConst1Lit() : Gia_ManConst0Lit();
+			if (val)
+				pObj->Value = Gia_ManConst1Lit();
+			else if (!val)
+				pObj->Value = Gia_ManConst0Lit();
 		  }
 		  else
 		  {
@@ -532,10 +536,12 @@ namespace avy
       else
       {
     	  Gia_ManForEachRi( p, pObj, i )
-    		if (frameVals[startSize-1][i] == boost::indeterminate)
-    		  pObj->Value = GIA_UND;
+    		if (frameVals[startSize-1][i])
+    		  pObj->Value = GIA_ONE;
+    		else if (!frameVals[startSize-1][i])
+		   	  pObj->Value = GIA_ZER;
     		else
-		   	  pObj->Value = frameVals[startSize-1][i] == true ? GIA_ONE : GIA_ZER;
+    		  pObj->Value = GIA_UND;
       }
 
       for (unsigned f = startSize; ; f++ )
