@@ -12,11 +12,12 @@ namespace avy
   {
     ::Minisat::SimpSolver *m_sat;
     bool m_Trivial;
+    bool m_Simplifier;
 
     std::vector<int> m_core;
     
   public:
-    Minisat (unsigned nVars) : m_sat(NULL), m_Trivial(false)
+    Minisat (unsigned nVars, bool simp=true) : m_sat(NULL), m_Trivial(false), m_Simplifier(simp)
     { reset (nVars); }
 
     virtual ~Minisat () 
@@ -92,7 +93,7 @@ namespace avy
           LOG ("sat", logs () << "ASM: " << (::Minisat::sign (p) ? "-" : "") 
                << (::Minisat::var (p)) << " " << "\n";);
         }
-      return m_sat->solve (massmp);
+      return m_sat->solve (massmp, m_Simplifier, !m_Simplifier);
     }
     
     int core (int **out)
@@ -106,7 +107,7 @@ namespace avy
       return m_core.size ();
     }
     
-    boost::tribool solve () { return m_sat->solve (); }
+    boost::tribool solve () { return m_sat->solve (m_Simplifier, !m_Simplifier); }
     
     bool isTrivial () { return m_Trivial; }
     
