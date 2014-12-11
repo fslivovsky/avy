@@ -89,9 +89,12 @@ namespace avy
    */
   Aig_Man_t *Aig_CreateAllZero (unsigned nPiNum);
  
-  Aig_Man_t *Aig_DupWithVals( Aig_Man_t * p, std::vector<boost::tribool> &vals);
+  Aig_Man_t *Aig_DupWithCiVals( Aig_Man_t * p, std::vector<boost::tribool> &vals);
 
-  Gia_Man_t *Aig_DupWithVals( Gia_Man_t * p, std::vector<boost::tribool> &vals);
+  Gia_Man_t *Aig_DupWithCiVals( Gia_Man_t * p, std::vector<boost::tribool> &vals);
+
+  void Aig_TernarySimulate( Aig_Man_t * p, unsigned nFrames, std::vector<std::vector<boost::tribool> >& frameVals );
+  void Aig_TernarySimulate( Gia_Man_t * p, unsigned nFrames, std::vector<std::vector<boost::tribool> >& frameVals );
 }
 
 

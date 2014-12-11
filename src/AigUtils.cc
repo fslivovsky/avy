@@ -160,7 +160,11 @@ namespace avy
   Aig_Man_t *Aig_ManGiaDup (Aig_Man_t *pAig)
   {
     Gia_Man_t *pGia = Gia_ManFromAigSimple (pAig);
-    return Gia_ManToAigSimple (pGia);
+    Aig_Man_t* pNewAig = Gia_ManToAigSimple (pGia);
+    Gia_ManStop(pGia);
+    pNewAig->nTruePis = pAig->nTruePis;
+    pNewAig->nTruePos = pAig->nTruePos;
+    return pNewAig;
   }
   
   Aig_Man_t *Aig_ManRebuild (Aig_Man_t **ppAig)
@@ -415,8 +419,17 @@ namespace avy
   }
   
   
-  Aig_Man_t *Aig_DupWithVals( Aig_Man_t * p, std::vector<boost::tribool> &vals)
+  Aig_Man_t *Aig_DupWithCiVals( Aig_Man_t * p, std::vector<boost::tribool> &vals)
   {
+	  Gia_Man_t *pGia = Gia_ManFromAigSimple (p);
+	  Gia_Man_t *pNewGia = Aig_DupWithCiVals(pGia, vals);
+	  Aig_Man_t* pNewAig = Gia_ManToAigSimple(pNewGia);
+	  Gia_ManStop(pGia);
+	  Gia_ManStop(pNewGia);
+	  pNewAig->nTruePis = p->nTruePis;
+	  pNewAig->nTruePos = p->nTruePos;
+	  Aig_ManCleanup( pNewAig );
+	  return pNewAig;
 	Aig_Man_t * pNew;
 	Aig_Obj_t * pObj, * pObjNew;
 	int i;
@@ -479,7 +492,7 @@ namespace avy
 	return pNew;
   }
 
-  Gia_Man_t* Aig_DupWithVals (Gia_Man_t* p, std::vector<boost::tribool>& vals)
+  Gia_Man_t* Aig_DupWithCiVals (Gia_Man_t* p, std::vector<boost::tribool>& vals)
   {
       Gia_Man_t * pNew;
       Gia_Obj_t * pObj;
@@ -492,6 +505,7 @@ namespace avy
       unsigned nPiNum = Gia_ManPiNum(p);
       Gia_ManForEachCi( p, pObj, i )
       {
+    	  pObj->Value = Gia_ManAppendCi(pNew);
     	  if ( i >= nPiNum)
           {
 			boost::tribool val = vals[i-nPiNum];
@@ -499,10 +513,6 @@ namespace avy
 				pObj->Value = Gia_ManConst1Lit();
 			else if (!val)
 				pObj->Value = Gia_ManConst0Lit();
-		  }
-		  else
-		  {
-			pObj->Value = Gia_ManAppendCi(pNew);
 		  }
       }
 
@@ -519,7 +529,8 @@ namespace avy
   void Aig_TernarySimulate( Gia_Man_t * p, unsigned nFrames, std::vector<std::vector<boost::tribool> >& frameVals )
   {
 	  unsigned startSize = frameVals.size();
-	  if (frameVals.size() >= nFrames)
+	  assert(startSize > 0);
+	  if (frameVals.size() > nFrames)
 		  return;
 	  frameVals.resize(nFrames+1);
       int nStateWords = Abc_BitWordNum( 2*Gia_ManCoNum(p) );
@@ -528,14 +539,8 @@ namespace avy
       Gia_ManConst0(p)->Value = GIA_ZER;
       Gia_ManForEachPi( p, pObj, i )
           pObj->Value = GIA_UND;
-      if (startSize == 0)
+      Gia_ManForEachRi( p, pObj, i )
       {
-    	  Gia_ManForEachRi( p, pObj, i )
-          	  pObj->Value = GIA_ZER;
-      }
-      else
-      {
-    	  Gia_ManForEachRi( p, pObj, i )
     		if (frameVals[startSize-1][i])
     		  pObj->Value = GIA_ONE;
     		else if (!frameVals[startSize-1][i])
@@ -544,11 +549,8 @@ namespace avy
     		  pObj->Value = GIA_UND;
       }
 
-      for (unsigned f = startSize; ; f++ )
+      for (unsigned f = startSize; f <= nFrames ; f++ )
       {
-          // if frames are given, break at frames
-          if ( nFrames && f == nFrames )
-              break;
           // aassign CI values
           Gia_ManForEachRiRo( p, pObj, pObjRo, i )
               pObjRo->Value = pObj->Value;
@@ -563,8 +565,15 @@ namespace avy
               boost::tribool v = boost::indeterminate;
               if (pObj->Value != GIA_UND)
             	v = (pObj->Value == GIA_ZER) ? false : true;
-            	  vals.push_back(v);
+              vals.push_back(v);
           }
       }
+  }
+
+  void Aig_TernarySimulate( Aig_Man_t * p, unsigned nFrames, std::vector<std::vector<boost::tribool> >& frameVals )
+  {
+	  Gia_Man_t *pGia = Gia_ManFromAigSimple (p);
+	  Aig_TernarySimulate(pGia, nFrames, frameVals);
+	  Gia_ManStop(pGia);
   }
 }
