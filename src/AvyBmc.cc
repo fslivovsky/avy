@@ -15,6 +15,7 @@ namespace po = boost::program_options;
 #include "avy/Util/AvyDebug.h"
 #include "avy/Util/Global.h"
 #include "SafetyVC.h"
+#include "SafetyAigVC.h"
 #include "AigPrint.h"
 
 #include "base/main/main.h"
@@ -95,13 +96,21 @@ namespace avy
     tribool res;
     if (gParams.glucose)
       {
-        Glucose sat (5000);
-        res = bmc (sat, uDepth);
+        for (unsigned f = 1; f <= uDepth; f++)
+        {
+            Glucose sat (5000, gParams.sat_simp);
+            res = bmc (sat, f);
+            if (res) break;
+        }
       }
     else
       {
-        Minisat sat (5000);
-        res = bmc (sat, uDepth);
+        for (unsigned f = 1; f <= uDepth; f++)
+		{
+            Minisat sat (5000, gParams.sat_simp);
+		    res = bmc (sat, f);
+		    if (res) break;
+		}
       }
     
     VERBOSE (1, Stats::PrintBrunch (outs ()););
@@ -114,7 +123,11 @@ namespace avy
   {
     AVY_MEASURE_FN;
     
+#if 0
+    SafetyAigVC vc (&*m_Aig);
+#else
     SafetyVC vc (&*m_Aig);
+#endif
     
     Unroller<Sat> unroller (solver, false);
     for (unsigned i = 0; i <= uDepth; ++i)
@@ -131,7 +144,7 @@ namespace avy
     if (m_doBmc)
     {
       ScoppedStats _s_ ("solve");
-      VERBOSE (1, vout () << "Solving...\n" << std::flush;);
+      VERBOSE (1, vout () << "Solving " << uDepth << " ...\n" << std::flush;);
       res = solver.solve ();
       VERBOSE(1, vout () << "Result: " << std::boolalpha << res << "\n");
       if (res) Stats::set ("Result", "SAT");
