@@ -1,6 +1,7 @@
 #include "aig/saig/saig.h"
 #include "aig/gia/giaAig.h"
 #include "proof/dch/dch.h"
+#include "proof/cec/cec.h"
 
 #include "AigUtils.h"
 #include "avy/Util/AvyAssert.h"
@@ -430,66 +431,6 @@ namespace avy
 	  pNewAig->nTruePos = p->nTruePos;
 	  Aig_ManCleanup( pNewAig );
 	  return pNewAig;
-	Aig_Man_t * pNew;
-	Aig_Obj_t * pObj, * pObjNew;
-	int i;
-	assert( p->pManTime == NULL );
-	assert(vals.size() == Aig_ManRegNum(p));
-	// create the new manager
-	pNew = Aig_ManStart( Aig_ManObjNumMax(p) );
-	pNew->pName = Abc_UtilStrsav( p->pName );
-	pNew->pSpec = Abc_UtilStrsav( p->pSpec );
-	pNew->nAsserts = p->nAsserts;
-	pNew->nConstrs = p->nConstrs;
-	//pNew->nBarBufs = p->nBarBufs;
-	if ( p->vFlopNums )
-		pNew->vFlopNums = Vec_IntDup( p->vFlopNums );
-	// create the PIs
-	Aig_ManCleanData( p );
-	Aig_ManConst1(p)->pData = Aig_ManConst1(pNew);
-	unsigned nPiNum = Aig_ManCiNum(p)-Aig_ManRegNum(p);
-	Aig_ManForEachCi( p, pObj, i )
-	{
-		if ( i >= nPiNum)
-		{
-			boost::tribool val = vals[i-nPiNum];
-			if (val)
-				pObjNew = Aig_ManConst1(pNew);
-			else if (!val)
-				pObjNew = Aig_ManConst0(pNew);
-		}
-		else
-		{
-			pObjNew = Aig_ObjCreateCi( pNew );
-			pObjNew->Level = pObj->Level;
-		}
-		pObj->pData = pObjNew;
-	}
-	// duplicate internal nodes
-	Aig_ManForEachObj( p, pObj, i )
-		if ( Aig_ObjIsBuf(pObj) )
-		{
-			pObjNew = Aig_ObjChild0Copy(pObj);
-			pObj->pData = pObjNew;
-		}
-		else if ( Aig_ObjIsNode(pObj) )
-		{
-			pObjNew = Aig_And( pNew, Aig_ObjChild0Copy(pObj), Aig_ObjChild1Copy(pObj) );
-			pObj->pData = pObjNew;
-		}
-	// add the POs
-	Aig_ManForEachCo( p, pObj, i )
-	{
-		pObjNew = Aig_ObjCreateCo( pNew, Aig_ObjChild0Copy(pObj) );
-		pObj->pData = pObjNew;
-	}
-//    assert( Aig_ManBufNum(p) != 0 || Aig_ManNodeNum(p) == Aig_ManNodeNum(pNew) );
-	Aig_ManCleanup( pNew );
-	Aig_ManSetRegNum( pNew, Aig_ManRegNum(p) );
-	// check the resulting network
-	if ( !Aig_ManCheck(pNew) )
-		return NULL;
-	return pNew;
   }
 
   Gia_Man_t* Aig_DupWithCiVals (Gia_Man_t* p, std::vector<boost::tribool>& vals)
@@ -575,5 +516,52 @@ namespace avy
 	  Gia_Man_t *pGia = Gia_ManFromAigSimple (p);
 	  Aig_TernarySimulate(pGia, nFrames, frameVals);
 	  Gia_ManStop(pGia);
+  }
+
+  Aig_Man_t* Aig_SatSweep(Aig_Man_t* p, std::vector<int>& equivClasses)
+  {
+	  Gia_Man_t* pGia = Gia_ManFromAigSimple(p);
+#if 1
+	  Cec_ParFra_t ParsFra, * pPars = &ParsFra;
+	  Cec_ManFraSetDefaultParams( pPars );
+	  pPars->fSatSweeping = 1;
+	  //pPars->fVerbose = 1;
+	  Gia_Man_t *pTemp = Cec_ManSatSweeping( pGia, pPars );
+#else
+	  Dch_Pars_t Pars, * pPars = &Pars;
+	  pPars->fVerbose = 1;
+	  Dch_ManSetDefaultParams( pPars );
+	  Gia_Man_t *pTemp = Gia_ManPerformDch( pGia, pPars );
+#endif
+	  Gia_ManStop(pGia);
+	  equivClasses.resize(p->nRegs, -1);
+	  int equiv=0;
+	  int consts=0;
+	  int nPoNum = Gia_ManPoNum(pTemp);
+	  for (int i=nPoNum; i < Gia_ManCoNum(pTemp); i++)
+	  {
+		  Gia_Obj_t* pObj = Gia_ManCo(pTemp, i);
+		  for (int j=i+1; j < Gia_ManCoNum(pTemp); j++)
+		  {
+			  if (Gia_ObjFanin0(pObj) == Gia_ObjFanin0(Gia_ManCo(pTemp, j)))
+			  {
+				  if (Gia_Obj2Lit(pTemp, Gia_ObjFanin0(pObj))== 0 || Gia_Obj2Lit(pTemp, Gia_ObjFanin0(pObj))== 1)
+					  consts++;
+				  equiv++;
+				  equivClasses[i-nPoNum] = j;
+				  break;
+			  }
+		  }
+	  }
+	  printf("Found %d equiv out of %d, from which %d constants\n", equiv, Gia_ManCoNum(pTemp), consts);
+	  Aig_Man_t* pNewAig = Gia_ManToAigSimple(pTemp);
+	  Gia_ManStop(pTemp);
+	  return pNewAig;
+  }
+
+  Aig_Man_t* Aig_SatSweep(Aig_Man_t* p)
+  {
+	  std::vector<int> equivClasses;
+	  return Aig_SatSweep(p, equivClasses);
   }
 }

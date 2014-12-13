@@ -95,6 +95,9 @@ namespace avy
 
   void Aig_TernarySimulate( Aig_Man_t * p, unsigned nFrames, std::vector<std::vector<boost::tribool> >& frameVals );
   void Aig_TernarySimulate( Gia_Man_t * p, unsigned nFrames, std::vector<std::vector<boost::tribool> >& frameVals );
+
+  Aig_Man_t* Aig_SatSweep(Aig_Man_t* p, std::vector<int>& equivClasses);
+  Aig_Man_t* Aig_SatSweep(Aig_Man_t* p);
 }
 
 

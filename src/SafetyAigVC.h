@@ -38,9 +38,6 @@ namespace avy
     std::vector<AigManPtr> m_Tr;
     /// the bad state
     AigManPtr m_Bad;
-
-    /// Tr of the 0 frame
-    AigManPtr m_Tr0;
     
     /// Cnf of Bad sates
     CnfPtr m_cnfBad;
@@ -50,29 +47,27 @@ namespace avy
     std::vector<Clauses> m_preCond;
     std::vector<Clauses> m_postCond;
 
-    std::vector<std::vector<boost::tribool> > frameVals;
+    std::vector<std::vector<boost::tribool> > m_frameVals;
 
     /// initialize given a circuit
     void init (Aig_Man_t *pCircuit);
 
     void computeNextTr()
     {
-    	Aig_TernarySimulate(&*m_MasterTr, frameVals.size(), frameVals);
-    	Aig_Man_t* pNewTr = Aig_DupWithCiVals(&*m_MasterTr, frameVals.back());
+    	Aig_TernarySimulate(&*m_MasterTr, m_frameVals.size(), m_frameVals);
+    	Aig_Man_t* pNewTr = Aig_DupWithCiVals(&*m_MasterTr, m_frameVals.back());
+    	//std::vector<int> equivClasses;
+    	//Aig_Man_t* pSimpTr = Aig_SatSweep(pNewTr, equivClasses);
+    	//Aig_ManStop(pNewTr);
     	m_Tr.push_back(aigPtr(pNewTr));
-    }
-
-    AigManPtr simulateAndRebuild(AigManPtr aig)
-    {
-
     }
 
   public:
     /// create a VC given from a circuit. Init is implicit.
     SafetyAigVC(Aig_Man_t *pCircuit)
     {
-    	frameVals.resize(1);
-    	frameVals[0].resize(Saig_ManRegNum(pCircuit), false);
+    	m_frameVals.resize(1);
+    	m_frameVals[0].resize(Saig_ManRegNum(pCircuit), false);
     	init (pCircuit);
     }
     
@@ -171,98 +166,53 @@ namespace avy
     template <typename S>
     void addTr (Unroller<S> &unroller)
     {
-      unsigned nFrame = unroller.frame ();
-      if (nFrame == 0) addTr0 (unroller);
-      else addTrN (unroller);
+        unsigned nFrame = unroller.frame ();
+        while (m_Tr.size() <= nFrame)
+      	  computeNextTr();
 
-      /** post-condition clauses */
-      if (unroller.frame () < m_postCond.size ())
-        addClauses (unroller, m_postCond [nFrame], unroller.getOutputs (nFrame));
-    }
+        CnfPtr cnfTr = cnfPtr (Cnf_Derive (&*m_Tr[nFrame], Aig_ManRegNum (&*m_Tr[nFrame])));
+        unsigned nOff = unroller.freshBlock (cnfTr->nVars);
+        Cnf_DataLift(&*cnfTr, nOff);
 
-  private:
-    template <typename S>
-    void addTr0 (Unroller<S> &unroller)
-    {
-      CnfPtr cnfTr0 = cnfPtr (Cnf_Derive (&*m_Tr0, Aig_ManRegNum (&*m_Tr0)));
-      unsigned nOff = unroller.freshBlock (cnfTr0->nVars);
-      Cnf_DataLift(&*cnfTr0, nOff);
+        AVY_ASSERT (Vec_IntSize (unroller.getInputs (nFrame)) == 0 &&
+                    "Unexpected inputs");
+        AVY_ASSERT (Vec_IntSize (unroller.getOutputs (nFrame)) == 0 &&
+                    "Unexpected outputs");
+        //AVY_ASSERT (nFrame > 0);
 
-      unsigned nFrame = unroller.frame ();
+        // -- add transition relation
+        unroller.addCnf (&*cnfTr);
 
-      AVY_ASSERT (Vec_IntSize (unroller.getInputs (nFrame)) == 0 &&
-                  "Unexpected inputs");
-      AVY_ASSERT (Vec_IntSize (unroller.getOutputs (nFrame)) == 0 &&
-                  "Unexpected outputs");        
-      AVY_ASSERT (nFrame == 0);
-      
-      // add clauses for Init
-      Aig_Obj_t *pObj;
-      int i;
-      lit Lits[1];
-        
-      Saig_ManForEachLo (&*m_Tr0, pObj, i)
+        // -- register frame PIs
+        Aig_Obj_t *pObj;
+        int i;
+        Saig_ManForEachPi (&*m_Tr[nFrame], pObj, i)
+          unroller.addPrimaryInput (cnfTr->pVarNums [pObj->Id]);
+
+        if (nFrame > 0)
         {
-          Lits[0] = toLitCond (cnfTr0->pVarNums [pObj->Id], 1);
-          unroller.addClause (Lits, Lits + 1);
+      	  // -- register inputs
+  		  Saig_ManForEachLo (&*m_Tr[nFrame], pObj, i)
+  			unroller.addInput (cnfTr->pVarNums [pObj->Id]);
+
+  		  // glue new In to old Out
+  		  unroller.glueOutIn ();
+
+  		  /** pre-condition clauses */
+  		  if (nFrame < m_preCond.size ())
+  			addClauses (unroller, m_preCond [nFrame], unroller.getInputs (nFrame));
         }
 
-      unroller.addCnf (&*cnfTr0);
+        // -- register frame outputs
+        Saig_ManForEachLi (&*m_Tr[nFrame], pObj, i)
+          unroller.addOutput (cnfTr->pVarNums [pObj->Id]);
 
-      // -- register frame PIs
-      Saig_ManForEachPi (&*m_Tr0, pObj, i)
-        unroller.addPrimaryInput (cnfTr0->pVarNums [pObj->Id]);
 
-      // -- register frame outputs
-      Saig_ManForEachLi (&*m_Tr0, pObj, i)
-        unroller.addOutput (cnfTr0->pVarNums [pObj->Id]);
+        /** post-condition clauses */
+        if (unroller.frame () < m_postCond.size ())
+            addClauses (unroller, m_postCond [nFrame], unroller.getOutputs (nFrame));
     }
 
-
-    template <typename S>
-    void addTrN (Unroller<S> &unroller)
-    {
-      unsigned nFrame = unroller.frame ();
-      while (m_Tr.size() < nFrame)
-    	  computeNextTr();
-
-      CnfPtr cnfTr = cnfPtr (Cnf_Derive (&*m_Tr[nFrame-1], Aig_ManRegNum (&*m_Tr[nFrame-1])));
-      unsigned nOff = unroller.freshBlock (cnfTr->nVars);
-      Cnf_DataLift(&*cnfTr, nOff);
-
-      AVY_ASSERT (Vec_IntSize (unroller.getInputs (nFrame)) == 0 &&
-                  "Unexpected inputs");
-      AVY_ASSERT (Vec_IntSize (unroller.getOutputs (nFrame)) == 0 &&
-                  "Unexpected outputs");        
-      AVY_ASSERT (nFrame > 0);
-      
-      // -- register frame PIs
-      Aig_Obj_t *pObj;
-      int i;
-      Saig_ManForEachPi (&*m_Tr[nFrame-1], pObj, i)
-        unroller.addPrimaryInput (cnfTr->pVarNums [pObj->Id]);
-
-      // -- register inputs
-      Saig_ManForEachLo (&*m_Tr[nFrame-1], pObj, i)
-        unroller.addInput (cnfTr->pVarNums [pObj->Id]);
-
-      // glue new In to old Out
-      unroller.glueOutIn ();
-
-      /** pre-condition clauses */
-      if (nFrame < m_preCond.size ())
-        addClauses (unroller, m_preCond [nFrame], unroller.getInputs (nFrame));
-
-      // -- add transition relation
-      unroller.addCnf (&*cnfTr);
-
-      // -- register frame outputs
-      Saig_ManForEachLi (&*m_Tr[nFrame-1], pObj, i)
-        unroller.addOutput (cnfTr->pVarNums [pObj->Id]);
-    }
-    
-  public:
-    
     template <typename S>
     void addBad (Unroller<S> &unroller)
     {
@@ -282,7 +232,7 @@ namespace avy
       Aig_ManForEachCi (&*m_Bad, pObj, i)
         {
           // -- skip Ci that corresponds to Pi of Tr
-          if (i < Saig_ManPiNum (&*m_Tr0))
+          if (i < Saig_ManPiNum (&*m_MasterTr))
             unroller.addPrimaryInput(m_cnfBad->pVarNums [pObj->Id]);
           else unroller.addInput (m_cnfBad->pVarNums [pObj->Id]);
         }
@@ -303,6 +253,12 @@ namespace avy
       unroller.setBadLit (Lit);
     }
     
+    const std::vector<boost::tribool>& getLatchesValues(unsigned nFrame) const
+	{
+    	AVY_ASSERT(m_frameVals.size() > nFrame);
+    	return m_frameVals[nFrame];
+	}
+
   };
 }
 

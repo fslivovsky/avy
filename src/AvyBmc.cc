@@ -123,7 +123,7 @@ namespace avy
   {
     AVY_MEASURE_FN;
     
-#if 0
+#if 1
     SafetyAigVC vc (&*m_Aig);
 #else
     SafetyVC vc (&*m_Aig);

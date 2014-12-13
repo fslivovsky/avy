@@ -26,7 +26,7 @@ namespace avy
     }
     
     // -- save circuit
-    m_Circuit = aigPtr (Aig_ManDupSimple (pCircuit));
+    m_Circuit = aigPtr (Aig_ManDupSimple (Aig_SatSweep(pCircuit)));
 
 
     AigManPtr aig;
@@ -48,36 +48,18 @@ namespace avy
           }
         else
           aig = m_Circuit;
-        
-        aig = aigPtr (Aig_AddResetPi (&*aig));
       }
         
     // -- construct Tr 
-    Aig_Man_t *pTr0 = Aig_ManDupNoPo (&*aig);
-    Aig_ManRebuild (&pTr0);
-    Aig_Man_t* pNewTr0 = Aig_DupWithCiVals(pTr0, frameVals[0]);
-    m_Tr0 = aigPtr (pNewTr0);
+    Aig_Man_t *pTr = Aig_ManDupNoPo (&*aig);
+    Aig_ManRebuild (&pTr);
+    m_MasterTr = aigPtr(pTr);
+    Aig_Man_t* pNewTr = Aig_DupWithCiVals(pTr, m_frameVals[0]);
+    std::vector<int> equivClasses;
+    Aig_Man_t* pSimpTr = Aig_SatSweep(pNewTr, equivClasses);
+    Aig_ManStop(pNewTr);
+    m_Tr.push_back(aigPtr (pSimpTr));
 
-    if (gParams.tr0)
-      {
-        Aig_Man_t *pTr;
-        if (gParams.stick_error)
-          pTr = Aig_ManDupNoPo (&*stuckErrorAig);
-        else
-          pTr = Aig_ManDupNoPo (&*m_Circuit);
-        
-        Aig_ManRebuild (&pTr);
-        m_MasterTr = aigPtr(pTr);
-        Aig_TernarySimulate(pTr, 1, frameVals);
-        Aig_Man_t* pNewTr = Aig_DupWithCiVals(pTr, frameVals[1]);
-        m_Tr.push_back(aigPtr (pNewTr));
-      }
-    else
-      {
-        m_Tr.push_back(m_Tr0);
-      }
-    
-    
     //AVY_ASSERT (Saig_ManRegNum (&*m_Tr0) == Saig_ManRegNum (&*m_Tr));
 
     // -- construct Bad
