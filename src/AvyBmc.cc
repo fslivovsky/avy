@@ -105,7 +105,7 @@ namespace avy
       }
     else
       {
-        for (unsigned f = 1; f <= uDepth; f++)
+        for (unsigned f = uDepth; f <= uDepth; f++)
 		{
             Minisat sat (5000, gParams.sat_simp);
 		    res = bmc (sat, f);
