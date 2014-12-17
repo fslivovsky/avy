@@ -93,6 +93,10 @@ namespace avy
 
   Gia_Man_t *Aig_DupWithCiVals( Gia_Man_t * p, std::vector<boost::tribool> &vals);
 
+  Gia_Man_t* Aig_DupWithCiEquivs (Gia_Man_t* p, const std::vector<int>& equiv);
+
+  Aig_Man_t* Aig_DupWithCiEquivs (Aig_Man_t* p, const std::vector<int>& equiv);
+
   void Aig_TernarySimulate( Aig_Man_t * p, unsigned nFrames, std::vector<std::vector<boost::tribool> >& frameVals );
   void Aig_TernarySimulate( Gia_Man_t * p, unsigned nFrames, std::vector<std::vector<boost::tribool> >& frameVals );
 

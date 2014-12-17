@@ -10,6 +10,8 @@
 namespace ABC_NAMESPACE
 {
   Aig_Obj_t * Aig_Mux2( Aig_Man_t * p, Aig_Obj_t * pC, Aig_Obj_t * p1, Aig_Obj_t * p0 );
+  //extern Gia_Man_t * Gia_SweeperSweep( Gia_Man_t * p, Vec_Int_t * vProbeOuts, int nWords, int nConfs, int fVerify, int fVerbose );
+  extern Gia_Man_t * Gia_SweeperSweep( Gia_Man_t * p, Vec_Int_t * vProbeOuts, int nWords, int nConfs, int fVerbose );
 }
 
 
@@ -467,6 +469,63 @@ namespace avy
       return pNew;
   }
 
+  Gia_Man_t* Aig_DupWithCiEquivs (Gia_Man_t* p, const std::vector<int>& equiv)
+  {
+	Gia_Man_t * pNew;
+	Gia_Obj_t * pObj;
+	int i;
+	pNew = Gia_ManStart( Gia_ManObjNum(p) );
+	Gia_ManHashStart(pNew);
+	pNew->pName = Abc_UtilStrsav( p->pName );
+	pNew->pSpec = Abc_UtilStrsav( p->pSpec );
+	Gia_ManConst0(p)->Value = 0;
+	unsigned nPiNum = Gia_ManPiNum(p);
+	Gia_ManForEachCi( p, pObj, i )
+	{
+	  pObj->Value = Gia_ManAppendCi(pNew);
+	  if ( i >= nPiNum)
+      {
+		int val = equiv[i-nPiNum];
+		if (val < -1)
+		{
+			if (val == -3)
+				pObj->Value = Gia_ManConst1Lit();
+			else if (val == -2)
+				pObj->Value = Gia_ManConst0Lit();
+		}
+		else if (val >=0)
+		{
+			assert(val+nPiNum < i);
+            pObj->Value = Gia_ManCi(p, val+nPiNum)->Value;
+            assert(pObj->Value != 0);
+		}
+      }
+	}
+
+	Gia_ManForEachAnd( p, pObj, i )
+		pObj->Value = Gia_ManHashAnd( pNew, Gia_ObjFanin0Copy(pObj), Gia_ObjFanin1Copy(pObj) );
+	Gia_ManForEachCo( p, pObj, i )
+		pObj->Value = Gia_ManAppendCo( pNew, Gia_ObjFanin0Copy(pObj) );
+	Gia_ManDupRemapEquiv( pNew, p );
+	Gia_ManSetRegNum( pNew, Gia_ManRegNum(p) );
+	assert( Gia_ManIsNormalized(pNew) );
+	return pNew;
+  }
+
+  Aig_Man_t* Aig_DupWithCiEquivs (Aig_Man_t* p, const std::vector<int>& equiv)
+  {
+	  Gia_Man_t *pGia = Gia_ManFromAigSimple (p);
+	  Gia_Man_t* pNewGia = Aig_DupWithCiEquivs(pGia, equiv);
+	  Aig_Man_t* pNewAig = Gia_ManToAigSimple(pNewGia);
+	  Gia_ManStop(pGia);
+	  Gia_ManStop(pNewGia);
+	  pNewAig->nTruePis = p->nTruePis;
+      pNewAig->nTruePos = p->nTruePos;
+	  Aig_ManCleanup( pNewAig );
+
+	  return pNewAig;
+  }
+
   void Aig_TernarySimulate( Gia_Man_t * p, unsigned nFrames, std::vector<std::vector<boost::tribool> >& frameVals )
   {
 	  unsigned startSize = frameVals.size();
@@ -525,7 +584,7 @@ namespace avy
 	  Cec_ParFra_t ParsFra, * pPars = &ParsFra;
 	  Cec_ManFraSetDefaultParams( pPars );
 	  pPars->fSatSweeping = 1;
-	  //pPars->fVerbose = 1;
+	  pPars->fVerbose = 0;
 	  Gia_Man_t *pTemp = Cec_ManSatSweeping( pGia, pPars );
 #else
 	  Dch_Pars_t Pars, * pPars = &Pars;
@@ -537,25 +596,40 @@ namespace avy
 	  equivClasses.resize(p->nRegs, -1);
 	  int equiv=0;
 	  int consts=0;
+	  int in_out=0;
 	  int nPoNum = Gia_ManPoNum(pTemp);
-	  for (int i=nPoNum; i < Gia_ManCoNum(pTemp); i++)
+	  for (int i=Gia_ManCoNum(pTemp)-1; i >= nPoNum; i--)
 	  {
 		  Gia_Obj_t* pObj = Gia_ManCo(pTemp, i);
-		  for (int j=i+1; j < Gia_ManCoNum(pTemp); j++)
+		  if (Gia_ObjIsCi(Gia_ObjFanin0(pObj))) in_out++;
+		  for (int j=i-1; j >= nPoNum; j--)
 		  {
-			  if (Gia_ObjFanin0(pObj) == Gia_ObjFanin0(Gia_ManCo(pTemp, j)))
+			  if (Gia_ObjChild0(pObj) == Gia_ObjChild0(Gia_ManCo(pTemp, j)))
 			  {
 				  if (Gia_Obj2Lit(pTemp, Gia_ObjFanin0(pObj))== 0 || Gia_Obj2Lit(pTemp, Gia_ObjFanin0(pObj))== 1)
+				  {
 					  consts++;
-				  equiv++;
-				  equivClasses[i-nPoNum] = j;
+					  equivClasses[i-nPoNum] =
+						Gia_Obj2Lit(pTemp, Gia_ObjChild0(pObj))== 0 ? -2 : -3;
+				  }
+				  else
+				  {
+					  equiv++;
+					  equivClasses[i-nPoNum] = j;
+				  }
 				  break;
 			  }
 		  }
 	  }
-	  printf("Found %d equiv out of %d, from which %d constants\n", equiv, Gia_ManCoNum(pTemp), consts);
+	  printf("Found %d equiv and %d constants out of %d\n", equiv, consts, Gia_ManCoNum(pTemp));
+	  printf("Found output driven by intput: %d\n", in_out);
 	  Aig_Man_t* pNewAig = Gia_ManToAigSimple(pTemp);
 	  Gia_ManStop(pTemp);
+
+	  pNewAig->nTruePis = p->nTruePis;
+	  pNewAig->nTruePos = p->nTruePos;
+	  Aig_ManCleanup( pNewAig );
+	  assert (equivClasses[0] == -1);
 	  return pNewAig;
   }
 
@@ -563,5 +637,71 @@ namespace avy
   {
 	  std::vector<int> equivClasses;
 	  return Aig_SatSweep(p, equivClasses);
+  }
+
+  Gia_Man_t* Aig_Unroll(Gia_Man_t* p, unsigned int nFrames)
+  {
+	// We only unroll TRs, no property
+	assert(Gia_ManPoNum(p) == 0);
+
+	Gia_Man_t * pUnrolled;
+	Gia_Obj_t * pObj;
+	int i;
+	pUnrolled = Gia_ManStart( Gia_ManObjNum(p) );
+	Gia_ManHashStart(pUnrolled);
+	pUnrolled->pName = Abc_UtilStrsav( p->pName );
+	pUnrolled->pSpec = Abc_UtilStrsav( p->pSpec );
+	Gia_ManConst0(p)->Value = 0;
+	unsigned nPiNum = Gia_ManPiNum(p);
+	for (unsigned int f = 0; f < nFrames; f++)
+	{
+		Gia_ManForEachCi( p, pObj, i )
+		{
+			// Create CIs for the first frame, and for inputs
+			// in every unrolled frame
+			if (f == 0 || i < nPiNum)
+				pObj->Value = Gia_ManAppendCi(pUnrolled);
+			else
+			{
+				// For latches from the second frame and up, we take the
+				// driver of the CO representing them in the previous frame
+			    pObj->Value = Gia_Obj2Lit(pUnrolled, Gia_ObjChild0(Gia_ManRi(p, i-nPiNum)));
+			}
+		}
+
+		Gia_ManForEachAnd( p, pObj, i )
+			pObj->Value = Gia_ManHashAnd( pUnrolled, Gia_ObjFanin0Copy(pObj), Gia_ObjFanin1Copy(pObj) );
+		Gia_ManForEachCo( p, pObj, i )
+			pObj->Value = Gia_ManAppendCo( pUnrolled, Gia_ObjFanin0Copy(pObj) );
+	}
+	Gia_ManDupRemapEquiv( pUnrolled, p );
+	assert( Gia_ManIsNormalized(pUnrolled) );
+	return pUnrolled;
+  }
+
+  Gia_Man_t* Aig_SatSweepWithConstraints(Gia_Man_t* pAig, Gia_Man_t* pConstraints)
+  {
+	  Gia_Man_t * p = Gia_ManDup(pAig);
+	  Gia_ManDupAppendShare( p, pConstraints );
+	  // create sweeper
+	  Gia_SweeperStart( p );
+
+	  // collect outputs and create conditions
+	  Vec_Int_t * vOuts = Vec_IntAlloc( Gia_ManPoNum(p) );;
+	  int i;
+	  Gia_Obj_t * pObj;
+	  Gia_ManForEachPo( p, pObj, i )
+		  if ( i < Gia_ManPoNum(p) - p->nConstrs )  // this is the user's output
+			  Vec_IntPush( vOuts, Gia_SweeperProbeCreate( p,  Gia_ObjFaninLit0p(p, pObj) ) );
+		  else // this is a constraint
+			  Gia_SweeperCondPush( p, Gia_SweeperProbeCreate( p, Gia_ObjFaninLit0p(p, pObj) ) );
+	  // perform the sweeping
+	  Gia_Man_t* pGia = Gia_SweeperSweep( p, vOuts, 4, 1000, 1 );
+	  //Gia_Man_t* pGia = Gia_SweeperSweep( p, vOuts, 4, 1000, 1, 1 );
+	  Vec_IntFree( vOuts );
+	  // stop the sweeper
+	  Gia_SweeperStop( p );
+	  Gia_ManStop( p );
+	  return pGia;
   }
 }
