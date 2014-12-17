@@ -54,11 +54,16 @@ namespace avy
     Aig_Man_t *pTr = Aig_ManDupNoPo (&*aig);
     Aig_ManRebuild (&pTr);
     m_MasterTr = aigPtr(pTr);
-    Aig_Man_t* pNewTr = Aig_DupWithCiVals(pTr, m_frameVals[0]);
-    m_frameEquivs.resize(1);
-    Aig_Man_t* pSimpTr = Aig_SatSweep(pNewTr, m_frameEquivs[0]);
-    Aig_ManStop(pNewTr);
-    m_Tr.push_back(aigPtr (pSimpTr));
+    if (gParams.opt_bmc)
+    {
+        Aig_Man_t* pNewTr = Aig_DupWithCiVals(pTr, m_frameVals[0]);
+        m_frameEquivs.resize(1);
+        Aig_Man_t* pSimpTr = Aig_SatSweep(pNewTr, m_frameEquivs[0]);
+        Aig_ManStop(pNewTr);
+        m_Tr.push_back(aigPtr (pSimpTr));
+    }
+    else
+    	m_Tr.push_back(m_MasterTr);
 
     //AVY_ASSERT (Saig_ManRegNum (&*m_Tr0) == Saig_ManRegNum (&*m_Tr));
 

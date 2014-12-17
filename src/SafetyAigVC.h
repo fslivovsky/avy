@@ -55,15 +55,19 @@ namespace avy
 
     void computeNextTr()
     {
-    	// TODO: TrCp not used for now. Need to see if it makes SatSweep more efficient
-    	Aig_TernarySimulate(&*m_MasterTr, m_frameVals.size(), m_frameVals);
-    	//Aig_Man_t* pTrCp = Aig_DupWithCiVals(&*m_MasterTr, m_frameVals.back());
-        Aig_Man_t* pNewTr = Aig_DupWithCiEquivs(&*m_MasterTr, m_frameEquivs.back());
-        m_frameEquivs.resize(m_frameEquivs.size()+1);
-        Aig_Man_t* pSimpTr = Aig_SatSweep(pNewTr, m_frameEquivs.back());
-        Aig_ManStop(pNewTr);
-        //Aig_ManStop(pTrCp);
-        m_Tr.push_back(aigPtr(pSimpTr));
+    	if (gParams.opt_bmc)
+    	{
+			// TODO: TrCp not used for now. Need to see if it makes SatSweep more efficient
+			Aig_TernarySimulate(&*m_MasterTr, m_frameVals.size(), m_frameVals);
+			//Aig_Man_t* pTrCp = Aig_DupWithCiVals(&*m_MasterTr, m_frameVals.back());
+			Aig_Man_t* pNewTr = Aig_DupWithCiEquivs(&*m_MasterTr, m_frameEquivs.back());
+			m_frameEquivs.resize(m_frameEquivs.size()+1);
+			Aig_Man_t* pSimpTr = Aig_SatSweep(pNewTr, m_frameEquivs.back());
+			Aig_ManStop(pNewTr);
+			//Aig_ManStop(pTrCp);
+			m_Tr.push_back(aigPtr(pSimpTr));
+    	}
+    		m_Tr.push_back(m_MasterTr);
     }
 
   public:

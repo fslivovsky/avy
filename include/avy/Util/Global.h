@@ -90,6 +90,9 @@ namespace avy
     
     /// maximum number of conflict during cube generalization
     unsigned genConfLimit;
+
+    // Use optimized BMC
+    bool opt_bmc;
   };
   
   std::ostream &operator<< (std::ostream& out, const AvyParams& p);
