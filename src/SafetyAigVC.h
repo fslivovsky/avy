@@ -48,18 +48,22 @@ namespace avy
     std::vector<Clauses> m_postCond;
 
     std::vector<std::vector<boost::tribool> > m_frameVals;
+    std::vector<std::vector<int> > m_frameEquivs;
 
     /// initialize given a circuit
     void init (Aig_Man_t *pCircuit);
 
     void computeNextTr()
     {
+    	// TODO: TrCp not used for now. Need to see if it makes SatSweep more efficient
     	Aig_TernarySimulate(&*m_MasterTr, m_frameVals.size(), m_frameVals);
-    	Aig_Man_t* pNewTr = Aig_DupWithCiVals(&*m_MasterTr, m_frameVals.back());
-    	//std::vector<int> equivClasses;
-    	//Aig_Man_t* pSimpTr = Aig_SatSweep(pNewTr, equivClasses);
-    	//Aig_ManStop(pNewTr);
-    	m_Tr.push_back(aigPtr(pNewTr));
+    	//Aig_Man_t* pTrCp = Aig_DupWithCiVals(&*m_MasterTr, m_frameVals.back());
+        Aig_Man_t* pNewTr = Aig_DupWithCiEquivs(&*m_MasterTr, m_frameEquivs.back());
+        m_frameEquivs.resize(m_frameEquivs.size()+1);
+        Aig_Man_t* pSimpTr = Aig_SatSweep(pNewTr, m_frameEquivs.back());
+        Aig_ManStop(pNewTr);
+        //Aig_ManStop(pTrCp);
+        m_Tr.push_back(aigPtr(pSimpTr));
     }
 
   public:

@@ -55,8 +55,8 @@ namespace avy
     Aig_ManRebuild (&pTr);
     m_MasterTr = aigPtr(pTr);
     Aig_Man_t* pNewTr = Aig_DupWithCiVals(pTr, m_frameVals[0]);
-    std::vector<int> equivClasses;
-    Aig_Man_t* pSimpTr = Aig_SatSweep(pNewTr, equivClasses);
+    m_frameEquivs.resize(1);
+    Aig_Man_t* pSimpTr = Aig_SatSweep(pNewTr, m_frameEquivs[0]);
     Aig_ManStop(pNewTr);
     m_Tr.push_back(aigPtr (pSimpTr));
 
