@@ -67,6 +67,7 @@ namespace avy
 			//Aig_ManStop(pTrCp);
 			m_Tr.push_back(aigPtr(pSimpTr));
     	}
+    	else
     		m_Tr.push_back(m_MasterTr);
     }
 
@@ -209,6 +210,22 @@ namespace avy
   		  /** pre-condition clauses */
   		  if (nFrame < m_preCond.size ())
   			addClauses (unroller, m_preCond [nFrame], unroller.getInputs (nFrame));
+        }
+        else
+        {
+        	if (gParams.opt_bmc == false)
+			{
+				// add clauses for Init
+				Aig_Obj_t *pObj;
+				int i;
+				lit Lits[1];
+
+				Saig_ManForEachLo (&*m_Tr[nFrame], pObj, i)
+				{
+				  Lits[0] = toLitCond (cnfTr->pVarNums [pObj->Id], 1);
+				  unroller.addClause (Lits, Lits + 1);
+				}
+			}
         }
 
         // -- register frame outputs
