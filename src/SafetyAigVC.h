@@ -6,6 +6,7 @@
 //#include "boost/logic/tribool.hpp"
 #include "avy/Util/AvyDebug.h"
 #include "avy/Util/Global.h"
+#include "avy/Util/Stats.h"
 
 #include "AigUtils.h"
 #include "SafetyVC.h"
@@ -57,8 +58,9 @@ namespace avy
     {
     	if (gParams.opt_bmc)
     	{
+    		AVY_MEASURE_FN;
 			// TODO: TrCp not used for now. Need to see if it makes SatSweep more efficient
-			Aig_TernarySimulate(&*m_MasterTr, m_frameVals.size(), m_frameVals);
+			//Aig_TernarySimulate(&*m_MasterTr, m_frameVals.size(), m_frameVals);
 			//Aig_Man_t* pTrCp = Aig_DupWithCiVals(&*m_MasterTr, m_frameVals.back());
 			Aig_Man_t* pNewTr = Aig_DupWithCiEquivs(&*m_MasterTr, m_frameEquivs.back());
 			m_frameEquivs.resize(m_frameEquivs.size()+1);
