@@ -24,7 +24,7 @@ namespace avy
   class ItpMinisat : boost::noncopyable
   {
   private:
-    ::Minisat::SimpSolver *m_pSat;
+    std::unique_ptr<::Minisat::SimpSolver> m_pSat;
 
     /// true if last result was trivial
     bool m_Trivial;
@@ -40,24 +40,21 @@ namespace avy
   public:
     /// create a solver with nParts partitions and nVars variables
     ItpMinisat (unsigned nParts, unsigned nVars, bool simp = true) : 
-      m_pSat (0), m_Simplifier(simp)
+      m_pSat (nullptr), m_Simplifier(simp)
     { reset (nParts, nVars); }
     
-    ~ItpMinisat ()
-    {
-      if (m_pSat) delete m_pSat;
-      m_pSat = NULL;
-    }
+    ~ItpMinisat () {}
+    
+    
 
     /// reset and allocate nParts partitions and nVars variables
     void reset (unsigned nParts, unsigned nVars)
     {
       AVY_ASSERT (nParts >= 2 && "require at least 2 partitions");
-      if (m_pSat) delete m_pSat;
       m_nParts = nParts;
       m_Trivial = false;
       m_State = boost::tribool (boost::indeterminate);
-      m_pSat = new ::Minisat::SimpSolver();
+      m_pSat.reset (new ::Minisat::SimpSolver());
       m_pSat->ccmin_mode = 2;
       m_pSat->reorderProof(gParams.proof_reorder);
       m_pSat->setCurrentPart(1);
@@ -121,7 +118,7 @@ namespace avy
 
 
     /// raw access to the sat solver
-    ::Minisat::Solver* get () { return m_pSat; }
+    ::Minisat::Solver* get () { return m_pSat.get (); }
     
     /// true if the context is decided 
     bool isSolved () { return m_Trivial || m_State || !m_State; }

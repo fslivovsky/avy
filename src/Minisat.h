@@ -10,26 +10,22 @@ namespace avy
 {
   class Minisat
   {
-    ::Minisat::SimpSolver *m_sat;
+    std::unique_ptr<::Minisat::SimpSolver> m_sat;
     bool m_Trivial;
     bool m_Simplifier;
 
     std::vector<int> m_core;
     
   public:
-    Minisat (unsigned nVars, bool simp=true) : m_sat(NULL), m_Trivial(false), m_Simplifier(simp)
+    Minisat (unsigned nVars, bool simp=true) : m_sat(nullptr), m_Trivial(false), m_Simplifier(simp)
     { reset (nVars); }
 
-    virtual ~Minisat () 
-    { 
-      if (m_sat) delete m_sat; 
-    }
+    virtual ~Minisat () {}
 
     void reset (int nVars)
     {
       m_core.clear ();
-      if (m_sat) delete m_sat;
-      m_sat = new ::Minisat::SimpSolver ();      
+      m_sat.reset (new ::Minisat::SimpSolver ());
       m_sat->ccmin_mode = 2;
       m_sat->proofLogging (false);
       reserve (nVars);
