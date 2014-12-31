@@ -373,13 +373,13 @@ namespace avy
       }
     }
 
-    bool merge(const clause* _ps, const clause* _qs, Var v, std::vector<lit>& out_clause)
+    bool merge(clause* _ps, clause* _qs, Var v, std::vector<lit>& out_clause)
     {
         out_clause.clear();
 
         bool  ps_smallest = clause_size(_ps) < clause_size(_qs);
-        const clause* ps  = ps_smallest ? _qs : _ps;
-        const clause* qs  = ps_smallest ? _ps : _qs;
+        clause* ps  = ps_smallest ? _qs : _ps;
+        clause* qs  = ps_smallest ? _ps : _qs;
 
         for (int i = 0; i < clause_size(qs); i++){
             if (lit_var(clause_begin(qs)[i]) != v){
