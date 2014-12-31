@@ -6,6 +6,7 @@
 #include "AigUtils.h"
 #include "avy/Util/AvyAssert.h"
 #include "avy/Util/Stats.h"
+#include "avy/Util/Global.h"
 
 namespace ABC_NAMESPACE
 {
@@ -621,8 +622,10 @@ namespace avy
 			  }
 		  }
 	  }
-	  printf("Found %d equiv and %d constants out of %d\n", equiv, consts, Gia_ManCoNum(pTemp));
-	  printf("Found output driven by intput: %d\n", in_out);
+          VERBOSE (3, 
+                   vout() << "Found " << equiv << "equiv and " << consts 
+                   << " constans out of " << Gia_ManCoNum(pTemp) << "\n"
+                   << "Found output driven by intput: " << in_out << "\n";);
 	  Aig_Man_t* pNewAig = Gia_ManToAigSimple(pTemp);
 	  Gia_ManStop(pTemp);
 
