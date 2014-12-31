@@ -58,6 +58,7 @@ namespace avy
       m_Trivial = false;
       m_State = boost::tribool (boost::indeterminate);
       m_pSat = new ::Minisat::SimpSolver();
+      m_pSat->ccmin_mode = 2;
       m_pSat->reorderProof(gParams.proof_reorder);
       m_pSat->setCurrentPart(1);
     }
