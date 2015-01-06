@@ -585,6 +585,8 @@ namespace avy
 	  Cec_ParFra_t ParsFra, * pPars = &ParsFra;
 	  Cec_ManFraSetDefaultParams( pPars );
 	  pPars->fSatSweeping = 1;
+	  pPars->fRewriting = 1;
+	  pPars->nItersMax = 5;
 	  pPars->fVerbose = 0;
 	  Gia_Man_t *pTemp = Cec_ManSatSweeping( pGia, pPars );
 #else
@@ -623,7 +625,7 @@ namespace avy
 		  }
 	  }
           VERBOSE (3, 
-                   vout() << "Found " << equiv << "equiv and " << consts 
+                   vout() << "Found " << equiv << " equiv and " << consts
                    << " constans out of " << Gia_ManCoNum(pTemp) << "\n"
                    << "Found output driven by intput: " << in_out << "\n";);
 	  Aig_Man_t* pNewAig = Gia_ManToAigSimple(pTemp);
