@@ -60,9 +60,9 @@ namespace avy
     	{
           AVY_MEASURE_FN;
           // TODO: TrCp not used for now. Need to see if it makes SatSweep more efficient
-          //Aig_TernarySimulate(&*m_MasterTr, m_frameVals.size(), m_frameVals);
-          //Aig_Man_t* pTrCp = Aig_DupWithCiVals(&*m_MasterTr, m_frameVals.back());
-          AigManPtr pNewTr = aigPtr (Aig_DupWithCiEquivs(&*m_MasterTr, 
+          Aig_TernarySimulate(&*m_MasterTr, m_frameVals.size(), m_frameVals);
+          AigManPtr pTrCp = aigPtr (Aig_DupWithCiVals(&*m_MasterTr, m_frameVals.back()));
+          AigManPtr pNewTr = aigPtr (Aig_DupWithCiEquivs(&*pTrCp,//&*m_MasterTr,
                                                          m_frameEquivs.back()));
           //m_frameEquivs.resize(m_frameEquivs.size()+1);
           m_frameEquivs.push_back (std::vector<int>());
@@ -71,6 +71,16 @@ namespace avy
     	}
     	else
           m_Tr.push_back(m_MasterTr);
+    }
+
+    template <typename S>
+    CnfPtr getCnfTr(Unroller<S> &unroller, unsigned nFrame)
+    {
+        AVY_MEASURE_FN;
+        CnfPtr cnfTr = cnfPtr (Cnf_Derive (&*m_Tr[nFrame], Aig_ManRegNum (&*m_Tr[nFrame])));
+		unsigned nOff = unroller.freshBlock (cnfTr->nVars);
+		Cnf_DataLift(&*cnfTr, nOff);
+		return cnfTr;
     }
 
   public:
@@ -181,9 +191,7 @@ namespace avy
         while (m_Tr.size() <= nFrame)
       	  computeNextTr();
 
-        CnfPtr cnfTr = cnfPtr (Cnf_Derive (&*m_Tr[nFrame], Aig_ManRegNum (&*m_Tr[nFrame])));
-        unsigned nOff = unroller.freshBlock (cnfTr->nVars);
-        Cnf_DataLift(&*cnfTr, nOff);
+        CnfPtr cnfTr = getCnfTr(unroller, nFrame);
 
         AVY_ASSERT (Vec_IntSize (unroller.getInputs (nFrame)) == 0 &&
                     "Unexpected inputs");
@@ -286,6 +294,7 @@ namespace avy
     	return m_frameVals[nFrame];
 	}
 
+    std::vector<std::vector<int> >& getFrameEquivs() { return m_frameEquivs; }
   };
 }
 
