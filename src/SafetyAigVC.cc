@@ -48,6 +48,8 @@ namespace avy
           }
         else
           aig = m_Circuit;
+
+        aig = aigPtr (Aig_AddResetPi (&*aig));
       }
         
     // -- construct Tr 
