@@ -3,6 +3,7 @@
 
 #include "AigUtils.h"
 #include "SafetyVC.h"
+#include "SafetyAigVC.h"
 #include "Minisat.h"
 #include "Glucose.h"
 #include "Pdr.h"
@@ -27,6 +28,7 @@ namespace avy
 
     /** reference to the current VC */
     SafetyVC *m_Vc;
+    SafetyAigVC *m_OptVc;
     
     Pdr *m_pPdr;
     
@@ -59,6 +61,8 @@ namespace avy
 
     template<typename Sat>
     void printCex(Sat& s, Unroller<Sat>& unroller);
+
+    bool findItpConstraints (AigManPtr itp, std::vector<std::vector<int> >& equivFrames);
   };
 }
 

@@ -99,7 +99,10 @@ std::string parseCmdLine (int argc, char** argv)
      "Enable Glucose incremental mode")
     ("cex",
      po::value<std::string> (&gParams.cexFileName)->default_value (""),
-     "Location to output counter-example");
+     "Location to output counter-example")
+	 ("opt-bmc",
+	  po::value<bool> (&gParams.opt_bmc)->default_value(true)->implicit_value(true),
+	  "Enable optimized BMC");
   
   
   po::options_description hidden("Hidden options");

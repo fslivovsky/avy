@@ -45,7 +45,7 @@ static Aig_Man_t *loadAig (std::string fname)
 namespace avy
 {
   AvyMain::AvyMain (std::string fname) : 
-    m_fName (fname), m_Vc (0), m_pPdr(0)
+    m_fName (fname), m_Vc (0), m_OptVc(0), m_pPdr(0)
   {
     VERBOSE (2, vout () << "Starting ABC\n");
     Abc_Start ();
@@ -54,7 +54,7 @@ namespace avy
   }
   
   AvyMain::AvyMain (AigManPtr pAig) :
-    m_fName (std::string()), m_Aig(pAig), m_Vc (0), m_pPdr(0)
+    m_fName (std::string()), m_Aig(pAig), m_Vc (0), m_OptVc(0), m_pPdr(0)
   {
     VERBOSE (2, vout () << "Starting ABC\n");
     Abc_Start ();
@@ -97,8 +97,10 @@ namespace avy
                vout () << "Warning: using kStep>1 without stuttering " 
                        << "or stick-error is unsound\n";);
     
+    SafetyAigVC optVc (&*m_Aig);
     SafetyVC vc (&*m_Aig);
     m_Vc = &vc;
+    m_OptVc = &optVc;
     m_pPdr = new Pdr (&*m_Aig);
  
     unsigned nMaxFrames = gParams.maxFrame;
@@ -165,6 +167,7 @@ namespace avy
             }
             VERBOSE (3, Stats::PrintBrunch (vout ()););
 
+            findItpConstraints(itp, m_OptVc->getFrameEquivs());
             AVY_ASSERT (validateItp (itp));
 
             if (doPdrTrace (itp))
@@ -192,6 +195,7 @@ namespace avy
   {
     AVY_MEASURE_FN;
     m_Vc->resetPreCond ();
+    m_OptVc->resetPreCond ();
     Vec_Ptr_t *pCubes = Vec_PtrAlloc (16);
     
 
@@ -202,6 +206,11 @@ namespace avy
        add F1 to pre of TR(1), F2 to pre of TR(2), etc.
      */
 
+    /*Aig_Man_t* pAig = Aig_ManStart( 5000 );
+    for (int i=0; i < m_Aig->nRegs; i++)
+    	Aig_ObjCreateCi(pAig);
+    Aig_Obj_t* pCo = Aig_ObjCreateCo(pAig, Aig_ManConst1(pAig));*/
+
     for (unsigned i = 1; i < m_pPdr->maxFrames (); ++i)
       {
         Vec_PtrClear (pCubes);
@@ -209,7 +218,14 @@ namespace avy
         Pdr_Set_t *pCube;
         int j;
         Vec_PtrForEachEntry (Pdr_Set_t*, pCubes, pCube, j)
+        {
           m_Vc->addPreCondClause (pCube->Lits, (pCube->Lits) + pCube->nLits, i, true);
+          m_OptVc->addPreCondClause (pCube->Lits, (pCube->Lits) + pCube->nLits, i, true);
+        }
+        //Aig_Obj_t* p = m_pPdr->getCover(i, pAig);
+        //Aig_ObjDisconnect(pAig, pCo);
+        //Aig_ObjConnect(pAig, pCo, p, NULL);
+        //m_OptVc->resimplifyFrame(pAig, i-1);
       }
     Vec_PtrFree (pCubes);
     
@@ -312,11 +328,11 @@ namespace avy
       {
     	if (gParams.minisat_itp || gParams.glucose_itp) {
     		solver.markPartition (i+1);
-    		m_Vc->addTr (unroller);
+    		m_OptVc->addTr (unroller);
     		unroller.newFrame ();
     	}
     	else {
-    		m_Vc->addTr (unroller);
+    		m_OptVc->addTr (unroller);
     		solver.markPartition (i);
 			  unroller.newFrame ();
     	}
@@ -324,11 +340,11 @@ namespace avy
       }
     if (gParams.minisat_itp || gParams.glucose_itp) {
     	solver.markPartition (nFrame + 2);
-    	m_Vc->addBad (unroller);
+    	m_OptVc->addBad (unroller);
     	unroller.pushBadUnit ();
     }
     else {
-    	m_Vc->addBad (unroller);
+    	m_OptVc->addBad (unroller);
     	unroller.pushBadUnit ();
     	solver.markPartition (nFrame + 1);
     }
@@ -389,10 +405,10 @@ namespace avy
 
     for (unsigned i = 0; i <= nFrame; ++i)
       {
-        m_Vc->addTr (unroller);
+        m_OptVc->addTr (unroller);
         unroller.newFrame ();
       }
-    m_Vc->addBad (unroller);
+    m_OptVc->addBad (unroller);
     unroller.pushBadUnit ();
     
     // -- freeze
@@ -608,6 +624,204 @@ namespace avy
     out << ".\n";
     out << std::flush;
     
+  }
+
+  bool AvyMain::findItpConstraints (AigManPtr itp, vector<vector<int> >& equivFrames)
+  {
+    VERBOSE (1, vout () << "FINDING NEEDED CONSTRAINTS: ";);
+
+    unsigned coNum = Aig_ManCoNum (&*itp);
+    VERBOSE (1, vout() << "CoNum: " << coNum << " EquivNum: " << equivFrames.size() << "\n";);
+
+    bool bChanged = false;
+    CnfPtr cnfItp = cnfPtr (Cnf_Derive (&*itp, Aig_ManCoNum (&*itp)));
+
+    for (unsigned int i = coNum; i > 0; --i)
+      {
+    	// -- skip if true
+		//if (Aig_ObjFanin0 (Aig_ManCo (&*itp, i-1)) == Aig_ManConst1 (&*itp)) continue;
+
+		// Need to rederive the CNF in case it was changed
+    	if (bChanged) {
+    		cnfItp = cnfPtr (Cnf_Derive (&*itp, Aig_ManCoNum (&*itp)));
+    		bChanged = false;
+    	}
+
+        Glucose satSolver (2, 5000);
+        Unroller<Glucose> unroller (satSolver);
+
+        // -- fast forward the unroller to the right frame
+        while (i >= 2 && unroller.frame () < i-1) unroller.newFrame  ();
+
+        // For now store a semi-map from the index of an equivalence
+		// to the generated literal that represents it.
+		// This should be thought of, maybe a full map is a better choice
+		// as the memory is going to be taken only during the execution of
+		// this function, and not through out the execution of AVY
+		// map<lit, int> litToEquiv
+		vector<lit> equivToLit;
+        if (i > 0)
+          {
+            unroller.freshBlock (cnfItp->nVars);
+            unroller.addCnf (&*cnfItp);
+
+            // -- assert Itp_{i-1}
+            lit Lit = toLit (cnfItp->pVarNums [Aig_ManCo (&*itp, i-1)->Id]);
+            satSolver.addClause (&Lit, &Lit + 1);
+
+            // -- register outputs
+            Aig_Obj_t *pCi;
+            int j;
+            Aig_ManForEachCi (&*itp, pCi, j)
+              unroller.addOutput (cnfItp->pVarNums [pCi->Id]);
+
+            // Take care of equivalence constraints
+            const vector<int>& equiv_i = equivFrames[i-1];
+
+            equivToLit.resize(equiv_i.size(), -1);
+            for (unsigned j = 0; j < equiv_i.size(); j++)
+            {
+            	int val = equiv_i[j];
+            	if (val < -1)
+            	{
+            		// Negative value means a constant: -2 is Const0 and -3 is Const1
+            		int a = unroller.freshVar ();
+                    lit aLit = toLit (a);
+                    lit Lit[2];
+                    Lit[0] = lit_neg(aLit);
+            		Lit[1] = toLitCond (cnfItp->pVarNums [Aig_ManCi (&*itp, j)->Id], 1);
+            		if (val == -2)
+            			unroller.addClause(Lit, Lit + 2);
+            		else
+            		{
+            			Lit[1] = lit_neg(Lit[1]);
+            			unroller.addClause(Lit, Lit + 2);
+            		}
+            		unroller.addAssump(aLit);
+            		equivToLit[j] = aLit;
+            	}
+            	else if (val >=0)
+            	{
+            		// This CI equals to the CI at 'val' location
+            		int a = unroller.freshVar ();
+					lit aLit = toLit (a);
+            		lit Lit[3];
+            		Lit[0] = lit_neg(aLit);
+            		Lit[1] = toLit(cnfItp->pVarNums [Aig_ManCi (&*itp, j)->Id]);
+            		Lit[2] = toLitCond(cnfItp->pVarNums [Aig_ManCi (&*itp, val)->Id], 1);
+            		unroller.addClause(Lit, Lit + 3);
+            		Lit[1] = lit_neg (Lit[1]);
+  	     	        Lit[2] = lit_neg (Lit[2]);
+	                unroller.addClause (Lit, Lit+3);
+
+	                unroller.addAssump(aLit);
+	                equivToLit[j] = aLit;
+            	}
+            }
+
+            unroller.newFrame ();
+          }
+
+        if (i < coNum)
+          {
+            m_Vc->addTr (unroller);
+            unroller.newFrame ();
+
+            unsigned nOffset = unroller.freshBlock (cnfItp->nVars);
+            ScoppedCnfLift scLift (cnfItp, nOffset);
+            unroller.addCnf (&*cnfItp);
+            Aig_Obj_t *pCi;
+            int j;
+            Aig_ManForEachCi (&*itp, pCi, j)
+              unroller.addInput (cnfItp->pVarNums [pCi->Id]);
+            unroller.glueOutIn ();
+
+            // -- assert !Itp_i
+            // Assuming that it already contains the needed equivalence
+            // constraints
+            lit Lit = toLitCond (cnfItp->pVarNums [Aig_ManCo (&*itp, i)->Id], 1);
+            unroller.addClause (&Lit, &Lit + 1);
+          }
+        else
+          {
+            m_Vc->addBad (unroller);
+            unroller.pushBadUnit ();
+          }
+
+
+        boost::tribool res = satSolver.solve (unroller.getAssumps ());
+        if (res == true)
+          {
+            VERBOSE (1, vout () << "\nFailed implication at i: " << i << "\n";);
+            return false;
+          }
+        else if (res == false)
+        {
+          VERBOSE (1, vout () << "." << std::flush;);
+          if (i > 0)
+          {
+            int *pCore;
+            int coreSz = satSolver.core(&pCore);
+            if (coreSz > 0) printf("YESS\n");
+            vector<int>& equivs = equivFrames[i-1];
+            Aig_Obj_t* pEq = Aig_ManConst1(&*itp);
+            for (int j=0; j < equivs.size(); j++)
+            {
+            	bool found = false;
+            	for (int c=0; c < coreSz && !found; c++)
+            		if (lit_neg(pCore[c]) == equivToLit[j])
+            			found = true;
+
+            	// If the quivalence was not used, remove it from the vector
+            	// Need to check that this does not add extra complexity in
+            	// subsequent calls to the SAT-sweeper. Maybe this is not
+            	// needed, or maybe it should be done on a copy of the
+            	// original vector.
+            	//if (!found)
+            	//	equivs[j] = -1;
+            	if (found)
+            	{
+            		// Track the constraints
+            		int val = equivs[j];
+            		if (val < -1)
+            			if (val == -2)
+            				pEq = Aig_And(&*itp, pEq, Aig_Not(Aig_ManCi(&*itp, j)));
+            			else
+            				pEq = Aig_And(&*itp, pEq, Aig_ManCi(&*itp, j));
+            		else if (val >= 0)
+            		{
+            			// Create an AIG expression representing
+            			// the equivalence
+            		    Aig_Obj_t* p1 = Aig_ManCi(&*itp, j);
+            		    Aig_Obj_t* p2 = Aig_ManCi(&*itp, val);
+            		    Aig_Obj_t* t =
+            		      Aig_And(&*itp,
+            		    		  Aig_Or(&*itp, p1, Aig_Not(p2)),
+								  Aig_Or(&*itp, Aig_Not(p1), p2));
+
+            		    pEq = Aig_And(&*itp, pEq, t);
+            		}
+            	}
+            }
+
+            // If there were equivalences used, pEq is going to be different
+            // than TRUE
+            if (Aig_ObjIsConst1(Aig_Regular(pEq)) == false)
+            {
+            	// In this case, add the constraints to the interpolant
+            	Aig_Obj_t* pItp = Aig_ObjChild0(Aig_ManCo(&*itp, i-1));
+            	pItp = Aig_And(&*itp, pItp, pEq);
+            	//Aig_ObjPatchFanin0(&*itp, Aig_ManCo(&*itp, i-1), pItp);
+            	Aig_ObjDisconnect(&*itp, Aig_ManCo(&*itp, i-1));
+            	Aig_ObjConnect(&*itp, Aig_ManCo(&*itp, i-1), pItp, NULL);
+            	bChanged = true;
+            }
+          }
+        }
+      }
+
+    VERBOSE (1, vout () << " Done\n" << std::flush;);
+    return true;
   }
 
 }
