@@ -102,6 +102,9 @@ namespace avy
 
   Aig_Man_t* Aig_SatSweep(Aig_Man_t* p, std::vector<int>& equivClasses);
   Aig_Man_t* Aig_SatSweep(Aig_Man_t* p);
+
+  Gia_Man_t* Aig_SatSweepWithConstraints(Gia_Man_t* pAig, Gia_Man_t* pConstraints, std::vector<int>& equivClasses);
+  Aig_Man_t* Aig_SatSweepWithConstraints(Aig_Man_t* pAig, Aig_Man_t* pConstraints, std::vector<int>& equivClasses);
 }
 
 

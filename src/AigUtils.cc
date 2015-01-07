@@ -684,7 +684,7 @@ namespace avy
 	return pUnrolled;
   }
 
-  Gia_Man_t* Aig_SatSweepWithConstraints(Gia_Man_t* pAig, Gia_Man_t* pConstraints)
+  Gia_Man_t* Aig_SatSweepWithConstraints(Gia_Man_t* pAig, Gia_Man_t* pConstraints, std::vector<int>& equivClasses)
   {
 	  Gia_Man_t * p = Gia_ManDup(pAig);
 	  Gia_ManDupAppendShare( p, pConstraints );
@@ -708,5 +708,64 @@ namespace avy
 	  Gia_SweeperStop( p );
 	  Gia_ManStop( p );
 	  return pGia;
+  }
+
+  Aig_Man_t* Aig_SatSweepWithConstraints(Aig_Man_t* pAig, Aig_Man_t* pConstraints, std::vector<int>& equivClasses)
+  {
+	  Gia_Man_t* p1 = Gia_ManFromAigSimple(pAig);
+	  Gia_Man_t* p2 = Gia_ManFromAigSimple(pConstraints);
+
+	  Gia_Man_t* pGiaRes = Aig_SatSweepWithConstraints(p1, p2, equivClasses);
+
+	  Gia_ManStop(p1);
+	  Gia_ManStop(p2);
+
+
+
+	  equivClasses.clear();
+	  equivClasses.resize(pAig->nRegs, -1);
+	  int equiv=0;
+	  int consts=0;
+	  int in_out=0;
+	  int nPoNum = Gia_ManPoNum(pGiaRes);
+	  for (int i=Gia_ManCoNum(pGiaRes)-1; i >= nPoNum; i--)
+	  {
+		  Gia_Obj_t* pObj = Gia_ManCo(pGiaRes, i);
+		  if (Gia_ObjIsCi(Gia_ObjFanin0(pObj))) in_out++;
+		  for (int j=i-1; j >= nPoNum; j--)
+		  {
+			  if (Gia_ObjChild0(pObj) == Gia_ObjChild0(Gia_ManCo(pGiaRes, j)))
+			  {
+				  if (Gia_Obj2Lit(pGiaRes, Gia_ObjFanin0(pObj))== 0 || Gia_Obj2Lit(pGiaRes, Gia_ObjFanin0(pObj))== 1)
+				  {
+					  consts++;
+					  equivClasses[i-nPoNum] =
+						Gia_Obj2Lit(pGiaRes, Gia_ObjChild0(pObj))== 0 ? -2 : -3;
+				  }
+				  else
+				  {
+					  equiv++;
+					  equivClasses[i-nPoNum] = j;
+				  }
+				  break;
+			  }
+		  }
+	  }
+		VERBOSE (3,
+				 vout() << "Found " << equiv << " equiv and " << consts
+				 << " constans out of " << Gia_ManCoNum(pGiaRes) << "\n"
+				 << "Found output driven by intput: " << in_out << "\n";);
+
+
+	  Aig_Man_t* pAigRes = Gia_ManToAigSimple(pGiaRes);
+	  Gia_ManStop(pGiaRes);
+
+	  pAigRes->nTruePis = pAig->nTruePis;
+	  pAigRes->nTruePos = pAig->nTruePos;
+	  Aig_ManCleanup( pAigRes );
+
+
+
+	  return pAigRes;
   }
 }
