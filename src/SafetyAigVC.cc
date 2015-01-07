@@ -80,4 +80,10 @@ namespace avy
          << "m_Tr is: \n " << *m_Tr[0] << "\n"
          << "m_Bad is: " << *m_Bad << "\n";);
   }
+
+  void SafetyAigVC::resimplifyFrame(Aig_Man_t* pConstraints, unsigned nFrame)
+  {
+	  Aig_Man_t* p = Aig_SatSweepWithConstraints(&*m_Tr[nFrame], pConstraints, m_frameEquivs[nFrame]);
+	  m_Tr[nFrame] = aigPtr(p);
+  }
 }

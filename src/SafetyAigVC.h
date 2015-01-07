@@ -60,11 +60,11 @@ namespace avy
     	{
           AVY_MEASURE_FN;
           // TODO: TrCp not used for now. Need to see if it makes SatSweep more efficient
-          Aig_TernarySimulate(&*m_MasterTr, m_frameVals.size(), m_frameVals);
-          AigManPtr pTrCp = aigPtr (Aig_DupWithCiVals(&*m_MasterTr, m_frameVals.back()));
-          AigManPtr pNewTr = aigPtr (Aig_DupWithCiEquivs(&*pTrCp,//&*m_MasterTr,
+          //Aig_TernarySimulate(&*m_MasterTr, m_frameVals.size(), m_frameVals);
+          //AigManPtr pTrCp = aigPtr (Aig_DupWithCiVals(&*m_MasterTr, m_frameVals.back()));
+          AigManPtr pNewTr = aigPtr (Aig_DupWithCiEquivs(&*m_MasterTr,
                                                          m_frameEquivs.back()));
-          //m_frameEquivs.resize(m_frameEquivs.size()+1);
+
           m_frameEquivs.push_back (std::vector<int>());
           Aig_Man_t* pSimpTr = Aig_SatSweep(&*pNewTr, m_frameEquivs.back());
           m_Tr.push_back(aigPtr(pSimpTr));
@@ -295,6 +295,8 @@ namespace avy
 	}
 
     std::vector<std::vector<int> >& getFrameEquivs() { return m_frameEquivs; }
+
+    void resimplifyFrame(Aig_Man_t* pConstraints, unsigned nFrame);
   };
 }
 
