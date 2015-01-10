@@ -72,7 +72,7 @@ namespace avy
     boost::tribool run (unsigned uDepth);
     
     template <typename Sat> 
-    boost::tribool bmc (Sat &solver, unsigned uDepth);
+    boost::tribool bmc (SafetyAigVC& vc, Sat &solver, Unroller<Sat>& unroller, unsigned uDepth);
     
     void setCnfFile (std::string &cnf) { m_CnfFile = cnf; }
     
@@ -94,21 +94,26 @@ namespace avy
     Stats::set ("Result", "UNKNOWN");
     VERBOSE (1, Stats::PrintBrunch (outs ()););
     tribool res;
+
+    SafetyAigVC vc (&*m_Aig);
+
     if (gParams.glucose)
       {
-        for (unsigned f = 1; f <= uDepth; f++)
+    	Glucose sat (5000, gParams.sat_simp);
+    	Unroller<Glucose> unroller (sat, false);
+        for (unsigned f = 0; f <= uDepth; f++)
         {
-            Glucose sat (5000, gParams.sat_simp);
-            res = bmc (sat, f);
+            res = bmc (vc, sat, unroller, f);
             if (res) break;
         }
       }
     else
       {
-        for (unsigned f = uDepth; f <= uDepth; f++)
+    	Minisat sat (5000, gParams.sat_simp);
+    	Unroller<Minisat> unroller (sat, false);
+        for (unsigned f = 0; f <= uDepth; f++)
 		{
-            Minisat sat (5000, gParams.sat_simp);
-		    res = bmc (sat, f);
+		    res = bmc (vc, sat, unroller, f);
 		    if (res) break;
 		}
       }
@@ -119,30 +124,33 @@ namespace avy
   }
   
   template <typename Sat>
-  tribool AvyBmc::bmc (Sat &solver, unsigned uDepth)
+  tribool AvyBmc::bmc (SafetyAigVC& vc, Sat &solver, Unroller<Sat>& unroller, unsigned uDepth)
   {
     AVY_MEASURE_FN;
-    
 
-    SafetyAigVC vc (&*m_Aig);
-    
-    Unroller<Sat> unroller (solver, false);
-    for (unsigned i = 0; i <= uDepth; ++i)
+    unroller.resetLastFrame();
+    if (uDepth > 1) unroller.setFrozenOutputs(uDepth-1, false);
+    for (unsigned i = unroller.frame(); i <= uDepth; ++i)
     {
       vc.addTr (unroller);
       unroller.newFrame ();
     }
+    unroller.setFrozenOutputs(uDepth, true);
     vc.addBad (unroller);
-    unroller.pushBadUnit ();
+   // unroller.pushBadUnit ();
 
     if (m_CnfFile != "") solver.dumpCnf (m_CnfFile);
     
     tribool res = false;
     if (m_doBmc)
     {
+      std::vector<int> assumptions;
+      assumptions.push_back(unroller.getBadLit());
       ScoppedStats _s_ ("solve");
       VERBOSE (1, vout () << "Solving " << uDepth << " ...\n" << std::flush;);
-      res = solver.solve ();
+      res = solver.solve (assumptions);
+      lit p = lit_neg(assumptions[0]);
+      solver.addClause(&p, &p+1);
       VERBOSE(1, vout () << "Result: " << std::boolalpha << res << "\n");
       if (res) Stats::set ("Result", "SAT");
       else if (!res) Stats::set ("Result", "UNSAT");

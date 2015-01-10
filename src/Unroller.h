@@ -108,6 +108,7 @@ namespace avy
     {
 
       Vec_IntClear (m_vInputs.back());
+      Vec_IntClear (m_vPrimaryInputs.back());
       //m_vInputs.pop_back();
 
       //Vec_IntFree (m_vOutputs.back());
