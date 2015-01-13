@@ -37,6 +37,8 @@ namespace avy
     /// TODO: For now, storing TRs as vector for frame 1 and up (0 is saved differently)
     /// Should change that and figure out what to do to be more efficient
     std::vector<AigManPtr> m_Tr;
+    std::vector<CnfPtr> m_TrCnf;
+
     /// the bad state
     AigManPtr m_Bad;
     
@@ -50,6 +52,10 @@ namespace avy
 
     std::vector<std::vector<boost::tribool> > m_frameVals;
     std::vector<std::vector<int> > m_frameEquivs;
+
+    std::vector<std::vector<int> > m_AigToSat;
+
+    std::vector<int> m_StartingRoots;
 
     /// initialize given a circuit
     void init (Aig_Man_t *pCircuit);
@@ -77,9 +83,20 @@ namespace avy
     CnfPtr getCnfTr(Unroller<S> &unroller, unsigned nFrame)
     {
         AVY_MEASURE_FN;
+        if (m_TrCnf.size() > nFrame) return m_TrCnf[nFrame];
+        AVY_ASSERT(m_TrCnf.size() == nFrame);
         CnfPtr cnfTr = cnfPtr (Cnf_Derive (&*m_Tr[nFrame], Aig_ManRegNum (&*m_Tr[nFrame])));
-		unsigned nOff = unroller.freshBlock (cnfTr->nVars);
-		Cnf_DataLift(&*cnfTr, nOff);
+		//unsigned nOff = unroller.freshBlock (cnfTr->nVars);
+		//Cnf_DataLift(&*cnfTr, nOff);
+        m_TrCnf.push_back(cnfTr);
+        m_AigToSat.push_back(std::vector<int>((&*cnfTr)->nVars, -1));
+
+        // Set variables for INPUTS
+        Aig_Obj_t *pObj;
+		int i;
+		Aig_ManForEachCi (&*m_Tr[nFrame], pObj, i)
+			m_AigToSat.back()[(&*cnfTr)->pVarNums[pObj->Id]] = unroller.freshVar();
+
 		return cnfTr;
     }
 
@@ -199,8 +216,8 @@ namespace avy
                     "Unexpected outputs");
         //AVY_ASSERT (nFrame > 0);
 
-        // -- add transition relation
-        unroller.addCnf (&*cnfTr);
+        std::vector<std::vector<int> > roots;
+        findCoiRoots(nFrame, roots);
 
         // -- register frame PIs
         Aig_Obj_t *pObj;
@@ -212,10 +229,7 @@ namespace avy
         {
       	  // -- register inputs
   		  Saig_ManForEachLo (&*m_Tr[nFrame], pObj, i)
-  			unroller.addInput (cnfTr->pVarNums [pObj->Id]);
-
-  		  // glue new In to old Out
-  		  unroller.glueOutIn ();
+  			unroller.addInput (m_AigToSat[nFrame][cnfTr->pVarNums [pObj->Id]]);
 
   		  /** pre-condition clauses */
   		  if (nFrame < m_preCond.size ())
@@ -232,16 +246,36 @@ namespace avy
 
 				Saig_ManForEachLo (&*m_Tr[nFrame], pObj, i)
 				{
-				  Lits[0] = toLitCond (cnfTr->pVarNums [pObj->Id], 1);
-				  unroller.addClause (Lits, Lits + 1);
+					int var = m_AigToSat[nFrame][cnfTr->pVarNums [pObj->Id]];
+					if (var > -1)
+					{
+						Lits[0] = toLitCond (var, 1);
+						unroller.addClause (Lits, Lits + 1);
+					}
 				}
 			}
         }
 
-        // -- register frame outputs
-        Saig_ManForEachLi (&*m_Tr[nFrame], pObj, i)
-          unroller.addOutput (cnfTr->pVarNums [pObj->Id]);
+        // -- add transition relation
+		for (int f = nFrame; f >= 0; f--)
+		{
+			// Add needed clauses according to COI
+			unroller.addCoiCnf(&*(m_Tr[f]), roots[f], m_TrCnf[f], m_AigToSat[f]);
+			// -- Update frame outputs
+			Vec_Int_t* pOutputs = unroller.getOutputs(f);
+			Vec_IntClear(pOutputs);
+			Aig_Obj_t *pObj;
+			int i;
+			Saig_ManForEachLi (&*m_Tr[f], pObj, i)
+			{
+			  int var = m_AigToSat[f][m_TrCnf[f]->pVarNums [pObj->Id]];
+			  //if (var > -1) printf("i=%d, var=%d\n", i, var);
+			  Vec_IntPush(pOutputs, var);
+			}
 
+			// Update the glue variables
+			if (f < nFrame && f >= 0) unroller.glueOutIn(f+1);
+		}
 
         /** post-condition clauses */
         if (unroller.frame () < m_postCond.size ())
@@ -297,6 +331,9 @@ namespace avy
     std::vector<std::vector<int> >& getFrameEquivs() { return m_frameEquivs; }
 
     void resimplifyFrame(Aig_Man_t* pConstraints, unsigned nFrame);
+
+    void findCoiRoots(unsigned nFrame, std::vector<std::vector<int> >& roots);
+
   };
 }
 

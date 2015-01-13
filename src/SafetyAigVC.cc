@@ -75,6 +75,10 @@ namespace avy
     m_Bad = aigPtr (pBad);
     m_cnfBad = cnfPtr (Cnf_Derive (&*m_Bad, Aig_ManCoNum (&*m_Bad)));
 
+    // Save the COI of BAD as its AIG is constant throughout the run
+    vector<int> startingRoots(1, 0);
+	Aig_FindCoiRoots(&*m_Bad, startingRoots, m_StartingRoots);
+
     LOG ("tr", logs () 
          << "m_Circuit is: " << *m_Circuit << "\n"
          << "m_Tr is: \n " << *m_Tr[0] << "\n"
@@ -85,5 +89,32 @@ namespace avy
   {
 	  Aig_Man_t* p = Aig_SatSweepWithConstraints(&*m_Tr[nFrame], pConstraints, m_frameEquivs[nFrame]);
 	  m_Tr[nFrame] = aigPtr(p);
+  }
+
+  // The function returns the needed COs from each time frame depnding on the
+  // given nFrame. The nFrame is the frame that is being checked, meaning, it
+  // is represented by BAD.
+  // Flow:
+  // 1. Find the COI of BAD
+  // 2. Go to TR at m_TR[nFrame], where the starting roots are those coming
+  //    from BAD. Find the COI and reiterate on m_Tr[nFrame-1]...
+  void SafetyAigVC::findCoiRoots(unsigned nFrame, vector<vector<int> >& roots)
+  {
+	  AVY_ASSERT(roots.size() == 0);
+
+	  // Prepare the vector
+	  roots.resize (nFrame + 1);
+
+	  // First set what is required by BAD
+	  roots.back().insert(roots.back().begin(), m_StartingRoots.begin(), m_StartingRoots.end());
+
+	  // Get the logic from the TRs. Start at nFrame and go backwards
+	  while (nFrame > 0)
+	  {
+		  AigManPtr pTr = m_Tr[nFrame];
+		  vector<int>& start = roots[nFrame];
+		  vector<int>& coi = roots[--nFrame];
+		  Aig_FindCoiRoots(&*pTr, start, coi);
+	  }
   }
 }

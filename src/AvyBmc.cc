@@ -156,6 +156,7 @@ namespace avy
       else if (!res) Stats::set ("Result", "UNSAT");
     }
     
+    vout().flush();
     return res;
   } 
 }

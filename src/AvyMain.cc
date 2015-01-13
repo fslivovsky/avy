@@ -814,6 +814,8 @@ namespace avy
             	//Aig_ObjPatchFanin0(&*itp, Aig_ManCo(&*itp, i-1), pItp);
             	Aig_ObjDisconnect(&*itp, Aig_ManCo(&*itp, i-1));
             	Aig_ObjConnect(&*itp, Aig_ManCo(&*itp, i-1), pItp, NULL);
+            	Aig_Man_t* p = &*itp;
+            	Aig_ManRebuild(&p);
             	bChanged = true;
             }
           }

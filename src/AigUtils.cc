@@ -586,7 +586,7 @@ namespace avy
 	  Cec_ManFraSetDefaultParams( pPars );
 	  pPars->fSatSweeping = 1;
 	  pPars->fRewriting = 1;
-	  pPars->nItersMax = 5;
+	  pPars->nItersMax = 4;
 	  pPars->fVerbose = 0;
 	  Gia_Man_t *pTemp = Cec_ManSatSweeping( pGia, pPars );
 #else
@@ -767,5 +767,37 @@ namespace avy
 
 
 	  return pAigRes;
+  }
+
+  void findCoiRoots_rec(Aig_Man_t* pAig, Aig_Obj_t* pObj, std::vector<int>& drivingRoots)
+  {
+	  if (pObj->fMarkA)
+		  return;
+	  pObj->fMarkA = 1;
+
+	  if (Aig_ObjIsAnd(pObj))
+	  {
+		  findCoiRoots_rec(pAig, Aig_ObjFanin0(pObj), drivingRoots);
+		  findCoiRoots_rec(pAig, Aig_ObjFanin1(pObj), drivingRoots);
+	  }
+	  else if (Aig_ObjIsCi(pObj))
+	  {
+		  if (Aig_ObjCioId(pObj) >= pAig->nTruePis)
+		      drivingRoots.push_back(Aig_ObjCioId(pObj) - pAig->nTruePis);
+	  }
+	  else assert(Aig_ObjIsConst1(Aig_Regular(pObj)));
+  }
+
+  void Aig_FindCoiRoots (Aig_Man_t* pAig, const std::vector<int>& startingRoots, std::vector<int>& drivingRoots)
+  {
+	  Aig_ManCleanMarkA(pAig);
+	  unsigned nSize = startingRoots.size();
+	  for (unsigned i=0; i < nSize; i++)
+	  {
+		  AVY_ASSERT(startingRoots[i] < Aig_ManCoNum(pAig));
+		  Aig_Obj_t* pObj = Aig_ManCo(pAig, startingRoots[i]);
+		  findCoiRoots_rec(pAig, Aig_ObjFanin0(pObj), drivingRoots);
+	  }
+	  Aig_ManCleanMarkA(pAig);
   }
 }

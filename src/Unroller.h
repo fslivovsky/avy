@@ -20,6 +20,9 @@ namespace avy
   template <typename SatSolver>
   class Unroller
   {
+    /// smart pointer for Cnf_Dat_t.
+	typedef boost::shared_ptr<Cnf_Dat_t> CnfPtr;
+
     SatSolver *m_pSolver;
     unsigned m_nVars;
     unsigned m_nFrames;
@@ -33,6 +36,8 @@ namespace avy
 
     /// All assumptions
     std::vector<int> m_Assumps;
+
+    std::vector<std::vector<int> > m_Glued;
 
     
     /**
@@ -93,6 +98,8 @@ namespace avy
       m_Assumps.clear ();
       m_FrameAssump.clear ();
       
+      m_Glued.clear();
+
       m_nVars = 0;
       m_nFrames = 0;
       m_pEnabledAssumps = NULL;
@@ -109,6 +116,7 @@ namespace avy
 
       Vec_IntClear (m_vInputs.back());
       Vec_IntClear (m_vPrimaryInputs.back());
+      m_Glued.back().clear();
       //m_vInputs.pop_back();
 
       //Vec_IntFree (m_vOutputs.back());
@@ -169,6 +177,8 @@ namespace avy
       m_vOutputs.push_back (Vec_IntAlloc (16));
 
       m_FrameAssump.push_back (m_Assumps.size ());
+
+      m_Glued.push_back(std::vector<int>());
     }
     
     unsigned frames () { return m_nFrames; }
@@ -206,6 +216,7 @@ namespace avy
         int i;
         Vec_IntForEachEntry( outputs, out, i )
         {
+        	if ( out == -1) continue;
             lit l = toLit(out);
             m_pSolver->setFrozen(lit_var(l), v);
         }
@@ -235,32 +246,43 @@ namespace avy
     }
     
 
-    void glueOutIn ()
+    void glueOutIn (int nFrame = -1)
     {
+      unsigned f = frame();
+      if (nFrame != -1) f = nFrame;
       if (gParams.abstraction)
         glueOutIn2 ();
       else
-        glueOutIn1 ();
+        glueOutIn1 (f);
     }
     
     /** Add glue clauses between current Inputs and previous frame outputs */
-    void glueOutIn1 ()
+    void glueOutIn1 (unsigned nFrame)
     {
       AVY_ASSERT (m_nFrames > 1);
-      AVY_ASSERT (Vec_IntSize (m_vOutputs.at (frame () - 1)) == 
-                  Vec_IntSize (m_vInputs.at (frame ())));
+      AVY_ASSERT (Vec_IntSize (m_vOutputs.at (nFrame - 1)) ==
+                  Vec_IntSize (m_vInputs.at (nFrame)));
 
       lit Lit[3];
       unsigned litSz = 2;
       
       int out, i;
     
-      Vec_Int_t *ins = m_vInputs.at (frame ());
+      Vec_Int_t *ins = m_vInputs.at (nFrame);
       
+      std::vector<int>& glued = m_Glued[nFrame];
       if (m_fWithAssump)
         {
-          int a = freshVar ();
-          lit aLit = toLit (a);
+    	  int a;
+    	  if (glued.size() == 0)
+    		  a = freshVar ();
+    	  else
+    	  {
+    		  for (int i=0; i < glued.size(); i++)
+    			  if (glued[i] != -1)
+    				  a = glued[i];
+    	  }
+    	  lit aLit = toLit (a);
           
           boost::tribool aVal = eval (aLit);
           if (boost::indeterminate(aVal))
@@ -273,8 +295,15 @@ namespace avy
           // ow, assumption enabled proceed as usual
         }
       
-      Vec_IntForEachEntry (m_vOutputs.at (frame () - 1), out, i)
+      if (glued.size() == 0) glued.resize(Vec_IntSize(ins), -1);
+
+      Vec_IntForEachEntry (m_vOutputs.at (nFrame - 1), out, i)
         {
+    	  if (out == -1 || glued[i] != -1) continue;
+    	  if (m_fWithAssump)
+    		  glued[i] = lit_var(Lit[2]);
+    	  else
+    		  glued[i] = 1;
           Lit[0] = toLit (out);
           Lit[1] = toLitCond (Vec_IntEntry (ins, i), 1);
           addClause (Lit, Lit+litSz);
@@ -348,6 +377,73 @@ namespace avy
           addClause (Lit, Lit+2);
         }
     }
+
+	void addCoiCnf(Aig_Man_t* pAig, const std::vector<int>& roots, CnfPtr pCnf, std::vector<int>& aig2sat)
+	{
+	  unsigned nSize = roots.size();
+	  for (unsigned i=0; i < nSize; i++)
+	  {
+		  AVY_ASSERT(roots[i] < Aig_ManCoNum(pAig));
+		  Aig_Obj_t* pObj = Aig_ManCo(pAig, roots[i]);
+		  if ( Aig_ObjFanin0(pObj) == Aig_ManConst0(pAig) )
+			  continue;
+		  addCoiCnf_rec(pAig, pObj, pCnf, aig2sat);
+	  }
+	}
+
+	void addCoiCnf_rec(Aig_Man_t* pAig, Aig_Obj_t* pObj, CnfPtr pCnf, std::vector<int>& aig2sat)
+	{
+	  int iObj = Aig_ObjId( pObj );
+	  if ( Aig_ObjIsAnd(pObj) && (&*pCnf)->pObj2Count[iObj] == -1 )
+	  {
+		  addCoiCnf_rec( pAig, Aig_ObjFanin0(pObj), pCnf, aig2sat );
+		  addCoiCnf_rec( pAig, Aig_ObjFanin1(pObj), pCnf, aig2sat );
+		  return;
+	  }
+
+	  if (aig2sat[(&*pCnf)->pVarNums[iObj]] >= 0) return;
+
+	  aig2sat[(&*pCnf)->pVarNums[iObj]] = freshVar();
+
+	  //assert (Aig_ObjIsConst1(Aig_Regular(pObj)) == false);
+
+	  if ( Aig_ObjIsAnd(pObj) || Aig_ObjIsCo(pObj) )
+	  {
+		  assert (Aig_ObjIsConst1(Aig_Regular(pObj)) == false);
+		  int i, nClas, iCla;
+		  addCoiCnf_rec( pAig, Aig_ObjFanin0(pObj), pCnf, aig2sat );
+		  if ( Aig_ObjIsAnd(pObj) )
+			  addCoiCnf_rec( pAig, Aig_ObjFanin1(pObj), pCnf, aig2sat );
+		  // add clauses
+		  nClas = (&*pCnf)->pObj2Count[iObj];
+		  iCla  = (&*pCnf)->pObj2Clause[iObj];
+		  for ( i = 0; i < nClas; i++ )
+		  {
+			  int nLits, pLits[8];
+			  int * pClauseThis = (&*pCnf)->pClauses[iCla+i];
+			  int * pClauseNext = (&*pCnf)->pClauses[iCla+i+1];
+			  for ( nLits = 0; pClauseThis + nLits < pClauseNext; nLits++ )
+			  {
+				  if ( pClauseThis[nLits] < 2 )
+					  printf( "\n\n\nError in CNF generation:  Constant literal!\n\n\n" );
+				  assert( pClauseThis[nLits] > 1 && pClauseThis[nLits] < 2*(Aig_ManObjNum(pAig)+1) );
+				  int var = Abc_Lit2Var(pClauseThis[nLits]);
+				  pLits[nLits] = Abc_Var2Lit( aig2sat[var], Abc_LitIsCompl(pClauseThis[nLits]) );
+			  }
+			  assert( nLits < 8 );
+			  if ( !this->addClause(pLits, pLits + nLits ) )
+				  break;
+		  }
+		  if ( i < nClas )
+			  printf( "SAT solver became UNSAT after adding clauses.\n" );
+	  }
+	  else if (Aig_ObjIsConst1(Aig_Regular(pObj)))
+	  {
+		  lit l = toLit(aig2sat[(&*pCnf)->pVarNums[iObj]]);
+		  this->addClause(&l, &l + 1);
+	  }
+	  else assert( Aig_ObjIsCi(pObj) );
+	}
   };
 }
 
