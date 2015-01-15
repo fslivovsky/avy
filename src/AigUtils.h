@@ -53,6 +53,8 @@ namespace avy
    * Rebuild an Aig via Gia and deallocate the old one
    */
   Aig_Man_t *Aig_ManRebuild (Aig_Man_t **ppAig);
+  void Aig_ManRebuild (Aig_Man_t *pAig, AigManPtr &res);
+  
 
   bool Aig_ObjDbgCompare (Aig_Obj_t *pObj1, Aig_Obj_t *pObj2);
   /**
