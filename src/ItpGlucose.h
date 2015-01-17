@@ -63,7 +63,8 @@ namespace avy
     /// Mark currently unmarked clauses as belonging to partition nPart
     void markPartition (unsigned nPart)
     { 
-        AVY_ASSERT (nPart > 0 && nPart <= m_nParts);
+        AVY_ASSERT (nPart > 0);
+        if (nPart > m_nParts) m_nParts = nPart;
         m_pSat->setCurrentPart(nPart);
 	    LOG ("glucose_dump", logs () << "c partition\n";);
     }
@@ -120,7 +121,27 @@ namespace avy
 
     /// decide context with assumptions
     //boost::tribool solve (LitVector &assumptions, int maxSize = -1)
+    boost::tribool solve (std::vector<int> &assumptions, int maxSize = -1)
+	{
+	  ScoppedStats __stats__("Glucose_solve");
+	  if (m_Trivial) return false;
 
+	  if (!m_pSat->okay ()) return false;
+
+	  ::Glucose::vec< ::Glucose::Lit> massmp;
+	  massmp.capacity (assumptions.size ());
+	  int max = assumptions.size ();
+	  if (maxSize >= 0 && maxSize < max) max = maxSize;
+
+	  for (unsigned i = 0; i < max; ++i)
+		{
+		  ::Glucose::Lit p = ::Glucose::toLit (assumptions [i]);
+		  massmp.push (p);
+		  LOG ("sat", logs () << "ASM: " << (::Glucose::sign (p) ? "-" : "")
+			   << (::Glucose::var (p)) << " " << "\n";);
+		}
+	  return m_pSat->solve (massmp, m_Simplifier, !m_Simplifier);
+	}
     /// a pointer to the unsat core
     //int core (int **out) { return sat_solver_final (m_pSat, out); }
     
@@ -137,7 +158,7 @@ namespace avy
     /// Compute an interpolant. User provides the list of shared variables
     /// Variables can only be shared between adjacent partitions.
     /// fMcM == true for McMillan, and false for McMillan'
-    Aig_Man_t* getInterpolant (std::vector<Vec_Int_t*> &vSharedVars, int nNumOfVars, bool fMcM = true);
+    Aig_Man_t* getInterpolant (lit bad, std::vector<Vec_Int_t*> &vSharedVars, int nNumOfVars, bool fMcM = true);
     
     bool getVarVal(int v)
     {

@@ -14,7 +14,7 @@ namespace avy
   /// Compute an interpolant. User provides the list of shared variables
   /// Variables can only be shared between adjacent partitions.
   /// fMcM == true for McMillan, and false for McMillan'
-  Aig_Man_t* ItpMinisat::getInterpolant (std::vector<Vec_Int_t*> &vSharedVars, 
+  Aig_Man_t* ItpMinisat::getInterpolant (lit bad, std::vector<Vec_Int_t*> &vSharedVars,
                                          int nNumOfVars,
                                          bool fMcM)
   {
@@ -23,7 +23,9 @@ namespace avy
     AVY_ASSERT (m_pSat != NULL);
     AVY_ASSERT (vSharedVars.size () >= m_nParts - 1);
     
-    AVY_VERIFY (!solve ());
+    std::vector<int> assump;
+    assump.push_back(bad);
+    //AVY_VERIFY (!solve (assump));
 
     std::vector<int> vVarToId;
     BOOST_FOREACH (Vec_Int_t *vVec, vSharedVars)
@@ -32,9 +34,12 @@ namespace avy
         int i;
         Vec_IntForEachEntry (vVec, nVar, i)
           {
-            // -- resize (not needed if we know how many variables there are)
-            vVarToId.resize (nVar + 1, -1);
-            vVarToId [nVar] = i;
+        	if (nVar != -1) {
+        		// -- resize (not needed if we know how many variables there are)
+        		if (vVarToId.size() <= nVar)
+        			vVarToId.resize (nVar + 1, -1);
+        		vVarToId [nVar] = i;
+        	}
           }
       }
     

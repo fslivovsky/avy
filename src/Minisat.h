@@ -118,6 +118,8 @@ namespace avy
       return (val == ::Minisat::l_True) ? true : false;*/
     }
     
+    void markPartition(int nPart) {}
+
     
   };
   

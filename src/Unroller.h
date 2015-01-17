@@ -38,6 +38,7 @@ namespace avy
     std::vector<int> m_Assumps;
 
     std::vector<std::vector<int> > m_Glued;
+    std::vector<int> m_GlueVars;
 
     
     /**
@@ -98,6 +99,7 @@ namespace avy
       m_Assumps.clear ();
       m_FrameAssump.clear ();
       
+      m_GlueVars.clear();
       m_Glued.clear();
 
       m_nVars = 0;
@@ -126,6 +128,7 @@ namespace avy
       //m_FrameAssump.pop_back ();
 
       //m_nFrames--;
+      m_Assumps.clear();
     }
 
   
@@ -223,9 +226,26 @@ namespace avy
 
     }
 
+    void setFrozenInputs(unsigned nFrame, bool v)
+	{
+		avy::abc::Vec_Int_t* outputs = m_vInputs[nFrame];
+		int out;
+		int i;
+		Vec_IntForEachEntry( outputs, out, i )
+		{
+			if ( out == -1) continue;
+			lit l = toLit(out);
+			m_pSolver->setFrozen(lit_var(l), v);
+		}
+
+	}
+
     /** Add clause to solver */
-    boost::tribool addClause (avy::abc::lit* beg, avy::abc::lit* end)
-    { return m_pSolver->addClause (beg, end); }
+    boost::tribool addClause (avy::abc::lit* beg, avy::abc::lit* end, int nFrame = -1)
+    {
+    	if (nFrame >=0) m_pSolver->markPartition(nFrame+1);
+    	return m_pSolver->addClause (beg, end);
+    }
   
     boost::tribool addCnf (Cnf_Dat_t* pCnf)
     {
@@ -249,7 +269,10 @@ namespace avy
     void glueOutIn (int nFrame = -1)
     {
       unsigned f = frame();
-      if (nFrame != -1) f = nFrame;
+      if (nFrame != -1) {
+    	  f = nFrame;
+    	  m_pSolver->markPartition(f+1);
+      }
       if (gParams.abstraction)
         glueOutIn2 ();
       else
@@ -274,14 +297,14 @@ namespace avy
       if (m_fWithAssump)
         {
     	  int a;
-    	  if (glued.size() == 0)
-    		  a = freshVar ();
-    	  else
+    	  if (m_GlueVars.size() <= nFrame)
     	  {
-    		  for (int i=0; i < glued.size(); i++)
-    			  if (glued[i] != -1)
-    				  a = glued[i];
+    		  a = freshVar ();
+    		  m_GlueVars.push_back(a);
     	  }
+    	  else
+    		  a = m_GlueVars[nFrame];
+
     	  lit aLit = toLit (a);
           
           boost::tribool aVal = eval (aLit);
@@ -300,10 +323,7 @@ namespace avy
       Vec_IntForEachEntry (m_vOutputs.at (nFrame - 1), out, i)
         {
     	  if (out == -1 || glued[i] != -1) continue;
-    	  if (m_fWithAssump)
-    		  glued[i] = lit_var(Lit[2]);
-    	  else
-    		  glued[i] = 1;
+    	  glued[i] = 1;
           Lit[0] = toLit (out);
           Lit[1] = toLitCond (Vec_IntEntry (ins, i), 1);
           addClause (Lit, Lit+litSz);
@@ -378,8 +398,9 @@ namespace avy
         }
     }
 
-	void addCoiCnf(Aig_Man_t* pAig, const std::vector<int>& roots, CnfPtr pCnf, std::vector<int>& aig2sat)
+	void addCoiCnf(int nFrame, Aig_Man_t* pAig, const std::vector<int>& roots, CnfPtr pCnf, std::vector<int>& aig2sat)
 	{
+	  m_pSolver->markPartition(nFrame+1);
 	  unsigned nSize = roots.size();
 	  for (unsigned i=0; i < nSize; i++)
 	  {

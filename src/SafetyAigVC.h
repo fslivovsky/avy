@@ -109,6 +109,11 @@ namespace avy
     	init (pCircuit);
     }
     
+    void resetSat()
+	{
+		for(int i=0; i < m_AigToSat.size(); i++)
+			m_AigToSat[i].clear();
+	}
 
     AigManPtr getTr (unsigned nFrame) { AVY_ASSERT(nFrame < m_Tr.size()); return m_Tr[nFrame]; }
     AigManPtr getBad () { return m_Bad; }
@@ -182,7 +187,7 @@ namespace avy
     
     template<typename S>
     boost::tribool addClauses (Unroller<S> &unroller, Clauses &clauses, 
-                               Vec_Int_t* vMap)
+                               Vec_Int_t* vMap, int nFrame = -1)
     {
       boost::tribool res = true;
       Clause tmp;
@@ -195,7 +200,7 @@ namespace avy
               int reg = lit_var (Lit);
               tmp.push_back (toLitCond (Vec_IntEntry (vMap, reg), lit_sign (Lit)));
             }
-          res = res && unroller.addClause (&tmp[0], &tmp[0] + tmp.size ());
+          res = res && unroller.addClause (&tmp[0], &tmp[0] + tmp.size (), nFrame);
         }
       return res;
     }
@@ -231,9 +236,10 @@ namespace avy
   		  Saig_ManForEachLo (&*m_Tr[nFrame], pObj, i)
   			unroller.addInput (m_AigToSat[nFrame][cnfTr->pVarNums [pObj->Id]]);
 
+  		  unroller.setFrozenInputs(nFrame, true);
   		  /** pre-condition clauses */
-  		  if (nFrame < m_preCond.size ())
-  			addClauses (unroller, m_preCond [nFrame], unroller.getInputs (nFrame));
+  		  //if (nFrame < m_preCond.size ())
+  			//addClauses (unroller, m_preCond [nFrame], unroller.getInputs (nFrame));
         }
         else
         {
@@ -260,7 +266,7 @@ namespace avy
 		for (int f = nFrame; f >= 0; f--)
 		{
 			// Add needed clauses according to COI
-			unroller.addCoiCnf(&*(m_Tr[f]), roots[f], m_TrCnf[f], m_AigToSat[f]);
+			unroller.addCoiCnf(f, &*(m_Tr[f]), roots[f], m_TrCnf[f], m_AigToSat[f]);
 			// -- Update frame outputs
 			Vec_Int_t* pOutputs = unroller.getOutputs(f);
 			Vec_IntClear(pOutputs);
@@ -274,7 +280,12 @@ namespace avy
 			}
 
 			// Update the glue variables
-			if (f < nFrame && f >= 0) unroller.glueOutIn(f+1);
+			if (f < nFrame && f >= 0) {
+				unroller.glueOutIn(f+1);
+			}
+			if (f > 0 && f < m_preCond.size ()) {
+			  addClauses (unroller, m_preCond [f], unroller.getInputs (f), f);
+			}
 		}
 
         /** post-condition clauses */

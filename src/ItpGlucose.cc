@@ -14,7 +14,7 @@ namespace avy
   /// Compute an interpolant. User provides the list of shared variables
   /// Variables can only be shared between adjacent partitions.
   /// fMcM == true for McMillan, and false for McMillan'
-  Aig_Man_t* ItpGlucose::getInterpolant (std::vector<Vec_Int_t*> &vSharedVars,
+  Aig_Man_t* ItpGlucose::getInterpolant (lit bad, std::vector<Vec_Int_t*> &vSharedVars,
 		                                 int nNumOfVars,
                                          bool fMcM)
   {
@@ -23,15 +23,17 @@ namespace avy
     AVY_ASSERT (m_pSat != NULL);
     AVY_ASSERT (vSharedVars.size () >= m_nParts - 1);
     
-    AVY_VERIFY (!solve ());
-
+    //std::vector<int> assump;
+	//assump.push_back(bad);
     std::vector<int> vVarToId;
+
     BOOST_FOREACH (Vec_Int_t *vVec, vSharedVars)
       {
         int nVar;
         int i;
         Vec_IntForEachEntry (vVec, nVar, i)
           {
+        	if (nVar == -1) continue;
             // -- resize (not needed if we know how many variables there are)
             vVarToId.resize (nVar + 1, -1);
             vVarToId [nVar] = i;

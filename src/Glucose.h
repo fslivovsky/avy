@@ -133,6 +133,8 @@ namespace avy
       return tobool (m_sat->modelValue(x));
     }
 
+    void markPartition(int nPart) {}
+
   };
     
 }
