@@ -729,6 +729,7 @@ namespace avy
 
             // Take care of equivalence constraints
             const vector<int>& equiv_i = equivFrames[i-1];
+            if (equiv_i.size() == 0) continue;
 
             equivToLit.resize(equiv_i.size(), -1);
             for (unsigned j = 0; j < equiv_i.size(); j++)
