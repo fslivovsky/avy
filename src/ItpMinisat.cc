@@ -44,6 +44,7 @@ namespace avy
       }
     
     
+    //m_pSat->runProof();
     SimpMinisatItpSeq itpSeqVisitor(*m_pSat, nNumOfVars, vVarToId, m_nParts-1);
     AVY_VERIFY (m_pSat->validate());
     
