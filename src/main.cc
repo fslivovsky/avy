@@ -17,6 +17,8 @@ namespace po = boost::program_options;
 #include "avy/Util/Global.h"
 #include "avy/Util/Stats.h"
 
+#include "BuildVariables.inc"
+
 using namespace std;
 using namespace avy;
 
@@ -31,6 +33,7 @@ std::string parseCmdLine (int argc, char** argv)
      "Interpolation system: 0 - McM, 1 - Mcm-prime")
     ("verbose,v", po::value<unsigned> (&gParams.verbosity)->default_value(0),
      "Verbosity level: 0 means silent")
+    ("version", "Print version string")
     ("avy", po::value<bool> (&gParams.avy)->implicit_value(true)->default_value (true))
     ("stutter,s", 
      po::value<bool> (&gParams.stutter)->default_value (false)->implicit_value(true),
@@ -132,6 +135,12 @@ std::string parseCmdLine (int argc, char** argv)
           cout << gParams << "\n";
           std::exit (1);
         }
+      if (vm.count ("version"))
+      {
+        cout << "Avy (" << AVY_BUILD_MODE << ")\n";
+        if (!vm.count ("input-file")) std::exit (1);
+      }
+      
 
       if (!vm.count("input-file"))
         {
