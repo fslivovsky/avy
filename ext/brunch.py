@@ -64,7 +64,8 @@ def collectStats (stats, file):
         if not line.startswith ('BRUNCH_STAT'): continue
 
         fld = line.split (' ')
-        stats [fld[1]] = fld[2].strip ()
+        if len (fld) == 3:
+            stats [fld[1]] = fld[2].strip ()
     f.close ()
     return stats
 

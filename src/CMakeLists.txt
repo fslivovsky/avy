@@ -57,3 +57,6 @@ if (AVY_STATIC_EXE)
     set_target_properties (avypdr PROPERTIES LINK_SEARCH_END_STATIC ON)
 endif()
 
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+set(AVY_BUILD_MODE ${CMAKE_BUILD_TYPE})
+configure_file (BuildVariables.inc.in BuildVariables.inc @ONLY)
