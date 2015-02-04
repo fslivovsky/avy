@@ -26,7 +26,7 @@ namespace avy
     }
     
     // -- save circuit
-    m_Circuit = aigPtr (Aig_ManDupSimple (Aig_SatSweep(pCircuit)));
+    m_Circuit = aigPtr (Aig_ManDupSimple (pCircuit));//Aig_SatSweep(pCircuit)));
 
 
     AigManPtr aig;
@@ -41,10 +41,10 @@ namespace avy
             aig = stuckErrorAig;
             // XXX HACK XXX
             // Add one extra reg to the INPUT circuit
-            Aig_ObjCreateCi (pCircuit);
-            Aig_ObjCreateCo (pCircuit, Aig_ManConst0 (pCircuit));
-            Aig_ManSetRegNum (pCircuit, pCircuit->nRegs + 1);
-            m_Circuit = aigPtr (Aig_ManDupSimple (pCircuit));
+            //Aig_ObjCreateCi (pCircuit);
+            //Aig_ObjCreateCo (pCircuit, Aig_ManConst0 (pCircuit));
+            //Aig_ManSetRegNum (pCircuit, pCircuit->nRegs + 1);
+            //m_Circuit = aigPtr (Aig_ManDupSimple (pCircuit));
           }
         else
           aig = m_Circuit;

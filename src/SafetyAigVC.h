@@ -105,7 +105,7 @@ namespace avy
     SafetyAigVC(Aig_Man_t *pCircuit)
     {
     	m_frameVals.resize(1);
-    	m_frameVals[0].resize(Saig_ManRegNum(pCircuit), false);
+    	m_frameVals[0].resize(Saig_ManRegNum(pCircuit +(gParams.stick_error ? 1 : 0)), false);
     	init (pCircuit);
     }
     

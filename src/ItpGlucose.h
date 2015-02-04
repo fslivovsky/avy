@@ -34,6 +34,8 @@ namespace avy
     /// current state
     boost::tribool m_State;
 
+    std::vector<int> m_core;
+
     
   public:
     /// create a solver with nParts partitions and nVars variables
@@ -119,6 +121,16 @@ namespace avy
     /// true if the context is decided 
     bool isSolved () { return m_Trivial || m_State || !m_State; }
 
+    int core (int **out)
+    {
+      m_core.clear ();
+      m_core.resize (m_pSat->conflict.size ());
+      for (unsigned i = 0 ; i < m_pSat->conflict.size (); i++)
+        m_core[i] = m_pSat->conflict[i].x;
+
+      *out = &m_core[0];
+      return m_core.size ();
+    }
     /// decide context with assumptions
     //boost::tribool solve (LitVector &assumptions, int maxSize = -1)
     boost::tribool solve (std::vector<int> &assumptions, int maxSize = -1)

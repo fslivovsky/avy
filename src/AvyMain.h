@@ -63,7 +63,7 @@ namespace avy
     template<typename Sat>
     void printCex(Sat& s, Unroller<Sat>& unroller);
 
-    bool findItpConstraints (AigManPtr &itp, std::vector<std::vector<int> >& equivFrames);
+    bool findItpConstraints (AigManPtr &itp, std::vector<std::vector<int> >& equivFrames, int stop);
   };
 }
 

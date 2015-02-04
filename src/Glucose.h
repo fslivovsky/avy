@@ -117,7 +117,7 @@ namespace avy
       return m_core.size ();
     }
     
-    boost::tribool solve () { return m_sat->solve (); }
+    boost::tribool solve () { return m_sat->solve (m_Simplifier, !m_Simplifier); }
     
     bool isTrivial () { return m_Trivial; }
     

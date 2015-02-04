@@ -75,7 +75,7 @@ namespace avy
       Gia_ManStop(m_pMan);
     }
 
-    Gia_Man_t*                                    getInterpolantMan() {printShared(); return m_pMan; }
+    Gia_Man_t*                             getInterpolantMan() {printShared(); return m_pMan; }
     const std::vector<std::vector<int> >&  getSharedLeaves()   { return sharedLeaves; }
 
     void visitLeaf(CRef cls, const Clause& c, int part, bool bTreatShared)
@@ -249,14 +249,18 @@ namespace avy
             int l = itpVec[pivot];
             if (l == -1) {
               CRef r = m_Solver.getReason(pivot);
-              const Clause& cls = m_Solver.getClause(r);
-              assert(cls.part().min() == cls.part().max());
-              assert(cls.size() == 1);
-              visitLeaf(r, cls, part, false);
-              l = itpVec[pivot];
+              if (r != PfTrait::CRef_Undef) {
+                  const Clause& cls = m_Solver.getClause(r);
+                  assert(cls.part().min() == cls.part().max());
+                  assert(cls.size() == 1);
+                  visitLeaf(r, cls, part, false);
+                  l = itpVec[pivot];
+              }
             }
-            assert(l != -1);
-            label = getLabelByPivot(pivot, part, label, l);
+            if (l != -1)
+                label = getLabelByPivot(pivot, part, label, l);
+            else
+                assert(m_Solver.getReason(pivot) == PfTrait::CRef_Undef); // Can only happen with assumptions
           }
         }
 

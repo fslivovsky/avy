@@ -75,14 +75,14 @@ namespace avy
           Unroller<ItpMinisat> unroller(solver, true);
           if (gParams.glucose)
           {
-        	  Glucose satBmc (2, gParams.sat_simp, gParams.glucose_inc_mode);
-        	  Unroller<Glucose> unrollerBmc(satBmc, true);
+        	  ItpGlucose satBmc (2, gParams.itp_simp, gParams.glucose_inc_mode);
+        	  Unroller<ItpGlucose> unrollerBmc(satBmc, true);
         	  return run(solver, unroller, satBmc, unrollerBmc);
           }
           else
           {
-        	  Minisat satBmc (2, gParams.sat_simp);
-        	  Unroller<Minisat> unrollerBmc(satBmc, true);
+        	  ItpMinisat satBmc (2, 2, gParams.itp_simp);
+        	  Unroller<ItpMinisat> unrollerBmc(satBmc, true);
         	  return run(solver, unroller, satBmc, unrollerBmc);
           }
         }
@@ -92,14 +92,14 @@ namespace avy
     	  Unroller<ItpGlucose> unroller(solver, true);
     	  if (gParams.glucose)
           {
-			  Glucose satBmc (2, gParams.sat_simp, gParams.glucose_inc_mode);
-			  Unroller<Glucose> unrollerBmc(satBmc, true);
+			  ItpGlucose satBmc (2, 2, gParams.itp_simp);
+			  Unroller<ItpGlucose> unrollerBmc(satBmc, true);
 			  return run(solver, unroller, satBmc, unrollerBmc);
 		  }
 		  else
 		  {
-			  Minisat satBmc (2);
-			  Unroller<Minisat> unrollerBmc(satBmc, true);
+			  ItpMinisat satBmc (2, 2, gParams.itp_simp);
+			  Unroller<ItpMinisat> unrollerBmc(satBmc, true);
 			  return run(solver, unroller, satBmc, unrollerBmc);
 		  }
         }
@@ -120,11 +120,12 @@ namespace avy
                        << "or stick-error is unsound\n";);
     
     SafetyAigVC optVcBmc (&*m_Aig);
+    m_OptVcBmc = &optVcBmc;
     SafetyAigVC optVc (&*m_Aig);
+    m_OptVc = &optVc;
     SafetyVC vc (&*m_Aig);
     m_Vc = &vc;
-    m_OptVc = &optVc;
-    m_OptVcBmc = &optVcBmc;
+
     m_pPdr = new Pdr (&*m_Aig);
  
     unsigned nMaxFrames = gParams.maxFrame;
@@ -178,7 +179,7 @@ namespace avy
 
             vector<int> vVarToId;
             AigManPtr itp =
-              aigPtr (solver.getInterpolant (unroller.getBadLit(), unroller.getAllOutputs (),
+              aigPtr (satBmc.getInterpolant (unrollerBmc.getBadLit(), unrollerBmc.getAllOutputs (),
                                              Saig_ManRegNum(&*m_Aig)));
 
             //lit good = lit_neg(unroller.getBadLit());
@@ -193,7 +194,8 @@ namespace avy
             }
             VERBOSE (3, Stats::PrintBrunch (vout ()););
 
-            findItpConstraints(itp, m_OptVc->getFrameEquivs());
+            int stop = -1;//unroller.getSuffixStartFrame()-2;
+            findItpConstraints(itp, m_OptVcBmc->getFrameEquivs(), (stop >= 0) ? stop : 0);
 
             AVY_ASSERT (validateItp (itp));
 
@@ -348,7 +350,7 @@ namespace avy
     tribool res;
     m_Core.clear ();
     if ((res = solveWithCore (satBmc, unrollerBmc, nFrame)) != false) return res;
-    
+    return res;
     //solver.reset (nFrame + 2, 2);
     //unroller.reset (&solver);
     //m_OptVc->resetSat();
@@ -442,10 +444,12 @@ namespace avy
     if (nFrame > 1) unroller.setFrozenOutputs(nFrame-1, false);
     for (unsigned i = unroller.frame(); i <= nFrame; ++i)
       {
+        sat.markPartition (i+1);
         m_OptVcBmc->addTr (unroller);
         unroller.newFrame ();
       }
     unroller.setFrozenOutputs(nFrame, true);
+    sat.markPartition (nFrame + 2);
     m_OptVcBmc->addBad (unroller);
     //unroller.pushBadUnit ();
     lit badLit = unroller.getBadLit();
@@ -514,8 +518,8 @@ namespace avy
               << " mincore: " << core.size () << "\n");
     }
     
-    lit goodLit = lit_neg(badLit);
-    sat.addClause(&goodLit, &goodLit+1);
+    //lit goodLit = lit_neg(badLit);
+    //sat.addClause(&goodLit, &goodLit+1);
 
 
     m_Core.reset ();
@@ -676,7 +680,7 @@ namespace avy
     
   }
 
-  bool AvyMain::findItpConstraints (AigManPtr& itp, vector<vector<int> >& equivFrames)
+  bool AvyMain::findItpConstraints (AigManPtr& itp, vector<vector<int> >& equivFrames, int stop)
   {
     VERBOSE (1, vout () << "FINDING NEEDED CONSTRAINTS: ";);
 
@@ -699,7 +703,7 @@ namespace avy
     		bChanged = false;
     	}
 
-        Glucose satSolver (2, 5000);
+        Glucose satSolver (2, false, true);
         Unroller<Glucose> unroller (satSolver);
 
         // -- fast forward the unroller to the right frame
@@ -729,6 +733,8 @@ namespace avy
 
             // Take care of equivalence constraints
             const vector<int>& equiv_i = equivFrames[i-1];
+            if (equiv_i.size() == 0 &&
+                Aig_ObjFanin0 (Aig_ManCo (&*itp, i-1)) == Aig_ManConst1 (&*itp)) break;
             if (equiv_i.size() == 0) continue;
 
             equivToLit.resize(equiv_i.size(), -1);
@@ -802,6 +808,11 @@ namespace avy
           }
 
 
+        /*boost::tribool res = satSolver.solve ();
+        if (res == false) {
+            printf("I LIKE!\n");
+            continue;
+        }*/
         boost::tribool res = satSolver.solve (unroller.getAssumps ());
         if (res == true)
           {
@@ -815,14 +826,31 @@ namespace avy
           {
             int *pCore;
             int coreSz = satSolver.core(&pCore);
-            if (coreSz > 0) printf("YESS\n");
+            LitVector core (pCore, pCore + coreSz);
+            // -- negate
+            BOOST_FOREACH (lit &p, core) p = lit_neg (p);
+            /*std::reverse (core.begin (), core.end ());
+            for (unsigned int x = 0; core.size () > 1 && x < core.size (); ++x)
+              {
+                lit tmp = core [x];
+                core[x] = core.back ();
+                if (!satSolver.solve (core, core.size () - 1))
+                {
+                  core.pop_back ();
+                  --x;
+                }
+                else
+                  core[x] = tmp;
+              }*/
+            if (core.size() > 0) printf("YESS\n");
+            else continue;
             vector<int>& equivs = equivFrames[i-1];
             Aig_Obj_t* pEq = Aig_ManConst1(&*itp);
             for (int j=0; j < equivs.size(); j++)
             {
             	bool found = false;
-            	for (int c=0; c < coreSz && !found; c++)
-            		if (lit_neg(pCore[c]) == equivToLit[j])
+            	for (int c=0; c < core.size() && !found; c++)
+            		if (core[c] == equivToLit[j])
             			found = true;
 
             	// If the quivalence was not used, remove it from the vector
@@ -854,6 +882,8 @@ namespace avy
 
             		    pEq = Aig_And(&*itp, pEq, t);
             		}
+
+            		//if (i < coNum-1) equivs[j] = -1;
             	}
             }
 

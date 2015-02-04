@@ -33,10 +33,12 @@ namespace avy
         int i;
         Vec_IntForEachEntry (vVec, nVar, i)
           {
-        	if (nVar == -1) continue;
-            // -- resize (not needed if we know how many variables there are)
-            vVarToId.resize (nVar + 1, -1);
-            vVarToId [nVar] = i;
+        	if (nVar != -1) {
+        	    // -- resize (not needed if we know how many variables there are)
+        	    if (vVarToId.size() <= nVar)
+        	        vVarToId.resize (nVar + 1, -1);
+        	    vVarToId [nVar] = i;
+        	}
           }
       }
     
