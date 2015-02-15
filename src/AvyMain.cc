@@ -73,35 +73,13 @@ namespace avy
         {
           ItpMinisat solver(2,2, gParams.itp_simp);
           Unroller<ItpMinisat> unroller(solver, true);
-          if (gParams.glucose)
-          {
-        	  ItpGlucose satBmc (2, gParams.itp_simp, gParams.glucose_inc_mode);
-        	  Unroller<ItpGlucose> unrollerBmc(satBmc, true);
-        	  return run(solver, unroller, satBmc, unrollerBmc);
-          }
-          else
-          {
-        	  ItpMinisat satBmc (2, 2, gParams.itp_simp);
-        	  Unroller<ItpMinisat> unrollerBmc(satBmc, true);
-        	  return run(solver, unroller, satBmc, unrollerBmc);
-          }
+          return run(solver, unroller);
         }
       else if (gParams.glucose_itp)
         {
     	  ItpGlucose solver(2,2, gParams.itp_simp);
     	  Unroller<ItpGlucose> unroller(solver, true);
-    	  if (gParams.glucose)
-          {
-			  ItpGlucose satBmc (2, 2, gParams.itp_simp);
-			  Unroller<ItpGlucose> unrollerBmc(satBmc, true);
-			  return run(solver, unroller, satBmc, unrollerBmc);
-		  }
-		  else
-		  {
-			  ItpMinisat satBmc (2, 2, gParams.itp_simp);
-			  Unroller<ItpMinisat> unrollerBmc(satBmc, true);
-			  return run(solver, unroller, satBmc, unrollerBmc);
-		  }
+    	  return run(solver, unroller);
         }
       else
         {
@@ -109,18 +87,15 @@ namespace avy
         }
   }
 
-  template<typename Sat, typename SatBmc>
-  int AvyMain::run (Sat& solver, Unroller<Sat>& unroller, SatBmc& satBmc, Unroller<SatBmc>& unrollerBmc)
+  template<typename Sat>
+  int AvyMain::run (Sat& solver, Unroller<Sat>& unroller)
   {
-
     VERBOSE (1, 
              if (gParams.kStep > 1 && 
                  !gParams.stutter && !gParams.stick_error)
                vout () << "Warning: using kStep>1 without stuttering " 
                        << "or stick-error is unsound\n";);
     
-    SafetyAigVC optVcBmc (&*m_Aig);
-    m_OptVcBmc = &optVcBmc;
     SafetyAigVC optVc (&*m_Aig);
     m_OptVc = &optVc;
     SafetyVC vc (&*m_Aig);
@@ -163,7 +138,7 @@ namespace avy
               }
           }
         
-        tribool res = doBmc (nFrame, solver, unroller, satBmc, unrollerBmc);
+        tribool res = doBmc (nFrame, solver, unroller);
         if (res)
           {
             VERBOSE (1, 
@@ -179,7 +154,7 @@ namespace avy
 
             vector<int> vVarToId;
             AigManPtr itp =
-              aigPtr (satBmc.getInterpolant (unrollerBmc.getBadLit(), unrollerBmc.getAllOutputs (),
+              aigPtr (solver.getInterpolant (unroller.getBadLit(), unroller.getAllOutputs (),
                                              Saig_ManRegNum(&*m_Aig)));
 
             //lit good = lit_neg(unroller.getBadLit());
@@ -194,8 +169,7 @@ namespace avy
             }
             VERBOSE (3, Stats::PrintBrunch (vout ()););
 
-            int stop = -1;//unroller.getSuffixStartFrame()-2;
-            findItpConstraints(itp, m_OptVcBmc->getFrameEquivs(), (stop >= 0) ? stop : 0);
+            findItpConstraints(itp, m_OptVc->getFrameEquivs());
 
             AVY_ASSERT (validateItp (itp));
 
@@ -225,7 +199,6 @@ namespace avy
     AVY_MEASURE_FN;
     m_Vc->resetPreCond ();
     m_OptVc->resetPreCond ();
-    m_OptVcBmc->resetPreCond();
     Vec_Ptr_t *pCubes = Vec_PtrAlloc (16);
     
 
@@ -251,7 +224,6 @@ namespace avy
         {
           m_Vc->addPreCondClause (pCube->Lits, (pCube->Lits) + pCube->nLits, i, true);
           m_OptVc->addPreCondClause (pCube->Lits, (pCube->Lits) + pCube->nLits, i, true);
-          m_OptVcBmc->addPreCondClause (pCube->Lits, (pCube->Lits) + pCube->nLits, i, true);
         }
         //Aig_Obj_t* p = m_pPdr->getCover(i, pAig);
         //Aig_ObjDisconnect(pAig, pCo);
@@ -342,115 +314,32 @@ namespace avy
     return boost::tribool (boost::indeterminate);
   }
     
-  template<typename Sat, typename SatBmc>
-  tribool AvyMain::doBmc (unsigned nFrame, Sat& solver, Unroller<Sat>& unroller, SatBmc& satBmc, Unroller<SatBmc>& unrollerBmc)
+  template<typename Sat>
+  tribool AvyMain::doBmc (unsigned nFrame, Sat& solver, Unroller<Sat>& unroller)
   {
     AVY_MEASURE_FN;
 
-    tribool res;
     m_Core.clear ();
-    if ((res = solveWithCore (satBmc, unrollerBmc, nFrame)) != false) return res;
-    return res;
-    //solver.reset (nFrame + 2, 2);
-    //unroller.reset (&solver);
-    //m_OptVc->resetSat();
-    //unroller.setEnabledAssumps (m_Core);
-    
-    unroller.resetLastFrame();
-    unroller.setEnabledAssumps (m_Core);
-	if (nFrame > 1) unroller.setFrozenOutputs(nFrame-1, false);
-    for (unsigned i = unroller.frame(); i <= nFrame; ++i)
-      {
-    	if (gParams.minisat_itp || gParams.glucose_itp) {
-    		solver.markPartition (i+1);
-    		m_OptVc->addTr (unroller);
-    		unroller.newFrame ();
-    	}
-    	else {
-    		m_OptVc->addTr (unroller);
-    		solver.markPartition (i);
-			  unroller.newFrame ();
-    	}
-
-      }
-    unroller.setFrozenOutputs(nFrame, true);
-    if (gParams.minisat_itp || gParams.glucose_itp) {
-    	solver.markPartition (nFrame + 2);
-    	m_OptVc->addBad (unroller);
-    	//unroller.pushBadUnit ();
-    }
-    else {
-    	m_OptVc->addBad (unroller);
-    	//unroller.pushBadUnit ();
-    	solver.markPartition (nFrame + 1);
-    }
-
-
-    LOG("dump_cnf", 
-        solver.dumpCnf ("frame" + lexical_cast<string>(nFrame+1) + ".cnf"););
-
-    LOG("dump_shared",
-        std::vector<Vec_Int_t *> &vShared = unroller.getAllOutputs ();
-        logs () << "Shared size: " << vShared.size () << "\n";
-        for (unsigned i = 0; i < vShared.size (); ++i)
-          {
-            int j;
-            Vec_Int_t *vVec = vShared [i];
-            int nVar;
-            logs () << i << ": ";
-            Vec_IntForEachEntry (vVec, nVar, j)
-              logs () << nVar << " ";
-            logs () << "\n";
-          });
-    
-    // -- do not expect assumptions yet
-    AVY_ASSERT (unroller.getAssumps ().empty ());
-
-    LitVector bad;
-    bad.push_back (unroller.getBadLit ());
-    res = solver.solve (bad);
-    // if (res == false)
-    //   {
-    //     AVY_ASSERT (unroller.pushBadUnit ());
-    //     solver.markPartition (nFrame + 1);
-    //     AVY_VERIFY (!solver.solve ());
-    //   }
+    tribool res = solveWithCore (solver, unroller, nFrame);
     return res;
   }
 
-  boost::tribool AvyMain::solveWithCore (unsigned nFrame)
-  {
-    if (gParams.glucose)
-      {
-        Glucose sat (2, gParams.sat_simp, gParams.glucose_inc_mode);
-        //return solveWithCore (sat, nFrame);
-        //return incSolveWithCore(nFrame);
-      }
-    else
-      {
-        Minisat sat (2);
-        //return solveWithCore (sat, nFrame);
-      }
-    return false;
-  }
-  
   template <typename Sat>
   boost::tribool AvyMain::solveWithCore (Sat &sat, Unroller<Sat>& unroller, unsigned nFrame)
   {
     AVY_MEASURE_FN;
-    //Unroller<Sat> unroller (sat, true);
 
     unroller.resetLastFrame();
     if (nFrame > 1) unroller.setFrozenOutputs(nFrame-1, false);
     for (unsigned i = unroller.frame(); i <= nFrame; ++i)
       {
         sat.markPartition (i+1);
-        m_OptVcBmc->addTr (unroller);
+        m_OptVc->addTr (unroller);
         unroller.newFrame ();
       }
     unroller.setFrozenOutputs(nFrame, true);
     sat.markPartition (nFrame + 2);
-    m_OptVcBmc->addBad (unroller);
+    m_OptVc->addBad (unroller);
     //unroller.pushBadUnit ();
     lit badLit = unroller.getBadLit();
     unroller.addAssump(badLit);
@@ -517,19 +406,13 @@ namespace avy
       VERBOSE(2, vout () << "Core size: original: " << coreSz 
               << " mincore: " << core.size () << "\n");
     }
-    
-    //lit goodLit = lit_neg(badLit);
-    //sat.addClause(&goodLit, &goodLit+1);
-
 
     m_Core.reset ();
     for (unsigned i = 0; i < core.size (); ++i)
       {
         unsigned int a = core [i];
-        if (core[i] == badLit) {
-        	printf("YES\n");
+        if (core[i] == badLit)
         	continue;
-        }
         if (m_Core.size () <= a) m_Core.resize (a + 1);
         m_Core.set (a);
       }
@@ -680,7 +563,7 @@ namespace avy
     
   }
 
-  bool AvyMain::findItpConstraints (AigManPtr& itp, vector<vector<int> >& equivFrames, int stop)
+  bool AvyMain::findItpConstraints (AigManPtr& itp, vector<vector<int> >& equivFrames)
   {
     VERBOSE (1, vout () << "FINDING NEEDED CONSTRAINTS: ";);
 
@@ -808,11 +691,7 @@ namespace avy
           }
 
 
-        /*boost::tribool res = satSolver.solve ();
-        if (res == false) {
-            printf("I LIKE!\n");
-            continue;
-        }*/
+        //boost::tribool res = satSolver.solve ();
         boost::tribool res = satSolver.solve (unroller.getAssumps ());
         if (res == true)
           {

@@ -29,7 +29,6 @@ namespace avy
     /** reference to the current VC */
     SafetyVC *m_Vc;
     SafetyAigVC *m_OptVc;
-    SafetyAigVC *m_OptVcBmc;
     
     Pdr *m_pPdr;
     
@@ -46,24 +45,23 @@ namespace avy
     virtual ~AvyMain() ;
 
     int run ();
-    template <typename Sat, typename SatBmc>
-    int run (Sat& solver, Unroller<Sat>& unroller, SatBmc& satBmc, Unroller<SatBmc>& unrollerBmc);
+    template <typename Sat>
+    int run (Sat& solver, Unroller<Sat>& unroller);
 
     /// do BMC check up to depth nFrame
-    template <typename Sat, typename SatBmc>
-    boost::tribool doBmc (unsigned nFrame, Sat& solver, Unroller<Sat>& unroller, SatBmc& satBmc, Unroller<SatBmc>& unrollerBmc);
+    template <typename Sat>
+    boost::tribool doBmc (unsigned nFrame, Sat& solver, Unroller<Sat>& unroller);
     /// convert interpolant into PDR trace
     boost::tribool doPdrTrace (AigManPtr itp);
     /// strengthen VC with current Pdr trace
     void doStrengthenVC ();
     
     bool validateItp (AigManPtr itp);
-    boost::tribool solveWithCore (unsigned nFrame);
 
     template<typename Sat>
     void printCex(Sat& s, Unroller<Sat>& unroller);
 
-    bool findItpConstraints (AigManPtr &itp, std::vector<std::vector<int> >& equivFrames, int stop);
+    bool findItpConstraints (AigManPtr &itp, std::vector<std::vector<int> >& equivFrames);
   };
 }
 
