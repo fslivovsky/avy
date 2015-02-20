@@ -66,13 +66,13 @@ std::string parseCmdLine (int argc, char** argv)
      po::value<bool> (&gParams.minisat)->default_value(false)->implicit_value (true),
      "Use Minisat 2.2.0 for abstraction")
     ("glucose",
-     po::value<bool> (&gParams.glucose)->default_value(false)->implicit_value (true),
+     po::value<bool> (&gParams.glucose)->default_value(true)->implicit_value (true),
      "Use Glucose for abstraction")
      ("minisat_itp",
       po::value<bool> (&gParams.minisat_itp)->default_value(false)->implicit_value (true),
       "Use Minisat 2.2.0 for interpolation")
       ("glucose_itp",
-	   po::value<bool> (&gParams.glucose_itp)->default_value(false)->implicit_value (true),
+	   po::value<bool> (&gParams.glucose_itp)->default_value(true)->implicit_value (true),
 	   "Use Glucose for interpolation")
     ("kstep,k",
      po::value<unsigned> (&gParams.kStep)->default_value (1),
@@ -92,7 +92,7 @@ std::string parseCmdLine (int argc, char** argv)
      po::value<bool> (&gParams.sat_simp)->default_value (true)->implicit_value(true),
      "Enable pre-processing for the non-interpolating SAT solver (if available)")
     ("itp-simp", 
-     po::value<bool> (&gParams.itp_simp)->default_value (true)->implicit_value(true),
+     po::value<bool> (&gParams.itp_simp)->default_value (false)->implicit_value(true),
      "Enable pre-processing during interpolation (if available)")
     ("proof-reorder",
      po::value<bool> (&gParams.proof_reorder)->default_value (false)->implicit_value(true),
