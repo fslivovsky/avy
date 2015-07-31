@@ -111,7 +111,7 @@ namespace avy
       {
     	Minisat sat (5000, gParams.sat_simp);
     	Unroller<Minisat> unroller (sat, false);
-        for (unsigned f = 0; f <= uDepth; f++)
+        for (unsigned f = uDepth; f <= uDepth; f++)
 		{
 		    res = bmc (vc, sat, unroller, f);
 		    if (res) break;
@@ -129,23 +129,24 @@ namespace avy
     AVY_MEASURE_FN;
 
     unroller.resetLastFrame();
-    if (uDepth > 1) unroller.setFrozenOutputs(uDepth-1, false);
+    //if (uDepth > 1) unroller.setFrozenOutputs(uDepth-1, false);
     for (unsigned i = unroller.frame(); i <= uDepth; ++i)
     {
       vc.addTr (unroller);
       unroller.newFrame ();
     }
-    unroller.setFrozenOutputs(uDepth, true);
+    //unroller.setFrozenOutputs(uDepth, true);
     vc.addBad (unroller);
    // unroller.pushBadUnit ();
 
-    if (m_CnfFile != "") solver.dumpCnf (m_CnfFile);
+    std::vector<int> assumptions;
+    assumptions.push_back(unroller.getBadLit());
+    if (m_CnfFile != "") solver.dumpCnf (m_CnfFile, assumptions);
     
     tribool res = false;
     if (m_doBmc)
     {
-      std::vector<int> assumptions;
-      assumptions.push_back(unroller.getBadLit());
+      vout () << "Assumption is: " << unroller.getBadLit() << "\n";
       ScoppedStats _s_ ("solve");
       VERBOSE (1, vout () << "Solving " << uDepth << " ...\n" << std::flush;);
       res = solver.solve (assumptions);
@@ -183,7 +184,7 @@ static std::string parseCmdLine (int argc, char**argv)
      po::value<bool> (&gParams.minisat)->default_value(false)->implicit_value (true),
      "Use Minisat 2.2.0 for abstraction")
     ("glucose",
-     po::value<bool> (&gParams.glucose)->default_value(false)->implicit_value (true),
+     po::value<bool> (&gParams.glucose)->default_value(true)->implicit_value (true),
      "Use Glucose for abstraction")
     ("stick-error",
      po::value<bool> (&gParams.stick_error)->default_value (false)->implicit_value (true),
@@ -201,7 +202,7 @@ static std::string parseCmdLine (int argc, char**argv)
      po::value<bool> (&gDoBmc)->default_value(true)->implicit_value (true),
      "Do BMC")
       ("sat-simp", 
-     po::value<bool> (&gParams.sat_simp)->default_value (true)->implicit_value(true),
+     po::value<bool> (&gParams.sat_simp)->default_value (false)->implicit_value(true),
      "Enable pre-processing for the non-interpolating SAT solver (if available)")
     ("glucose-inc-mode", 
      po::value<bool> (&gParams.glucose_inc_mode)->default_value(false)->implicit_value(true),

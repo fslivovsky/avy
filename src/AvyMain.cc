@@ -565,6 +565,7 @@ namespace avy
 
   bool AvyMain::findItpConstraints (AigManPtr& itp, vector<vector<int> >& equivFrames)
   {
+      AVY_MEASURE_FN;
     VERBOSE (1, vout () << "FINDING NEEDED CONSTRAINTS: ";);
 
     //Aig_Man_t* itp = *pItpMan;
@@ -616,15 +617,22 @@ namespace avy
 
             // Take care of equivalence constraints
             const vector<int>& equiv_i = equivFrames[i-1];
-            if (equiv_i.size() == 0 &&
+            bool bNoConstraints = true;
+            for (int x = 0; x < equiv_i.size() && bNoConstraints; x++)
+                if (equiv_i[x] != -1)
+                    bNoConstraints = false;
+            if (bNoConstraints &&
                 Aig_ObjFanin0 (Aig_ManCo (&*itp, i-1)) == Aig_ManConst1 (&*itp)) break;
-            if (equiv_i.size() == 0) continue;
+            if (bNoConstraints) {
+                VERBOSE (1, vout () << "." << std::flush;);
+                continue;
+            }
 
             equivToLit.resize(equiv_i.size(), -1);
             for (unsigned j = 0; j < equiv_i.size(); j++)
             {
             	int val = equiv_i[j];
-            	if (val < -1)
+            	if (val == 0 || val == 1)
             	{
             		// Negative value means a constant: -2 is Const0 and -3 is Const1
             		int a = unroller.freshVar ();
@@ -632,7 +640,7 @@ namespace avy
                     lit Lit[2];
                     Lit[0] = lit_neg(aLit);
             		Lit[1] = toLitCond (cnfItp->pVarNums [Aig_ManCi (&*itp, j)->Id], 1);
-            		if (val == -2)
+            		if (val == 0)
             			unroller.addClause(Lit, Lit + 2);
             		else
             		{
@@ -642,15 +650,18 @@ namespace avy
             		unroller.addAssump(aLit);
             		equivToLit[j] = aLit;
             	}
-            	else if (val >=0)
+            	else if (val != -1)
             	{
-            		// This CI equals to the CI at 'val' location
+            		// This CI equals to the CI at '|(val/2)-1|' location
+            	    bool neg = (val < 0);
+            	    if (val < 0) val *= -1;
+            	    int loc = (val / 2) - 1;
             		int a = unroller.freshVar ();
 					lit aLit = toLit (a);
             		lit Lit[3];
             		Lit[0] = lit_neg(aLit);
             		Lit[1] = toLit(cnfItp->pVarNums [Aig_ManCi (&*itp, j)->Id]);
-            		Lit[2] = toLitCond(cnfItp->pVarNums [Aig_ManCi (&*itp, val)->Id], 1);
+            		Lit[2] = toLitCond(cnfItp->pVarNums [Aig_ManCi (&*itp, loc)->Id], !neg);
             		unroller.addClause(Lit, Lit + 3);
             		Lit[1] = lit_neg (Lit[1]);
   	     	        Lit[2] = lit_neg (Lit[2]);
@@ -743,17 +754,22 @@ namespace avy
             	{
             		// Track the constraints
             		int val = equivs[j];
-            		if (val < -1)
-            			if (val == -2)
+            		if (val == 0 || val == 1)
+            			if (val == 0)
             				pEq = Aig_And(&*itp, pEq, Aig_Not(Aig_ManCi(&*itp, j)));
             			else
             				pEq = Aig_And(&*itp, pEq, Aig_ManCi(&*itp, j));
-            		else if (val >= 0)
+            		else if (val != -1)
             		{
+            		    bool neg = (val < 0);
+                        if (val < 0) val *= -1;
+                        int loc = (val / 2) - 1;
             			// Create an AIG expression representing
             			// the equivalence
             		    Aig_Obj_t* p1 = Aig_ManCi(&*itp, j);
-            		    Aig_Obj_t* p2 = Aig_ManCi(&*itp, val);
+            		    Aig_Obj_t* p2 = Aig_ManCi(&*itp, loc);
+            		    if (neg)
+            		        p2 = Aig_Not(p2);
             		    Aig_Obj_t* t =
             		      Aig_And(&*itp,
             		    		  Aig_Or(&*itp, p1, Aig_Not(p2)),

@@ -238,8 +238,8 @@ namespace avy
 
   		  unroller.setFrozenInputs(nFrame, true);
   		  /** pre-condition clauses */
-  		  //if (nFrame < m_preCond.size ())
-  			//addClauses (unroller, m_preCond [nFrame], unroller.getInputs (nFrame));
+  		  if (nFrame < m_preCond.size ())
+  			  addClauses (unroller, m_preCond [nFrame], unroller.getInputs (nFrame));
         }
         else
         {

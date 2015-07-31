@@ -71,6 +71,20 @@ namespace avy
       m_sat->toDimacs(const_cast<char*>(fname.c_str ()), assumps);
     }
     
+    void dumpCnf (std::string fname, std::vector<int> &assumptions)
+    {
+      ::Minisat::vec< ::Minisat::Lit> massmp;
+      massmp.capacity (assumptions.size ());
+      int max = assumptions.size ();
+
+      for (unsigned i = 0; i < max; ++i)
+        {
+          ::Minisat::Lit p = ::Minisat::toLit (assumptions [i]);
+          massmp.push (p);
+        }
+      m_sat->toDimacs(const_cast<char*>(fname.c_str ()), massmp);
+    }
+
 
     boost::tribool solve (std::vector<int> &assumptions, int maxSize = -1)
     {

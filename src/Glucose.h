@@ -78,9 +78,22 @@ namespace avy
     
     void dumpCnf (std::string fname)
     { 
-      
       ::Glucose::vec< ::Glucose::Lit> v;
       m_sat->toDimacs(const_cast<char*>(fname.c_str ()), v); 
+    }
+
+    void dumpCnf (std::string fname, std::vector<int>& assumptions)
+    {
+      ::Glucose::vec< ::Glucose::Lit> massmp;
+      massmp.capacity (assumptions.size ());
+      int max = assumptions.size ();
+
+      for (unsigned i = 0; i < max; ++i)
+        {
+          ::Glucose::Lit p = ::Glucose::toLit (assumptions [i]);
+          massmp.push (p);
+        }
+      m_sat->toDimacs(const_cast<char*>(fname.c_str ()), massmp);
     }
 
 

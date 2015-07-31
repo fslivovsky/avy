@@ -494,17 +494,20 @@ namespace avy
 	  if ( i >= nPiNum)
       {
 		int val = equiv[i-nPiNum];
-		if (val < -1)
+		if (val == 0 || val == 1)
 		{
-			if (val == -3)
+			if (val == 1)
 				pObj->Value = Gia_ManConst1Lit();
-			else if (val == -2)
+			else //if (val == 0)
 				pObj->Value = Gia_ManConst0Lit();
 		}
-		else if (val >=0)
+		else if (val != -1)
 		{
-			assert(val+nPiNum < i);
-            pObj->Value = Gia_ManCi(p, val+nPiNum)->Value;
+		    bool neg = (val < 0);
+            if (val < 0) val *= -1;
+            int loc = (val / 2) - 1;
+			assert(loc+nPiNum < i);
+            pObj->Value = Abc_LitNotCond(Gia_ManCi(p, loc+nPiNum)->Value, neg);
             assert(pObj->Value != 0);
 		}
       }
@@ -604,7 +607,7 @@ namespace avy
 #endif
 	  Gia_ManStop(pGia);
 	  equivClasses.resize(p->nRegs, -1);
-	  int equiv=0;
+	  int equiv=0, neg_eq=0;
 	  int consts=0;
 	  int in_out=0;
 	  int nPoNum = Gia_ManPoNum(pTemp);
@@ -612,27 +615,33 @@ namespace avy
 	  {
 		  Gia_Obj_t* pObj = Gia_ManCo(pTemp, i);
 		  if (Gia_ObjIsCi(Gia_ObjFanin0(pObj))) in_out++;
+		  // First check if a constant
+		  if (Gia_Obj2Lit(pTemp, Gia_ObjFanin0(pObj))== 0 || Gia_Obj2Lit(pTemp, Gia_ObjFanin0(pObj))== 1)
+		  {
+		      consts++;
+		      equivClasses[i-nPoNum] =
+		          Gia_Obj2Lit(pTemp, Gia_ObjChild0(pObj))== 0 ? 0 : 1;
+		      continue;
+		  }
 		  for (int j=i-1; j >= nPoNum; j--)
 		  {
-			  if (Gia_ObjChild0(pObj) == Gia_ObjChild0(Gia_ManCo(pTemp, j)))
+			  if (Gia_ObjChild0(pObj) == Gia_ObjChild0(Gia_ManCo(pTemp, j)) ||
+			      Gia_ObjChild0(pObj) == Gia_Not(Gia_ObjChild0(Gia_ManCo(pTemp, j))))
 			  {
-				  if (Gia_Obj2Lit(pTemp, Gia_ObjFanin0(pObj))== 0 || Gia_Obj2Lit(pTemp, Gia_ObjFanin0(pObj))== 1)
-				  {
-					  consts++;
-					  equivClasses[i-nPoNum] =
-						Gia_Obj2Lit(pTemp, Gia_ObjChild0(pObj))== 0 ? -2 : -3;
+			      equiv++;
+				  if (Gia_ObjChild0(pObj) == Gia_ObjChild0(Gia_ManCo(pTemp, j)))
+					  equivClasses[i-nPoNum] = (j+1)*2; // Shift?
+				  else {
+					  equivClasses[i-nPoNum] = -((j+1)*2);
+					  neg_eq++;
 				  }
-				  else
-				  {
-					  equiv++;
-					  equivClasses[i-nPoNum] = j;
-				  }
+
 				  break;
 			  }
 		  }
 	  }
           VERBOSE (3, 
-                   vout() << "Found " << equiv << " equiv and " << consts
+                   vout() << "Found " << equiv << " (" << neg_eq << ")" << " equiv and " << consts
                    << " constans out of " << Gia_ManCoNum(pTemp) << "\n"
                    << "Found output driven by intput: " << in_out << "\n";);
 	  Aig_Man_t* pNewAig = Gia_ManToAigSimple(pTemp);
@@ -641,7 +650,7 @@ namespace avy
 	  pNewAig->nTruePis = p->nTruePis;
 	  pNewAig->nTruePos = p->nTruePos;
 	  Aig_ManCleanup( pNewAig );
-	  assert (equivClasses[0] == -1);
+	  assert (equivClasses[0] == -1 || equivClasses[0] == 0 || equivClasses[0] == 1);
 	  return pNewAig;
   }
 
