@@ -112,7 +112,7 @@ namespace avy
             res = bmc (vc, sat, unroller, f);
             if (res) {
                 printCex(sat, unroller);
-                break;
+                return res;
             }
         }
       }
@@ -131,7 +131,7 @@ namespace avy
       }
     
     VERBOSE (1, Stats::PrintBrunch (outs ()););
-    return res;
+    return boost::indeterminate;
     
   }
   
