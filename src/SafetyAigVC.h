@@ -64,16 +64,30 @@ namespace avy
     {
     	if (gParams.opt_bmc)
     	{
-          AVY_MEASURE_FN;
-          // TODO: TrCp not used for now. Need to see if it makes SatSweep more efficient
-          //Aig_TernarySimulate(&*m_MasterTr, m_frameVals.size(), m_frameVals);
-          //AigManPtr pTrCp = aigPtr (Aig_DupWithCiVals(&*m_MasterTr, m_frameVals.back()));
-          AigManPtr pNewTr = aigPtr (Aig_DupWithCiEquivs(&*m_MasterTr,
-                                                         m_frameEquivs.back()));
+    	    AVY_MEASURE_FN;
 
-          m_frameEquivs.push_back (std::vector<int>());
-          Aig_Man_t* pSimpTr = Aig_SatSweep(&*pNewTr, m_frameEquivs.back());
-          m_Tr.push_back(aigPtr(pSimpTr));
+    	    std::vector<int>& lastEquiv = m_frameEquivs.back();
+            bool modified = false;
+            for (int i=0; i < lastEquiv.size() && !modified; i++)
+                if (lastEquiv[i] != -1) modified = true;
+
+            if (modified) {
+
+              // TODO: TrCp not used for now. Need to see if it makes SatSweep more efficient
+              //Aig_TernarySimulate(&*m_MasterTr, m_frameVals.size(), m_frameVals);
+              //AigManPtr pTrCp = aigPtr (Aig_DupWithCiVals(&*m_MasterTr, m_frameVals.back()));
+              AigManPtr pNewTr = aigPtr (Aig_DupWithCiEquivs(&*m_MasterTr,
+                                                             m_frameEquivs.back()));
+
+              m_frameEquivs.push_back (std::vector<int>());
+              Aig_Man_t* pSimpTr = Aig_SatSweep(&*pNewTr, m_frameEquivs.back());
+              m_Tr.push_back(aigPtr(pSimpTr));
+            }
+            else {
+                m_Tr.push_back(m_MasterTr);
+                std::vector<int> empty(lastEquiv.size(), -1);
+                m_frameEquivs.push_back (empty);
+            }
     	}
     	else
           m_Tr.push_back(m_MasterTr);
@@ -228,7 +242,7 @@ namespace avy
         Aig_Obj_t *pObj;
         int i;
         Saig_ManForEachPi (&*m_Tr[nFrame], pObj, i)
-          unroller.addPrimaryInput (cnfTr->pVarNums [pObj->Id]);
+          unroller.addPrimaryInput (m_AigToSat[nFrame][cnfTr->pVarNums [pObj->Id]]);
 
         if (nFrame > 0)
         {
