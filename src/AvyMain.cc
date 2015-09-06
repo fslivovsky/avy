@@ -541,7 +541,7 @@ namespace avy
         // -- skipping the first input of the first and last
         // -- frames. It is used for reset and is not part of the
         // -- original circuit.
-        if (j == 0 && (i == 0 || i + 1 == unroller.frames ())) continue;
+        if (j == 0 /*&& (i == 0 || i + 1 == unroller.frames ())*/) continue;
         out << (s.getVarVal(input) ? "1" : "0");
       }
       out <<  "\n";
