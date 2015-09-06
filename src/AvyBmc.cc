@@ -176,10 +176,8 @@ namespace avy
   template<typename Sat>
     void AvyBmc::printCex(Sat& s, Unroller<Sat>& unroller)
     {
-      printf("Here\n");
       // -- skip cex if no output file is given
       if (gParams.cexFileName.empty ()) return;
-      printf("Here\n");
       AVY_ASSERT (!gParams.stutter);
       AVY_ASSERT (gParams.tr0);
 
