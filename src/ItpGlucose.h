@@ -36,7 +36,14 @@ namespace avy
 
     std::vector<int> m_core;
 
-    
+    boost::tribool tobool (::Glucose::lbool v)
+    {
+      boost::tribool r (boost::indeterminate);
+      if (v == ::Glucose::lbool ((uint8_t)0)) r = true;
+      else if (v == ::Glucose::lbool ((uint8_t)1)) r = false;
+      return r;
+    }
+
   public:
     /// create a solver with nParts partitions and nVars variables
     ItpGlucose (unsigned nParts, unsigned nVars, bool simp = true) :
@@ -174,10 +181,8 @@ namespace avy
     
     bool getVarVal(int v)
     {
-      return false;
-      /*::Glucose::Var x = v;
-      ::Glucose::lbool val = m_pSat->modelValue(x);
-      return (val == ::Glucose::l_True) ? true : false;*/
+        ::Glucose::Var x = v;
+        return tobool (m_pSat->modelValue(x));
     }
   };
   
