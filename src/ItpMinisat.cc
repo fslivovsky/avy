@@ -64,5 +64,41 @@ namespace avy
     //Sto_ManFree( pSatCnf );
     return pMan;
   }
+
+  Aig_Man_t* ItpMinisat::getInterpolant (std::vector<int>& shared_variables,
+                                         int nNumOfVars)
+  {
+    AVY_MEASURE_FN;
+    //AVY_ASSERT (!isTrivial ());
+    AVY_ASSERT (m_pSat != NULL);
+    //AVY_ASSERT (vSharedVars.size () >= m_nParts - 1);
+
+    std::vector<int> vVarToId;
+    for (auto i = 0; i < shared_variables.size(); i++) {
+      int v = shared_variables[i];
+      if (vVarToId.size() <= v)
+        vVarToId.resize (v + 1, -1);
+      vVarToId [v] = i;
+    }
+    //m_pSat->runProof();
+    SimpMinisatItpSeq itpSeqVisitor(*m_pSat, nNumOfVars, vVarToId, m_nParts-1);
+    AVY_VERIFY (m_pSat->validate());
+    
+    m_pSat->replay(itpSeqVisitor);
+
+    Gia_Man_t* pManGia = Gia_ManRehash(itpSeqVisitor.getInterpolantMan(), 1);
+    Aig_Man_t* pMan = Gia_ManToAigSimple(pManGia);
+
+    Gia_ManHashStop(pManGia);
+    Gia_ManStop(pManGia);
+
+    VERBOSE(2, Aig_ManPrintStats(pMan););
+    LOG("itp_verbose", logs () << *pMan << "\n";);
+
+
+    // Release memory
+    //Sto_ManFree( pSatCnf );
+    return pMan;
+  }
   
 }

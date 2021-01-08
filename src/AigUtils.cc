@@ -816,4 +816,29 @@ namespace avy
 	  }
 	  Aig_ManCleanMarkA(pAig);
   }
+
+  Aig_Man_t* Aig_ManCombine(Aig_Man_t* p1, Aig_Man_t* p2) {
+    //Aig_Man_t * pNew;
+    Aig_Obj_t * pObj;
+    int i;
+    assert( Aig_ManRegNum(p1) == 0 );
+    assert( Aig_ManRegNum(p2) == 0 );
+    assert( Aig_ManCoNum(p1) >= 1 );
+    assert( Aig_ManCoNum(p2) >= 1 );
+    assert( Aig_ManCiNum(p1) <= Aig_ManCiNum(p2) );
+    while ( Aig_ManCiNum(p1) < Aig_ManCiNum(p2) ) {
+      Aig_ObjCreateCi( p1 );
+    }
+
+    // add second AIG
+    Aig_ManConst1(p2)->pData = Aig_ManConst1(p1);
+    Aig_ManForEachCi( p2, pObj, i )
+        pObj->pData = Aig_ManCi( p1, i );
+    Aig_ManForEachNode( p2, pObj, i )
+        pObj->pData = Aig_And( p1, Aig_ObjChild0Copy(pObj), Aig_ObjChild1Copy(pObj) );
+    Aig_ManForEachCo( p2, pObj, i )
+        pObj->pData = Aig_ObjCreateCo( p1 , Aig_ObjChild0Copy(pObj) );
+    Aig_ManCleanup( p1 );
+    return p1;
+  }
 }

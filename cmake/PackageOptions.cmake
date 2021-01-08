@@ -1,0 +1,6 @@
+set(AVY_INCLUDE_DIR "${ClauseItpSeq_SOURCE_DIR}/include/")
+set(AVY_SOURCE_DIR "${ClauseItpSeq_SOURCE_DIR}/src/")
+set(ABC_CPP_LIBRARY AbcCpp)
+set(AVY_DEBUG_LIBRARY AvyDebug)
+set(CLAUSEITPSEQ_LIBRARY ClauseItpSeq)
+add_definitions(-D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS)

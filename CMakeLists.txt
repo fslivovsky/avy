@@ -6,11 +6,13 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR )
     "In-source builds are not allowed. Please clean your source tree and try again.")  
 endif()
 
+include ("cmake/PackageOptions.cmake")
+
 # Add path for custom modules
 set(CMAKE_MODULE_PATH
   ${CMAKE_MODULE_PATH}
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
-  )
+)
 
 add_definitions(-D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS)
 add_definitions ("-std=c++11")
@@ -31,7 +33,6 @@ endif ()
 
 # prefer linking with static libraries
 set(CMAKE_FIND_LIBRARY_SUFFIXES ".a" ${CMAKE_FIND_LIBRARY_SUFFIXES})
-
 
 
 # check for rt lib. Not needed on OSX.

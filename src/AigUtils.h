@@ -109,6 +109,8 @@ namespace avy
   Aig_Man_t* Aig_SatSweepWithConstraints(Aig_Man_t* pAig, Aig_Man_t* pConstraints, std::vector<int>& equivClasses);
 
   void Aig_FindCoiRoots (Aig_Man_t* pAig, const std::vector<int>& startingRoots, std::vector<int>& drivingRoots);
+
+  Aig_Man_t* Aig_ManCombine(Aig_Man_t* p1, Aig_Man_t* p2);
 }
 
 

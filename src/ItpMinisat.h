@@ -77,6 +77,7 @@ namespace avy
     
     bool addUnit (int unit)
     {
+      m_State = boost::tribool (boost::indeterminate);
       ::Minisat::Lit p = ::Minisat::toLit (unit);
       LOG ("sat", logs () << "UNT: "
            << (::Minisat::sign (p) ? "-" : "")
@@ -90,12 +91,39 @@ namespace avy
 
     bool addClause (int* bgn, int* end)
     {
+      m_State = boost::tribool (boost::indeterminate);
       LOG("sat", logs () << "NEW CLS: ";);
       ::Minisat::vec< ::Minisat::Lit> cls;
       cls.capacity (end-bgn);
       for (int* it = bgn; it != end; ++it)
         {
           ::Minisat::Lit p = ::Minisat::toLit (*it);
+          cls.push (p);
+
+
+          LOG("sat", logs () << (::Minisat::sign (p) ? "-" : "")
+              << (::Minisat::var (p)) << " ";);
+          LOG("minisat_dump", logs () << (::Minisat::sign (p) ? "-" : "")
+              << (::Minisat::var (p) + 1) << " ";);
+
+        }
+      LOG("sat", logs () << "\n" << std::flush;);
+      LOG("minisat_dump", logs () << " 0\n" << std::flush;);
+      
+
+      m_Trivial = !m_pSat->addClause (cls);
+      return !m_Trivial;
+    }
+
+    bool addClause (std::vector<int>& literal_ints)
+    {
+      m_State = boost::tribool (boost::indeterminate);
+      LOG("sat", logs () << "NEW CLS: ";);
+      ::Minisat::vec< ::Minisat::Lit> cls;
+      cls.capacity (literal_ints.size());
+      for (auto& i: literal_ints)
+        {
+          ::Minisat::Lit p = ::Minisat::toLit (i);
           cls.push (p);
 
 
@@ -124,7 +152,7 @@ namespace avy
     ::Minisat::Solver* get () { return m_pSat.get (); }
     
     /// true if the context is decided 
-    bool isSolved () { return m_Trivial || m_State || !m_State; }
+    bool isSolved() { return m_Trivial || m_State || !m_State; }
 
     int core (int **out)
     {
@@ -138,7 +166,7 @@ namespace avy
     }
     /// decide context with assumptions
     //boost::tribool solve (LitVector &assumptions, int maxSize = -1)
-    boost::tribool solve (std::vector<int> &assumptions, int maxSize = -1)
+    boost::tribool solve (std::vector<int> &assumptions, int budget = 1000, int maxSize = -1)
 	{
 	  if (m_Trivial) return false;
 
@@ -156,33 +184,67 @@ namespace avy
 		  LOG ("sat", logs () << "ASM: " << (::Minisat::sign (p) ? "-" : "")
 			   << (::Minisat::var (p)) << " " << "\n";);
 		}
-	  return m_pSat->solve (massmp, m_Simplifier, !m_Simplifier);
+
+    ::Minisat::lbool result;
+    
+    if (budget > 0) {
+      m_pSat->setConfBudget(budget);
+      result = m_pSat->solveLimited (massmp, m_Simplifier, !m_Simplifier);
+    } else {
+      result = ::Minisat::lbool(m_pSat->solve(massmp, m_Simplifier, !m_Simplifier));
+    }
+
+    if (result == ::Minisat::lbool(false)) {
+      m_State = boost::tribool(false);
+    } else if (result == ::Minisat::lbool(true)) {
+      m_State = boost::tribool(true);
+    } else {
+      m_State = boost::indeterminate;
+    }
+    return m_State;
 	}
     /// a pointer to the unsat core
     //int core (int **out) { return sat_solver_final (m_pSat, out); }
     
     /// decide current context
-    boost::tribool solve () 
+    bool solve (const std::vector<int>& assumptions) 
     { 
       ScoppedStats __stats__("ItpMinisat_solve");
-      return m_pSat->solve (m_Simplifier, !m_Simplifier); 
+      if (assumptions.size() > 0) {
+        ::Minisat::vec< ::Minisat::Lit> massmp;
+        massmp.capacity (assumptions.size ());
+        for (auto& lit_int: assumptions) {
+          ::Minisat::Lit p = ::Minisat::toLit(lit_int);
+          massmp.push (p);
+          LOG ("sat", logs () << "ASM: " << (::Minisat::sign (p) ? "-" : "")
+            << (::Minisat::var (p)) << " " << "\n";);
+        }
+        m_State = m_pSat->solve (massmp, m_Simplifier, !m_Simplifier);
+      } else {
+        m_State = m_pSat->solve (m_Simplifier, !m_Simplifier);
+      }
+      return m_State;
     }
 
     bool isTrivial () { return m_Trivial; }
     
-    void setFrozen (int v, bool p) { }//m_pSat->setFrozen (v, p); }
+    void setFrozen (int v, bool p) { m_pSat->setFrozen (v, p); }
 
     /// Compute an interpolant. User provides the list of shared variables
     /// Variables can only be shared between adjacent partitions.
     /// fMcM == true for McMillan, and false for McMillan'
     Aig_Man_t* getInterpolant (lit bad, std::vector<Vec_Int_t*> &vSharedVars, int nNumOfVars, bool fMcM = true);
+
+    Aig_Man_t* getInterpolant (std::vector<int> &shared_variables, int nNumOfVars);
     
-    bool getVarVal(int v)
+    boost::tribool getVarVal(int v)
     {
-      return false;
-      /*::Minisat::Var x = v;
+      if (!isSolved()) {
+        return boost::tribool (boost::indeterminate);
+      }
+      ::Minisat::Var x = v;
       ::Minisat::lbool val = m_pSat->modelValue(x);
-      return (val == ::Minisat::l_True) ? true : false;*/
+      return (val == ::Minisat::lbool(true)) ? boost::tribool(true) : boost::tribool(false);
     }
   };
   
