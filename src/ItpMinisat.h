@@ -152,7 +152,7 @@ namespace avy
     ::Minisat::Solver* get () { return m_pSat.get (); }
     
     /// true if the context is decided 
-    bool isSolved() { return m_Trivial || m_State || !m_State; }
+    bool isSolved() { return bool{(m_Trivial || m_State || !m_State)}; }
 
     int core (int **out)
     {
@@ -223,7 +223,7 @@ namespace avy
       } else {
         m_State = m_pSat->solve (m_Simplifier, !m_Simplifier);
       }
-      return m_State;
+      return bool{m_State};
     }
 
     bool isTrivial () { return m_Trivial; }
