@@ -65,7 +65,7 @@ namespace avy
     return pMan;
   }
 
-  Aig_Man_t* ItpMinisat::getInterpolant (std::vector<int>& shared_variables,
+  Aig_Man_t* ItpMinisat::getInterpolant (const std::vector<int>& shared_variables,
                                          int nNumOfVars)
   {
     AVY_MEASURE_FN;
