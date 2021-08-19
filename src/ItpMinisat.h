@@ -235,7 +235,7 @@ namespace avy
     /// fMcM == true for McMillan, and false for McMillan'
     Aig_Man_t* getInterpolant (lit bad, std::vector<Vec_Int_t*> &vSharedVars, int nNumOfVars, bool fMcM = true);
 
-    Aig_Man_t* getInterpolant (std::vector<int> &shared_variables, int nNumOfVars);
+    Aig_Man_t* getInterpolant (const std::vector<int> &shared_variables, int nNumOfVars);
     
     boost::tribool getVarVal(int v)
     {
