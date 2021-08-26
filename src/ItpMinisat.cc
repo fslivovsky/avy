@@ -85,6 +85,7 @@ namespace avy
     AVY_VERIFY (m_pSat->validate());
     
     m_pSat->replay(itpSeqVisitor);
+    m_pSat->resetSolver();
 
     Gia_Man_t* pManGia = Gia_ManRehash(itpSeqVisitor.getInterpolantMan(), 1);
     Aig_Man_t* pMan = Gia_ManToAigSimple(pManGia);
