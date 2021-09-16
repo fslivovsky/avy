@@ -226,6 +226,36 @@ namespace avy
       return bool{m_State};
     }
 
+    bool solve (const std::vector<int>& assumptions, int limit)
+    {
+       if (m_Trivial) return false;
+
+      if (!m_pSat->okay ()) return false;
+
+      ::Minisat::vec< ::Minisat::Lit> massmp;
+      massmp.capacity (assumptions.size ());
+
+      for (auto& lit_int: assumptions) {
+        ::Minisat::Lit p = ::Minisat::toLit(lit_int);
+        massmp.push (p);
+      }
+
+      ::Minisat::lbool result;
+      
+      m_pSat->setConfBudget(limit);
+      result = m_pSat->solveLimited (massmp, m_Simplifier, !m_Simplifier);
+
+      if (result == ::Minisat::lbool(false)) {
+        m_State = boost::tribool(false);
+      } else if (result == ::Minisat::lbool(true)) {
+        m_State = boost::tribool(true);
+      } else {
+        m_State = boost::indeterminate;
+      }
+
+      return indeterminate(m_State) || m_State;
+    }
+
     bool isTrivial () { return m_Trivial; }
     
     void setFrozen (int v, bool p) { m_pSat->setFrozen (v, p); }
