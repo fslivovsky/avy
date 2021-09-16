@@ -253,7 +253,7 @@ namespace avy
         m_State = boost::indeterminate;
       }
 
-      return indeterminate(m_State) || m_State;
+      return indeterminate(m_State) || bool{m_State};
     }
 
     bool isTrivial () { return m_Trivial; }
